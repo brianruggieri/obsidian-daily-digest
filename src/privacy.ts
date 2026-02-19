@@ -3,19 +3,28 @@ import { DailyDigestSettings } from "./settings";
 
 // ── Constants ────────────────────────────────────────────
 
-/** Bump this to re-trigger the onboarding modal for all users. */
-export const CURRENT_PRIVACY_VERSION = 1;
+/**
+ * Bump this to re-trigger the onboarding modal for all users.
+ * v1 → v2: updated for cross-platform browser profile detection.
+ */
+export const CURRENT_PRIVACY_VERSION = 2;
 
 export const PRIVACY_DESCRIPTIONS = {
 	browser: {
 		label: "Browser History",
 		access:
-			"Reads SQLite database files from your browsers to extract visited URLs, " +
-			"page titles, and timestamps. This includes all browsing activity within " +
-			"the configured lookback window.",
+			"Reads browser History SQLite databases for visited URLs, page titles, and timestamps. " +
+			"Supports per-profile selection — you choose exactly which browsers and profiles " +
+			"are included. Only History files are read; passwords, cookies, and saved payment " +
+			"data are never accessed.",
 		files:
-			"~/Library/Application Support/Google/Chrome/Default/History " +
-			"(and equivalents for Brave, Edge, Firefox, Safari)",
+			"macOS:   ~/Library/Application Support/{Browser}/[Profile]/History\n" +
+			"Windows: %LOCALAPPDATA%\\{Browser}\\User Data\\[Profile]\\History\n" +
+			"Linux:   ~/.config/{browser}/[Profile]/History\n" +
+			"Firefox: OS-specific profiles directory · places.sqlite per profile\n" +
+			"Safari (macOS only): ~/Library/Safari/History.db\n" +
+			"Profile names are read from browser config files (Local State / profiles.ini). " +
+			"No credentials, cookies, or encrypted data are read from those files.",
 		destination:
 			"Stored in your vault as part of the daily note. If your vault syncs " +
 			"(iCloud, Obsidian Sync, Dropbox, etc.), this data will be uploaded " +
@@ -137,7 +146,12 @@ export class OnboardingModal extends Modal {
 
 		new Setting(contentEl)
 			.setName(PRIVACY_DESCRIPTIONS.browser.label)
-			.setDesc(PRIVACY_DESCRIPTIONS.browser.access)
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.browser.access +
+				"\n\nAfter enabling, use Settings → Data Sources → " +
+				"'Detect Browsers & Profiles' to choose which browsers and " +
+				"profiles to include. Nothing is collected until you select profiles there."
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.localToggles.enableBrowser)

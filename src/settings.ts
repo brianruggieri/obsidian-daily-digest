@@ -1,8 +1,9 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
-import { SanitizationLevel, SensitivityCategory } from "./types";
+import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "./types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "./sensitivity";
+import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "./browser-profiles";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
@@ -14,7 +15,11 @@ export interface DailyDigestSettings {
 	maxSearches: number;
 	maxShellCommands: number;
 	maxClaudeSessions: number;
-	browsers: string[];
+	/**
+	 * Per-browser, per-profile selection. Replaces the old `browsers: string[]`.
+	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
+	 */
+	browserConfigs: BrowserInstallConfig[];
 	anthropicApiKey: string;
 	aiModel: string;
 	profile: string;
@@ -57,7 +62,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	maxSearches: 40,
 	maxShellCommands: 50,
 	maxClaudeSessions: 30,
-	browsers: ["chrome", "brave", "firefox", "safari"],
+	// Empty until the user clicks "Detect Browsers & Profiles". Nothing is
+	// collected until the user has reviewed and enabled specific profiles.
+	browserConfigs: [],
 	anthropicApiKey: "",
 	aiModel: "claude-haiku-4-5",
 	profile: "",
@@ -92,13 +99,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	privacyConsentVersion: 0,
 };
 
-const BROWSER_OPTIONS: Record<string, string> = {
-	chrome: "Google Chrome",
-	brave: "Brave",
-	edge: "Microsoft Edge",
-	firefox: "Firefox",
-	safari: "Safari",
-};
+// Browser display names are imported from browser-profiles.ts (BROWSER_DISPLAY_NAMES)
 
 export class DailyDigestSettingTab extends PluginSettingTab {
 	plugin: DailyDigestPlugin;
@@ -215,12 +216,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		// ── Data Sources ─────────────────────────────
 		new Setting(containerEl).setName("Data sources").setHeading();
 
+		// ── Browser history ───────────────────────────
 		new Setting(containerEl)
 			.setName("Browser history")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.browser.access + " " +
-				PRIVACY_DESCRIPTIONS.browser.destination
-			)
+			.setDesc(PRIVACY_DESCRIPTIONS.browser.access + " " + PRIVACY_DESCRIPTIONS.browser.destination)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableBrowser)
@@ -231,21 +230,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Browsers")
-			.setDesc("Which browsers to scan (comma-separated: chrome, brave, edge, firefox, safari)")
-			.addText((text) =>
-				text
-					.setPlaceholder("chrome, brave, firefox, safari")
-					.setValue(this.plugin.settings.browsers.join(", "))
-					.onChange(async (value) => {
-						this.plugin.settings.browsers = value
-							.split(",")
-							.map((b) => b.trim().toLowerCase())
-							.filter((b) => b in BROWSER_OPTIONS);
-						await this.plugin.saveSettings();
-					})
-			);
+		if (this.plugin.settings.enableBrowser) {
+			this.renderBrowserProfileSection(containerEl);
+		}
 
 		new Setting(containerEl)
 			.setName("Shell history")
@@ -1131,6 +1118,192 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		} catch (e) {
 			notice.hide();
 			new Notice(`Failed to detect models: ${e}`, 8000);
+		}
+	}
+
+	// ── Browser Profile UI ───────────────────────────────
+
+	/**
+	 * Renders the browser profile picker section inside the Data Sources area.
+	 * Called conditionally when enableBrowser is true.
+	 *
+	 * Layout:
+	 *   Privacy note
+	 *   [Detect Browsers & Profiles] button
+	 *   Status line (N browsers · M profiles selected)
+	 *   Per-browser toggles with indented per-profile sub-toggles
+	 */
+	private renderBrowserProfileSection(containerEl: HTMLElement): void {
+		// Privacy note — shown every time as a reminder of what we access
+		const privacyNote = containerEl.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
+		privacyNote.createEl("p", {
+			text:
+				"Scanning reads only browser History files. Profile names are read from " +
+				"browser configuration — passwords, cookies, and payment data are never accessed.",
+		});
+
+		const configs = this.plugin.settings.browserConfigs;
+
+		// Detect button + status line
+		const detectRow = new Setting(containerEl)
+			.setName("Browser & profile detection")
+			.setDesc(
+				configs.length === 0
+					? "Scan your system to find installed browsers and their profiles. " +
+					  "Nothing is read until you enable a profile and generate a note."
+					: this.buildBrowserStatusLine(configs)
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText(configs.length === 0 ? "Detect Browsers & Profiles" : "Re-scan")
+					.setCta()
+					.onClick(() => this.detectBrowserProfiles())
+			);
+
+		if (configs.length > 0) {
+			detectRow.descEl.addClass("dd-browser-status");
+		}
+
+		// Nothing detected yet — show hint and stop
+		if (configs.length === 0) {
+			const hint = containerEl.createDiv({ cls: "dd-settings-callout" });
+			hint.createEl("p", {
+				text: "Click 'Detect Browsers & Profiles' to scan for installed browsers.",
+			});
+			return;
+		}
+
+		// ── Per-browser toggles ─────────────────────────
+		const browserContainer = containerEl.createDiv({ cls: "dd-browser-configs" });
+
+		for (const config of configs) {
+			const displayName = BROWSER_DISPLAY_NAMES[config.browserId] ?? config.browserId;
+			const profileWord = config.profiles.length !== 1 ? "profiles" : "profile";
+
+			let browserDesc = `${config.profiles.length} ${profileWord} found`;
+			if (config.browserId === "safari") {
+				browserDesc += " · macOS Full Disk Access may be required";
+			}
+
+			// Browser master toggle
+			new Setting(browserContainer)
+				.setName(displayName)
+				.setDesc(browserDesc)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(config.enabled)
+						.onChange(async (value) => {
+							config.enabled = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			// Per-profile sub-toggles (only when browser is enabled)
+			if (config.enabled && config.profiles.length > 0) {
+				const profileContainer = browserContainer.createDiv({ cls: "dd-browser-profile-sub" });
+
+				for (const profile of config.profiles) {
+					// Show folder path only when it differs from display name (Firefox uses full paths)
+					const profileDesc = profile.profileDir !== profile.displayName
+						? `Folder: ${profile.profileDir}`
+						: "";
+
+					new Setting(profileContainer)
+						.setName(profile.displayName)
+						.setDesc(profileDesc)
+						.addToggle((toggle) =>
+							toggle
+								.setValue(config.selectedProfiles.includes(profile.profileDir))
+								.onChange(async (value) => {
+									const selected = new Set(config.selectedProfiles);
+									if (value) {
+										selected.add(profile.profileDir);
+									} else {
+										selected.delete(profile.profileDir);
+									}
+									config.selectedProfiles = [...selected];
+									await this.plugin.saveSettings();
+								})
+						);
+				}
+			}
+		}
+
+		// Warn if a browser is enabled but no profiles are selected
+		const anyEnabledWithNoProfiles = configs.some(
+			(c) => c.enabled && c.selectedProfiles.length === 0
+		);
+		if (anyEnabledWithNoProfiles) {
+			const warnEl = containerEl.createDiv({ cls: "dd-settings-callout dd-settings-callout-warn" });
+			warnEl.createEl("p", {
+				text:
+					"One or more browsers are enabled but have no profiles selected. " +
+					"Toggle on at least one profile per browser to collect history.",
+			});
+		}
+	}
+
+	/** Summary line shown under the Re-scan button once detection has run. */
+	private buildBrowserStatusLine(configs: BrowserInstallConfig[]): string {
+		const enabledCount = configs.filter((c) => c.enabled).length;
+		const selectedCount = configs.reduce((n, c) => n + c.selectedProfiles.length, 0);
+		const totalProfiles = configs.reduce((n, c) => n + c.profiles.length, 0);
+
+		if (enabledCount === 0) {
+			const b = configs.length;
+			return `${b} browser${b !== 1 ? "s" : ""} detected · none enabled`;
+		}
+		const b = enabledCount;
+		const p = totalProfiles;
+		return (
+			`${b} browser${b !== 1 ? "s" : ""} enabled · ` +
+			`${selectedCount} of ${p} profile${p !== 1 ? "s" : ""} selected`
+		);
+	}
+
+	/**
+	 * Runs a filesystem scan for installed browsers and profiles.
+	 * Merges results with existing settings so the user's choices are preserved.
+	 */
+	private async detectBrowserProfiles(): Promise<void> {
+		const notice = new Notice("Scanning for browser profiles\u2026", 0);
+		try {
+			const detected = await detectAllBrowsers();
+			notice.hide();
+
+			if (detected.length === 0) {
+				new Notice(
+					"No browser profiles found.\n\n" +
+					"Make sure your browser has been opened at least once and that " +
+					"Obsidian has permission to read your files.",
+					10000
+				);
+				return;
+			}
+
+			this.plugin.settings.browserConfigs = mergeDetectedWithExisting(
+				detected,
+				this.plugin.settings.browserConfigs
+			);
+			await this.plugin.saveSettings();
+
+			const totalProfiles = this.plugin.settings.browserConfigs
+				.reduce((n, b) => n + b.profiles.length, 0);
+			const bCount = detected.length;
+			new Notice(
+				`Found ${bCount} browser${bCount !== 1 ? "s" : ""} · ` +
+				`${totalProfiles} profile${totalProfiles !== 1 ? "s" : ""}. ` +
+				"Enable the profiles you want to include.",
+				7000
+			);
+			this.display();
+		} catch (e) {
+			notice.hide();
+			new Notice(
+				`Browser detection failed: ${e instanceof Error ? e.message : String(e)}`,
+				8000
+			);
 		}
 	}
 }
