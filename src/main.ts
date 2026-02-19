@@ -9,6 +9,7 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
+import { RAGConfig } from "./types";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -169,6 +170,19 @@ export default class DailyDigestPlugin extends Plugin {
 			localModel: this.settings.localModel,
 		};
 
+		// Build RAG config if enabled
+		let ragConfig: RAGConfig | undefined;
+		if (this.settings.enableRAG && useAI) {
+			ragConfig = {
+				enabled: true,
+				embeddingEndpoint: this.settings.localEndpoint,
+				embeddingModel: this.settings.embeddingModel,
+				topK: this.settings.ragTopK,
+				minChunkTokens: 100,
+				maxChunkTokens: 1500,
+			};
+		}
+
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
@@ -208,10 +222,15 @@ export default class DailyDigestPlugin extends Plugin {
 					}
 
 					if (result === "proceed-with-ai") {
-						const aiNotice = new Notice("Daily Digest: Generating AI summary (Anthropic)\u2026", 0);
+						const aiNotice = new Notice(
+							ragConfig?.enabled
+								? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
+								: "Daily Digest: Generating AI summary (Anthropic)\u2026",
+							0
+						);
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, shellCmds,
-							claudeSessions, aiConfig, this.settings.profile
+							claudeSessions, aiConfig, this.settings.profile, ragConfig
 						);
 						aiNotice.hide();
 					} else {
@@ -219,10 +238,14 @@ export default class DailyDigestPlugin extends Plugin {
 					}
 				} else {
 					// Local provider: no consent needed, data stays on machine
-					progressNotice.setMessage("Daily Digest: Generating AI summary (local)\u2026");
+					progressNotice.setMessage(
+						ragConfig?.enabled
+							? "Daily Digest: Chunking, embedding & summarizing (local)\u2026"
+							: "Daily Digest: Generating AI summary (local)\u2026"
+					);
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, shellCmds,
-						claudeSessions, aiConfig, this.settings.profile
+						claudeSessions, aiConfig, this.settings.profile, ragConfig
 					);
 				}
 			}

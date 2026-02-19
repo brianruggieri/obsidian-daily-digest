@@ -24,6 +24,9 @@ export interface DailyDigestSettings {
 	enableShell: boolean;
 	enableClaude: boolean;
 	claudeSessionsDir: string;
+	enableRAG: boolean;
+	embeddingModel: string;
+	ragTopK: number;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 }
@@ -48,6 +51,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableShell: false,
 	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
+	enableRAG: false,
+	embeddingModel: "nomic-embed-text",
+	ragTopK: 8,
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 };
@@ -510,6 +516,97 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 			}
+
+			// ── RAG Pipeline (Advanced) ─────────────
+			new Setting(containerEl)
+				.setName("RAG pipeline (advanced)")
+				.setHeading();
+
+			new Setting(containerEl)
+				.setName("Enable RAG chunking")
+				.setDesc(
+					"Split activity data into focused chunks and use embeddings " +
+					"to select the most relevant context for summarization. " +
+					"Improves quality with large datasets and small context models. " +
+					"Requires a local model server with an embedding model."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enableRAG)
+						.onChange(async (value) => {
+							this.plugin.settings.enableRAG = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			if (this.plugin.settings.enableRAG) {
+				new Setting(containerEl)
+					.setName("Embedding model")
+					.setDesc(
+						"Model for generating embeddings (e.g. nomic-embed-text, " +
+						"all-minilm, mxbai-embed-large). Must be available on your " +
+						"local server."
+					)
+					.addText((text) =>
+						text
+							.setPlaceholder("nomic-embed-text")
+							.setValue(this.plugin.settings.embeddingModel)
+							.onChange(async (value) => {
+								this.plugin.settings.embeddingModel = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				new Setting(containerEl)
+					.setName("Retrieved chunks (Top K)")
+					.setDesc(
+						"Number of most-relevant chunks to include in the AI prompt. " +
+						"Higher = more context but slower. 6–10 is a good range."
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(4, 15, 1)
+							.setValue(this.plugin.settings.ragTopK)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.ragTopK = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				const ragCallout = containerEl.createDiv({
+					cls: "dd-settings-callout dd-settings-callout-info",
+				});
+				ragCallout.createEl("p", {
+					text:
+						"Embeddings are always generated locally using your local server " +
+						"endpoint, even when Anthropic is selected for summarization. " +
+						"No embedding data is sent externally.",
+				});
+
+				const ragPullHint = containerEl.createDiv({
+					cls: "dd-settings-callout",
+				});
+				const pullP = ragPullHint.createEl("p");
+				pullP.createEl("span", { text: "Pull an embedding model: " });
+				pullP.createEl("code", { text: "ollama pull nomic-embed-text" });
+
+				// Warn if Anthropic selected but no local endpoint
+				if (
+					this.plugin.settings.aiProvider === "anthropic" &&
+					!this.plugin.settings.localEndpoint
+				) {
+					const warnCallout = containerEl.createDiv({
+						cls: "dd-settings-callout dd-settings-callout-warn",
+					});
+					warnCallout.createEl("p", {
+						text:
+							"RAG requires a local model server for embedding generation. " +
+							"Configure a local server endpoint above.",
+					});
+				}
+			}
 		}
 
 		// ── Advanced ─────────────────────────────────
@@ -533,34 +630,51 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const notice = new Notice("Detecting local models\u2026", 0);
 
 		try {
-			// Try Ollama-native endpoint first
 			let models: string[] = [];
-			try {
-				const { requestUrl } = await import("obsidian");
-				const resp = await requestUrl({
-					url: `${endpoint}/api/tags`,
-					method: "GET",
-				});
-				if (resp.status === 200 && resp.json?.models) {
-					models = resp.json.models.map(
-						(m: { name: string }) => m.name
-					);
+
+			// Use native fetch for localhost — Obsidian's requestUrl can fail
+			// on app:// origins due to CORS restrictions with local servers.
+			const isLocalhost =
+				endpoint.includes("localhost") ||
+				endpoint.includes("127.0.0.1") ||
+				endpoint.includes("0.0.0.0");
+
+			const doFetch = async (url: string): Promise<unknown> => {
+				if (isLocalhost) {
+					const resp = await fetch(url, {
+						method: "GET",
+						headers: { Accept: "application/json" },
+					});
+					if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+					return await resp.json();
+				} else {
+					const { requestUrl } = await import("obsidian");
+					const resp = await requestUrl({ url, method: "GET" });
+					if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
+					return resp.json;
 				}
-			} catch {
+			};
+
+			// Try Ollama-native endpoint first
+			try {
+				const data = (await doFetch(`${endpoint}/api/tags`)) as {
+					models?: { name: string }[];
+				};
+				if (data?.models) {
+					models = data.models.map((m) => m.name);
+				}
+			} catch (e1) {
+				console.debug("Daily Digest: Ollama /api/tags failed:", e1);
 				// Fall back to OpenAI-compatible /v1/models
 				try {
-					const { requestUrl } = await import("obsidian");
-					const resp = await requestUrl({
-						url: `${endpoint}/v1/models`,
-						method: "GET",
-					});
-					if (resp.status === 200 && resp.json?.data) {
-						models = resp.json.data.map(
-							(m: { id: string }) => m.id
-						);
+					const data = (await doFetch(`${endpoint}/v1/models`)) as {
+						data?: { id: string }[];
+					};
+					if (data?.data) {
+						models = data.data.map((m) => m.id);
 					}
-				} catch {
-					// Both failed
+				} catch (e2) {
+					console.debug("Daily Digest: /v1/models failed:", e2);
 				}
 			}
 
@@ -568,8 +682,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 			if (models.length === 0) {
 				new Notice(
-					`No models found at ${endpoint}. Is your local server running?`,
-					8000
+					`No models found at ${endpoint}. Is your local server running?\n\n` +
+					`If using Ollama, you may need to set the OLLAMA_ORIGINS ` +
+					`environment variable to allow Obsidian's requests:\n` +
+					`OLLAMA_ORIGINS="*" ollama serve`,
+					12000
 				);
 				return;
 			}

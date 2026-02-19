@@ -56,6 +56,16 @@ export const PRIVACY_DESCRIPTIONS = {
 			"commands, and Claude prompts are sent to Anthropic's servers for " +
 			"processing. Using a local model keeps everything on your machine.",
 	},
+	rag: {
+		label: "RAG Pipeline",
+		access:
+			"Generates vector embeddings of your activity data using your " +
+			"local model server. Embeddings are numerical representations " +
+			"of text used for similarity search.",
+		destination:
+			"Embeddings are generated locally and stored in memory only " +
+			"(not persisted to disk). No embedding data is sent externally.",
+	},
 };
 
 // ── Utilities ────────────────────────────────────────────

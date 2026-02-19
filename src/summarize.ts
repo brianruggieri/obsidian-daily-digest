@@ -1,6 +1,8 @@
 import { requestUrl } from "obsidian";
 import { CATEGORY_LABELS, scrubSecrets } from "./categorize";
-import { AISummary, CategorizedVisits, SearchQuery, ShellCommand, ClaudeSession } from "./types";
+import { chunkActivityData, estimateTokens } from "./chunker";
+import { retrieveRelevantChunks } from "./embeddings";
+import { AISummary, CategorizedVisits, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession } from "./types";
 import { AIProvider } from "./settings";
 
 // ── Anthropic caller ────────────────────────────────────
@@ -47,33 +49,53 @@ async function callLocal(
 ): Promise<string> {
 	const baseUrl = endpoint.replace(/\/+$/, "");
 	const url = `${baseUrl}/v1/chat/completions`;
+	const isLocalhost =
+		baseUrl.includes("localhost") ||
+		baseUrl.includes("127.0.0.1") ||
+		baseUrl.includes("0.0.0.0");
+
+	const payload = JSON.stringify({
+		model,
+		max_tokens: maxTokens,
+		temperature: 0.3,
+		messages: [
+			{
+				role: "system",
+				content:
+					"You are a concise summarization assistant. " +
+					"Return only valid JSON with no markdown fences or preamble.",
+			},
+			{ role: "user", content: prompt },
+		],
+	});
 
 	try {
-		const response = await requestUrl({
-			url,
-			method: "POST",
-			contentType: "application/json",
-			body: JSON.stringify({
-				model,
-				max_tokens: maxTokens,
-				temperature: 0.3,
-				messages: [
-					{
-						role: "system",
-						content:
-							"You are a concise summarization assistant. " +
-							"Return only valid JSON with no markdown fences or preamble.",
-					},
-					{ role: "user", content: prompt },
-				],
-			}),
-		});
-
-		if (response.status === 200) {
-			const data = response.json;
+		// Use native fetch for localhost to avoid Obsidian requestUrl CORS issues
+		if (isLocalhost) {
+			const resp = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				body: payload,
+			});
+			if (!resp.ok) return `[AI summary unavailable: HTTP ${resp.status}]`;
+			const data = await resp.json();
 			return data.choices[0].message.content.trim();
+		} else {
+			const response = await requestUrl({
+				url,
+				method: "POST",
+				contentType: "application/json",
+				body: payload,
+			});
+			if (response.status === 200) {
+				const data = response.json;
+				return data.choices[0].message.content.trim();
+			}
+			return `[AI summary unavailable: HTTP ${response.status}]`;
 		}
-		return `[AI summary unavailable: HTTP ${response.status}]`;
 	} catch (e) {
 		return `[AI summary unavailable: ${e}]`;
 	}
@@ -171,6 +193,53 @@ Only include category_summaries for categories that actually had activity.
 Do not include categories with zero visits.`;
 }
 
+// ── RAG-aware prompt builder ────────────────────────────
+
+function buildRAGPrompt(
+	date: Date,
+	retrievedChunks: EmbeddedChunk[],
+	profile: string
+): string {
+	const dateStr = date.toLocaleDateString("en-US", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
+
+	const chunkTexts = retrievedChunks
+		.map(
+			(c, i) =>
+				`--- Activity Block ${i + 1} (${c.type}${c.category ? `: ${c.category}` : ""}) ---\n${c.text}`
+		)
+		.join("\n\n");
+
+	return `You are summarizing a person's digital activity for ${dateStr}.
+Your job is to distill activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
+
+The following activity blocks were selected as the most relevant from today's data:
+
+${chunkTexts}
+
+Return ONLY a JSON object with these exact keys — no markdown, no preamble:
+{
+  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
+  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
+  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "category_summaries": {
+    "<category_name>": "1-sentence plain-English summary of what they did in this category"
+  },
+  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
+  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
+}
+
+Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
+Only include category_summaries for categories represented in the activity blocks above.`;
+}
+
+// ── Main summarization entry point ──────────────────────
+
 export async function summarizeDay(
 	date: Date,
 	categorized: CategorizedVisits,
@@ -178,9 +247,56 @@ export async function summarizeDay(
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	config: AICallConfig,
-	profile: string
+	profile: string,
+	ragConfig?: RAGConfig
 ): Promise<AISummary> {
-	const prompt = buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile);
+	let prompt: string;
+
+	if (ragConfig?.enabled) {
+		const chunks = chunkActivityData(
+			date, categorized, searches, shellCmds, claudeSessions
+		);
+		const totalTokens = chunks.reduce(
+			(sum, c) => sum + estimateTokens(c.text), 0
+		);
+
+		if (chunks.length > 2 && totalTokens > 500) {
+			try {
+				const retrieved = await retrieveRelevantChunks(
+					chunks,
+					ragConfig.embeddingEndpoint,
+					ragConfig.embeddingModel,
+					ragConfig.topK
+				);
+				prompt = buildRAGPrompt(date, retrieved, profile);
+				console.debug(
+					`Daily Digest RAG: Using RAG prompt (${retrieved.length} chunks, ` +
+					`~${estimateTokens(prompt)} tokens)`
+				);
+			} catch (e) {
+				console.warn(
+					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
+					e
+				);
+				prompt = buildPrompt(
+					date, categorized, searches, shellCmds, claudeSessions, profile
+				);
+			}
+		} else {
+			console.debug(
+				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
+				`${totalTokens} tokens — too small)`
+			);
+			prompt = buildPrompt(
+				date, categorized, searches, shellCmds, claudeSessions, profile
+			);
+		}
+	} else {
+		prompt = buildPrompt(
+			date, categorized, searches, shellCmds, claudeSessions, profile
+		);
+	}
+
 	const raw = await callAI(prompt, config, 1000);
 
 	// Strip markdown fences if the model wrapped it
