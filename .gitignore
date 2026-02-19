@@ -1,5 +1,21 @@
+# Dependencies
 node_modules/
+
+# Build output
 main.js
 *.js.map
+
+# Obsidian plugin data
 data.json
+
+# OS
 .DS_Store
+
+# Claude / AI tooling
+.claude-flow/
+.claude/
+
+# Editor
+*.swp
+*.swo
+*~
