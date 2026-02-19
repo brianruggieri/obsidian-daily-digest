@@ -41,7 +41,7 @@ The result is a note that looks like this:
 
 ### Supported browsers
 
-Chrome, Brave, Edge, Firefox, and Safari on macOS.
+Chrome, Brave, Edge, and Firefox on macOS, Windows, and Linux. Safari on macOS only.
 
 ### AI providers
 
@@ -358,7 +358,17 @@ src/
 
 ## Platform support
 
-Daily Digest is **macOS only** (desktop). It reads browser SQLite databases and shell history files using macOS-specific paths. Linux support is possible but not yet implemented. Windows support would require different browser database paths.
+Daily Digest is **desktop only** (`isDesktopOnly: true`) — it requires filesystem access not available on mobile.
+
+| Feature | macOS | Windows | Linux |
+|---|---|---|---|
+| Browser history (Chrome, Brave, Edge) | ✓ | ✓ | ✓ |
+| Browser history (Firefox) | ✓ | ✓ | ✓ |
+| Browser history (Safari) | ✓ | — | — |
+| Shell history | ✓ (zsh/bash) | — | ✓ (bash) |
+| Claude Code sessions | ✓ | ✓ | ✓ |
+
+Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly) — no native binaries, no system dependencies. The wasm binary (~1.2 MB) is bundled inline.
 
 ---
 
@@ -392,8 +402,7 @@ Features already shipped are in the current release. The following are planned b
 These stubs exist in the codebase and return gracefully (no-op / empty array). They are intentionally excluded from the current feature set.
 
 **Platform expansion**
-- Linux browser path support
-- Windows browser path support (requires replacing the macOS `sqlite3` CLI dependency)
+- Windows/Linux shell history support
 
 ---
 
