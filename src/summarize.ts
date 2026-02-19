@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
 import { CATEGORY_LABELS, scrubSecrets } from "./categorize";
-import { AISummary, CategorizedVisits, SearchQuery, ShellCommand, ClaudeSession } from "./types";
+import { AISummary, CategorizedVisits, SearchQuery, ShellCommand, ClaudeSession, slugifyQuestion } from "./types";
 
 export async function callClaude(
 	prompt: string,
@@ -110,7 +110,23 @@ Do not include categories with zero visits.`;
 		.trim();
 
 	try {
-		return JSON.parse(cleaned) as AISummary;
+		const summary = JSON.parse(cleaned) as AISummary;
+		// Derive structured prompts with stable IDs from plain question strings
+		if (summary.questions?.length) {
+			const seen = new Set<string>();
+			summary.prompts = summary.questions.map((q) => {
+				let id = slugifyQuestion(q);
+				// Deduplicate IDs by appending a suffix
+				const base = id;
+				let n = 2;
+				while (seen.has(id)) {
+					id = `${base}_${n++}`;
+				}
+				seen.add(id);
+				return { id, question: q };
+			});
+		}
+		return summary;
 	} catch {
 		return {
 			headline: "Activity summary unavailable",
