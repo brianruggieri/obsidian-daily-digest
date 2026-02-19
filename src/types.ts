@@ -69,26 +69,31 @@ export interface BrowserConfig {
 	type: "chromium" | "firefox" | "safari";
 }
 
-export const BROWSER_PATHS: Record<string, BrowserConfig> = {
+// Browser history paths by OS. The `history` field is only used for Chromium browsers;
+// Firefox and Safari resolve their paths at runtime via OS detection.
+export const BROWSER_PATHS: Record<string, Record<string, BrowserConfig>> = {
 	chrome: {
-		history: "~/Library/Application Support/Google/Chrome/Default/History",
-		type: "chromium",
+		darwin: { history: "~/Library/Application Support/Google/Chrome/Default/History", type: "chromium" },
+		win32:  { history: "%LOCALAPPDATA%/Google/Chrome/User Data/Default/History", type: "chromium" },
+		linux:  { history: "~/.config/google-chrome/Default/History", type: "chromium" },
 	},
 	brave: {
-		history: "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History",
-		type: "chromium",
+		darwin: { history: "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History", type: "chromium" },
+		win32:  { history: "%LOCALAPPDATA%/BraveSoftware/Brave-Browser/User Data/Default/History", type: "chromium" },
+		linux:  { history: "~/.config/BraveSoftware/Brave-Browser/Default/History", type: "chromium" },
 	},
 	edge: {
-		history: "~/Library/Application Support/Microsoft Edge/Default/History",
-		type: "chromium",
+		darwin: { history: "~/Library/Application Support/Microsoft Edge/Default/History", type: "chromium" },
+		win32:  { history: "%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/History", type: "chromium" },
+		linux:  { history: "~/.config/microsoft-edge/Default/History", type: "chromium" },
 	},
 	firefox: {
-		history: "~/Library/Application Support/Firefox/Profiles",
-		type: "firefox",
+		darwin: { history: "", type: "firefox" },
+		win32:  { history: "", type: "firefox" },
+		linux:  { history: "", type: "firefox" },
 	},
 	safari: {
-		history: "~/Library/Safari/History.db",
-		type: "safari",
+		darwin: { history: "~/Library/Safari/History.db", type: "safari" },
 	},
 };
 
