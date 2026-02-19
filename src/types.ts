@@ -25,6 +25,21 @@ export interface ClaudeSession {
 
 export type CategorizedVisits = Record<string, BrowserVisit[]>;
 
+export interface ReflectionPrompt {
+	id: string;
+	question: string;
+}
+
+/** Turn a question string into a stable, Dataview-friendly field name. */
+export function slugifyQuestion(question: string): string {
+	return question
+		.toLowerCase()
+		.replace(/['']/g, "")             // remove apostrophes
+		.replace(/[^a-z0-9]+/g, "_")      // non-alphanumeric → underscore
+		.replace(/^_+|_+$/g, "")          // trim leading/trailing underscores
+		.slice(0, 60);                     // keep it reasonable
+}
+
 export interface AISummary {
 	headline: string;
 	tldr: string;
@@ -32,6 +47,8 @@ export interface AISummary {
 	category_summaries: Record<string, string>;
 	notable: string[];
 	questions: string[];
+	/** Structured prompts with stable IDs for inline-field rendering */
+	prompts?: ReflectionPrompt[];
 }
 
 export interface CollectedData {
