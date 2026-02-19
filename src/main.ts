@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
-import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS } from "./settings";
+import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./collectors";
 import { categorizeVisits } from "./categorize";
 import { summarizeDay, AICallConfig } from "./summarize";
@@ -69,8 +69,14 @@ export default class DailyDigestPlugin extends Plugin {
 	settings: DailyDigestSettings;
 	statusBarItem: HTMLElement;
 
+	/** Whether the running Obsidian version supports app.secretStorage. */
+	get hasSecretStorage(): boolean {
+		return "secretStorage" in this.app && this.app.secretStorage != null;
+	}
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		await this.migrateApiKeyToSecretStorage();
 
 		// Ribbon icon
 		this.addRibbonIcon("calendar-clock", "Daily Digest: Generate daily note", () => {
@@ -132,6 +138,42 @@ export default class DailyDigestPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+	/**
+	 * Resolve the Anthropic API key from the best available source:
+	 *   1. Obsidian SecretStorage (>=1.11.4) — not synced, not in data.json
+	 *   2. Legacy data.json field — for older Obsidian versions
+	 *   3. ANTHROPIC_API_KEY environment variable
+	 */
+	getAnthropicApiKey(): string {
+		if (this.hasSecretStorage) {
+			const stored = this.app.secretStorage.getSecret(SECRET_ID);
+			if (stored) return stored;
+		}
+		return this.settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY || "";
+	}
+
+	/**
+	 * One-time migration: if SecretStorage is available and data.json still
+	 * contains an API key, move it to SecretStorage and clear the data.json
+	 * field. This ensures the key is no longer synced/committed.
+	 */
+	private async migrateApiKeyToSecretStorage(): Promise<void> {
+		if (!this.hasSecretStorage) return;
+		const legacyKey = this.settings.anthropicApiKey;
+		if (!legacyKey) return;
+
+		// Write to SecretStorage
+		this.app.secretStorage.setSecret(SECRET_ID, legacyKey);
+
+		// Clear from data.json
+		this.settings.anthropicApiKey = "";
+		await this.saveSettings();
+
+		console.debug(
+			"Daily Digest: Migrated Anthropic API key from data.json to SecretStorage."
+		);
+	}
+
 	private generateToday(skipAI = false): void {
 		const now = new Date();
 		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -155,7 +197,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 		const since = new Date(targetDate.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
 		const provider = this.settings.aiProvider;
-		const apiKey = this.settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY || "";
+		const apiKey = this.getAnthropicApiKey();
 
 		// Determine if AI is usable
 		let useAI = this.settings.enableAI && !skipAI;
