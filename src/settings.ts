@@ -2,6 +2,8 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
 
+export type AIProvider = "none" | "local" | "anthropic";
+
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
@@ -15,6 +17,9 @@ export interface DailyDigestSettings {
 	aiModel: string;
 	profile: string;
 	enableAI: boolean;
+	aiProvider: AIProvider;
+	localEndpoint: string;
+	localModel: string;
 	enableBrowser: boolean;
 	enableShell: boolean;
 	enableClaude: boolean;
@@ -36,6 +41,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	aiModel: "claude-haiku-4-5",
 	profile: "",
 	enableAI: false,
+	aiProvider: "local",
+	localEndpoint: "http://localhost:11434",
+	localModel: "",
 	enableBrowser: false,
 	enableShell: false,
 	enableClaude: false,
@@ -140,19 +148,27 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		const transmitCallout = containerEl.createDiv({
-			cls: "dd-settings-callout dd-settings-callout-warn",
+			cls: "dd-settings-callout " +
+				(this.plugin.settings.enableAI && this.plugin.settings.aiProvider === "anthropic"
+					? "dd-settings-callout-warn" : ""),
 		});
-		if (this.plugin.settings.enableAI) {
-			transmitCallout.createEl("p", {
-				text:
-					"AI Summarization is ON. When you generate a note, collected data " +
-					"will be sent to Anthropic's API (api.anthropic.com) for processing.",
-			});
-		} else {
+		if (!this.plugin.settings.enableAI) {
 			transmitCallout.createEl("p", {
 				text:
 					"AI Summarization is OFF. All data stays on your computer. " +
 					"No data is transmitted externally.",
+			});
+		} else if (this.plugin.settings.aiProvider === "local") {
+			transmitCallout.createEl("p", {
+				text:
+					"AI Summarization is ON (local model). All data stays on your " +
+					"computer. No data is transmitted externally.",
+			});
+		} else {
+			transmitCallout.createEl("p", {
+				text:
+					"AI Summarization is ON (Anthropic API). When you generate a note, " +
+					"collected data will be sent to api.anthropic.com for processing.",
 			});
 		}
 
@@ -297,8 +313,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Enable AI summaries")
 			.setDesc(
-				PRIVACY_DESCRIPTIONS.ai.access + " " +
-				PRIVACY_DESCRIPTIONS.ai.destination
+				"Use an AI model to generate daily summaries, themes, and reflections. " +
+				"Choose a local model to keep all data on your machine, or Anthropic's " +
+				"API for cloud-based summarization."
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -310,48 +327,120 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Anthropic API key")
-			.setDesc(
-				"Your Anthropic API key. Stored in this plugin's data.json file " +
-				"within your vault. If your vault is synced, this key may be " +
-				"uploaded to your sync provider. Alternative: set the " +
-				"ANTHROPIC_API_KEY environment variable instead and leave this blank."
-			)
-			.addText((text) => {
-				text.inputEl.type = "password";
-				text.setPlaceholder("sk-ant-...")
-					.setValue(this.plugin.settings.anthropicApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.anthropicApiKey = value;
-						await this.plugin.saveSettings();
+		if (this.plugin.settings.enableAI) {
+			new Setting(containerEl)
+				.setName("AI provider")
+				.setDesc(
+					"Local: runs on your machine via Ollama, LM Studio, or any OpenAI-compatible " +
+					"server. No data leaves your computer. " +
+					"Anthropic: sends data to api.anthropic.com for processing."
+				)
+				.addDropdown((dropdown) =>
+					dropdown
+						.addOption("local", "Local model (private)")
+						.addOption("anthropic", "Anthropic API (cloud)")
+						.setValue(this.plugin.settings.aiProvider)
+						.onChange(async (value) => {
+							this.plugin.settings.aiProvider = value as AIProvider;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			if (this.plugin.settings.aiProvider === "local") {
+				// ── Local model settings ─────────────
+				new Setting(containerEl)
+					.setName("Local server endpoint")
+					.setDesc(
+						"URL of your local inference server. Ollama defaults to " +
+						"http://localhost:11434, LM Studio to http://localhost:1234. " +
+						"Must expose an OpenAI-compatible /v1/chat/completions endpoint."
+					)
+					.addText((text) =>
+						text
+							.setPlaceholder("http://localhost:11434")
+							.setValue(this.plugin.settings.localEndpoint)
+							.onChange(async (value) => {
+								this.plugin.settings.localEndpoint = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				new Setting(containerEl)
+					.setName("Local model")
+					.setDesc(
+						"Model name to use (e.g. llama3.2, mistral, phi3). " +
+						"Click Detect to query your server for available models."
+					)
+					.addText((text) =>
+						text
+							.setPlaceholder("llama3.2")
+							.setValue(this.plugin.settings.localModel)
+							.onChange(async (value) => {
+								this.plugin.settings.localModel = value;
+								await this.plugin.saveSettings();
+							})
+					)
+					.addButton((btn) =>
+						btn.setButtonText("Detect").onClick(async () => {
+							await this.detectLocalModels(containerEl);
+						})
+					);
+
+				const localCallout = containerEl.createDiv({
+					cls: "dd-settings-callout",
+				});
+				localCallout.createEl("p", {
+					text:
+						"All data stays on your machine. The local server receives your " +
+						"activity data over localhost only. No internet connection is used.",
+				});
+			} else {
+				// ── Anthropic settings ───────────────
+				new Setting(containerEl)
+					.setName("Anthropic API key")
+					.setDesc(
+						"Your Anthropic API key. Stored in this plugin's data.json file " +
+						"within your vault. If your vault is synced, this key may be " +
+						"uploaded to your sync provider. Alternative: set the " +
+						"ANTHROPIC_API_KEY environment variable instead and leave this blank."
+					)
+					.addText((text) => {
+						text.inputEl.type = "password";
+						text.setPlaceholder("sk-ant-...")
+							.setValue(this.plugin.settings.anthropicApiKey)
+							.onChange(async (value) => {
+								this.plugin.settings.anthropicApiKey = value;
+								await this.plugin.saveSettings();
+							});
 					});
-			});
 
-		const apiKeyNote = containerEl.createDiv({
-			cls: "dd-settings-callout dd-settings-callout-info",
-		});
-		apiKeyNote.createEl("p", {
-			text:
-				"Security note: API keys in data.json are readable by any Obsidian " +
-				"plugin and may be synced with your vault. For better security, use " +
-				"the ANTHROPIC_API_KEY environment variable and leave the field above blank.",
-		});
+				const apiKeyNote = containerEl.createDiv({
+					cls: "dd-settings-callout dd-settings-callout-info",
+				});
+				apiKeyNote.createEl("p", {
+					text:
+						"Security note: API keys in data.json are readable by any Obsidian " +
+						"plugin and may be synced with your vault. For better security, use " +
+						"the ANTHROPIC_API_KEY environment variable and leave the field above blank.",
+				});
 
-		new Setting(containerEl)
-			.setName("AI model")
-			.setDesc("Anthropic model for summarization")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("claude-haiku-4-5", "Claude Haiku 4.5 (fast, cheap)")
-					.addOption("claude-sonnet-4-5-20250929", "Claude Sonnet 4.5")
-					.addOption("claude-opus-4-6", "Claude Opus 4.6")
-					.setValue(this.plugin.settings.aiModel)
-					.onChange(async (value) => {
-						this.plugin.settings.aiModel = value;
-						await this.plugin.saveSettings();
-					})
-			);
+				new Setting(containerEl)
+					.setName("AI model")
+					.setDesc("Anthropic model for summarization")
+					.addDropdown((dropdown) =>
+						dropdown
+							.addOption("claude-haiku-4-5", "Claude Haiku 4.5 (fast, cheap)")
+							.addOption("claude-sonnet-4-5-20250929", "Claude Sonnet 4.5")
+							.addOption("claude-opus-4-6", "Claude Opus 4.6")
+							.setValue(this.plugin.settings.aiModel)
+							.onChange(async (value) => {
+								this.plugin.settings.aiModel = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
+		}
 
 		// ── Advanced ─────────────────────────────────
 		new Setting(containerEl).setName("Advanced").setHeading();
@@ -367,5 +456,65 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					new Notice("Onboarding will be shown again when Obsidian restarts.");
 				})
 			);
+	}
+
+	private async detectLocalModels(containerEl: HTMLElement): Promise<void> {
+		const endpoint = this.plugin.settings.localEndpoint.replace(/\/+$/, "");
+		const notice = new Notice("Detecting local models\u2026", 0);
+
+		try {
+			// Try Ollama-native endpoint first
+			let models: string[] = [];
+			try {
+				const { requestUrl } = await import("obsidian");
+				const resp = await requestUrl({
+					url: `${endpoint}/api/tags`,
+					method: "GET",
+				});
+				if (resp.status === 200 && resp.json?.models) {
+					models = resp.json.models.map(
+						(m: { name: string }) => m.name
+					);
+				}
+			} catch {
+				// Fall back to OpenAI-compatible /v1/models
+				try {
+					const { requestUrl } = await import("obsidian");
+					const resp = await requestUrl({
+						url: `${endpoint}/v1/models`,
+						method: "GET",
+					});
+					if (resp.status === 200 && resp.json?.data) {
+						models = resp.json.data.map(
+							(m: { id: string }) => m.id
+						);
+					}
+				} catch {
+					// Both failed
+				}
+			}
+
+			notice.hide();
+
+			if (models.length === 0) {
+				new Notice(
+					`No models found at ${endpoint}. Is your local server running?`,
+					8000
+				);
+				return;
+			}
+
+			// Auto-select first model if none set
+			if (!this.plugin.settings.localModel && models.length > 0) {
+				this.plugin.settings.localModel = models[0];
+				await this.plugin.saveSettings();
+			}
+
+			new Notice(`Found ${models.length} model(s): ${models.slice(0, 5).join(", ")}`, 6000);
+			this.display();
+		} catch (e) {
+			notice.hide();
+			new Notice(`Failed to detect models: ${e}`, 8000);
+		}
 	}
 }
