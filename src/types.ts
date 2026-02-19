@@ -55,15 +55,6 @@ export interface AISummary {
 	prompts?: ReflectionPrompt[];
 }
 
-export interface CollectedData {
-	visits: BrowserVisit[];
-	searches: SearchQuery[];
-	shellCommands: ShellCommand[];
-	claudeSessions: ClaudeSession[];
-	categorized: CategorizedVisits;
-	aiSummary: AISummary | null;
-}
-
 // ── Browser Profile Types ────────────────────────────────
 
 /**

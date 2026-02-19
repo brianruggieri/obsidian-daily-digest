@@ -177,7 +177,7 @@ describe("sanitizeUrl", () => {
 
 describe("redactPaths", () => {
 	it("redacts /Users/name paths", () => {
-		expect(redactPaths("/Users/brianruggieri/project/src/main.ts"))
+		expect(redactPaths("/Users/testuser/project/src/main.ts"))
 			.toBe("~/project/src/main.ts");
 	});
 

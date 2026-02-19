@@ -6,7 +6,7 @@ import initSqlJs from "sql.js";
 // @ts-ignore — wasm loaded as binary by esbuild
 import sqlWasm from "sql.js/dist/sql-wasm.wasm";
 import { DailyDigestSettings } from "./settings";
-import { scrubSecrets } from "./categorize";
+import { scrubSecrets } from "./sanitize";
 import {
 	BrowserVisit,
 	SearchQuery,

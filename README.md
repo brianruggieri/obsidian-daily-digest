@@ -317,7 +317,7 @@ npm run deploy       # Build and copy to your local Obsidian vault
 
 ### Testing
 
-The test suite includes 285+ test cases:
+The test suite includes 350+ test cases:
 
 - **Unit tests** — sanitization, categorization, classification, pattern extraction, knowledge generation, rendering, summarization, merge safety
 - **Integration tests** — full pipeline runs with 6 realistic personas, privacy escalation chain verification, multi-day topic recurrence
@@ -342,6 +342,7 @@ src/
   sanitize.ts       Defense-in-depth secret scrubbing
   sensitivity.ts    419-domain sensitivity filter
   categorize.ts     Rule-based domain categorization
+  browser-profiles.ts  Multi-browser, multi-profile detection
   classify.ts       Local LLM event classification
   patterns.ts       Statistical pattern extraction
   knowledge.ts      Knowledge section generation

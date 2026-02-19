@@ -220,7 +220,7 @@ export async function retrieveRelevantChunks(
 
 	// 2. Generate search queries from the data
 	const queries = autoGenerateQueries(chunks);
-	console.debug(`Daily Digest RAG: Generated ${queries.length} queries:`, queries);
+	console.debug(`Daily Digest RAG: Generated ${queries.length} queries`);
 
 	// 3. Embed the queries
 	const queryEmbeddings = await generateEmbeddings(queries, endpoint, model);
@@ -250,24 +250,4 @@ export async function retrieveRelevantChunks(
 	return final;
 }
 
-// ── Phase 3 stubs: cross-day retrieval ──────────────────
-
-export async function persistDayIndex(
-	_date: string,
-	_chunks: EmbeddedChunk[],
-	_model: string
-): Promise<void> {
-	// TODO Phase 3: Write to .daily-digest/embeddings/YYYY-MM-DD.json
-	console.debug("Daily Digest: persistDayIndex is a Phase 3 feature");
-}
-
-export async function queryAcrossDays(
-	_query: string,
-	_dateRange: { start: string; end: string },
-	_endpoint: string,
-	_model: string
-): Promise<EmbeddedChunk[]> {
-	// TODO Phase 3: Load indices for date range, search across all
-	console.debug("Daily Digest: queryAcrossDays is a Phase 3 feature");
-	return [];
-}
+// Phase 3 stubs (persistDayIndex, queryAcrossDays) removed — see roadmap in README.

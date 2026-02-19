@@ -4,6 +4,9 @@ node_modules/
 # Build output
 main.js
 *.js.map
+dist/
+coverage/
+*.tgz
 
 # Obsidian plugin data
 data.json
@@ -15,6 +18,7 @@ data.json
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Claude / AI tooling
 .claude-flow/

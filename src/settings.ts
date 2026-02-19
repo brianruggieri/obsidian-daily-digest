@@ -131,7 +131,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Filename template")
-			.setDesc("Date format for filenames (uses Moment.js format, e.g. YYYY-MM-DD)")
+			.setDesc("Date format for filenames (supports YYYY, MM, DD tokens, e.g. YYYY-MM-DD)")
 			.addText((text) =>
 				text
 					.setPlaceholder("YYYY-MM-DD")
