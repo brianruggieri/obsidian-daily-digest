@@ -88,3 +88,33 @@ export const EXCLUDE_DOMAINS = new Set([
 	"localhost",
 	"127.0.0.1",
 ]);
+
+// ── RAG Types ───────────────────────────────────────────
+
+export interface ActivityChunk {
+	id: string;
+	date: string;
+	type: "browser" | "search" | "shell" | "claude";
+	category?: string;
+	text: string;
+	metadata: {
+		itemCount: number;
+		domains?: string[];
+		projects?: string[];
+		timeRange?: { start: string; end: string };
+	};
+	embedding?: number[];
+}
+
+export interface EmbeddedChunk extends ActivityChunk {
+	embedding: number[];
+}
+
+export interface RAGConfig {
+	enabled: boolean;
+	embeddingEndpoint: string;
+	embeddingModel: string;
+	topK: number;
+	minChunkTokens: number;
+	maxChunkTokens: number;
+}
