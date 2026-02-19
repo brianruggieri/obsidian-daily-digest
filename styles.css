@@ -99,3 +99,42 @@
 .dd-settings-callout-info {
 	border-left-color: var(--text-muted);
 }
+
+/* ── Local Model Setup Guide ────────────── */
+
+.dd-setup-guide {
+	margin: 16px 0;
+}
+
+.dd-setup-guide-content {
+	padding: 0 0 0 8px;
+	margin-top: 8px;
+}
+
+.dd-setup-guide-content h4 {
+	margin: 16px 0 8px 0;
+	font-size: 0.95em;
+	color: var(--text-normal);
+}
+
+.dd-setup-guide-content h4:first-child {
+	margin-top: 8px;
+}
+
+.dd-setup-guide-content ol {
+	padding-left: 20px;
+	margin: 8px 0;
+}
+
+.dd-setup-guide-content li {
+	margin-bottom: 6px;
+	font-size: 0.9em;
+	line-height: 1.5;
+}
+
+.dd-setup-guide-content code {
+	background: var(--background-secondary);
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 0.85em;
+}
