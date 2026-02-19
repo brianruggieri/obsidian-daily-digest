@@ -46,16 +46,15 @@ export const PRIVACY_DESCRIPTIONS = {
 	ai: {
 		label: "AI Summarization",
 		access:
-			"Sends collected activity data to Anthropic's API to generate " +
-			"summaries, themes, and reflections. This is the only feature " +
-			"that transmits data outside your computer.",
+			"Uses an AI model to generate summaries, themes, and reflections " +
+			"from your collected activity data.",
 		destination:
-			"Data is sent to api.anthropic.com via HTTPS. Anthropic's API " +
-			"data retention policies apply. See: " +
-			"https://www.anthropic.com/policies/privacy",
+			"Local model: all data stays on your machine. " +
+			"Anthropic API: data is sent to api.anthropic.com via HTTPS.",
 		warning:
-			"When enabled, your browser history, search queries, shell commands, " +
-			"and Claude prompts are sent to Anthropic's servers for processing.",
+			"If using Anthropic API, your browser history, search queries, shell " +
+			"commands, and Claude prompts are sent to Anthropic's servers for " +
+			"processing. Using a local model keeps everything on your machine.",
 	},
 };
 
@@ -159,8 +158,16 @@ export class OnboardingModal extends Modal {
 					})
 			);
 
-		// ── External Data Transmission ──────────────
-		contentEl.createEl("h3", { text: "External Data Transmission" });
+		// ── AI Summarization ────────────────────────
+		contentEl.createEl("h3", { text: "AI Summarization" });
+
+		const aiInfo = contentEl.createDiv({ cls: "dd-privacy-callout" });
+		aiInfo.createEl("p", {
+			text:
+				"AI summarization can run locally (via Ollama, LM Studio, or any " +
+				"OpenAI-compatible server) or via Anthropic's cloud API. Using a " +
+				"local model keeps all data on your machine.",
+		});
 
 		const aiWarning = contentEl.createDiv({ cls: "dd-ai-warning-callout" });
 		aiWarning.createEl("p", {
@@ -169,7 +176,10 @@ export class OnboardingModal extends Modal {
 
 		new Setting(contentEl)
 			.setName(PRIVACY_DESCRIPTIONS.ai.label)
-			.setDesc(PRIVACY_DESCRIPTIONS.ai.access)
+			.setDesc(
+				"Enable to generate headlines, themes, and reflections from your " +
+				"activity data. You can choose the provider (local or cloud) in Settings."
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.localToggles.enableAI)

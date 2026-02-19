@@ -2,7 +2,7 @@ import { Notice, Plugin, TFile, TFolder, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./collectors";
 import { categorizeVisits } from "./categorize";
-import { summarizeDay } from "./summarize";
+import { summarizeDay, AICallConfig } from "./summarize";
 import { renderMarkdown } from "./renderer";
 import {
 	OnboardingModal,
@@ -147,12 +147,27 @@ export default class DailyDigestPlugin extends Plugin {
 		}
 
 		const since = new Date(targetDate.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
+		const provider = this.settings.aiProvider;
 		const apiKey = this.settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY || "";
-		let useAI = this.settings.enableAI && !skipAI && !!apiKey;
 
-		if (this.settings.enableAI && !skipAI && !apiKey) {
-			new Notice("No Anthropic API key configured. Running without AI summaries. Set it in Daily Digest settings.", 8000);
+		// Determine if AI is usable
+		let useAI = this.settings.enableAI && !skipAI;
+		if (useAI && provider === "anthropic" && !apiKey) {
+			new Notice("No Anthropic API key configured. Running without AI summaries.", 8000);
+			useAI = false;
 		}
+		if (useAI && provider === "local" && !this.settings.localModel) {
+			new Notice("No local model configured. Set a model name in Daily Digest settings.", 8000);
+			useAI = false;
+		}
+
+		const aiConfig: AICallConfig = {
+			provider,
+			anthropicApiKey: apiKey,
+			anthropicModel: this.settings.aiModel,
+			localEndpoint: this.settings.localEndpoint,
+			localModel: this.settings.localModel,
+		};
 
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
@@ -172,45 +187,51 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
-			// ── AI Summary (with user confirmation) ─
+			// ── AI Summary ───────────────────────
 			let aiSummary = null;
 			if (useAI) {
-				progressNotice.hide();
+				if (provider === "anthropic") {
+					// Cloud provider: show data preview for explicit consent
+					progressNotice.hide();
 
-				const result = await new DataPreviewModal(this.app, {
-					visitCount: visits.length,
-					searchCount: searches.length,
-					shellCount: shellCmds.length,
-					claudeCount: claudeSessions.length,
-				}).openAndWait();
+					const result = await new DataPreviewModal(this.app, {
+						visitCount: visits.length,
+						searchCount: searches.length,
+						shellCount: shellCmds.length,
+						claudeCount: claudeSessions.length,
+					}).openAndWait();
 
-				if (result === "cancel") {
-					this.statusBarItem.setText("Daily Digest ready");
-					new Notice("Daily Digest: Generation cancelled.");
-					return;
-				}
+					if (result === "cancel") {
+						this.statusBarItem.setText("Daily Digest ready");
+						new Notice("Daily Digest: Generation cancelled.");
+						return;
+					}
 
-				if (result === "proceed-with-ai") {
-					const aiNotice = new Notice("Daily Digest: Generating AI summary\u2026", 0);
-					aiSummary = await summarizeDay(
-						targetDate,
-						categorized,
-						searches,
-						shellCmds,
-						claudeSessions,
-						apiKey,
-						this.settings.aiModel,
-						this.settings.profile
-					);
-					aiNotice.hide();
+					if (result === "proceed-with-ai") {
+						const aiNotice = new Notice("Daily Digest: Generating AI summary (Anthropic)\u2026", 0);
+						aiSummary = await summarizeDay(
+							targetDate, categorized, searches, shellCmds,
+							claudeSessions, aiConfig, this.settings.profile
+						);
+						aiNotice.hide();
+					} else {
+						useAI = false;
+					}
 				} else {
-					// proceed-without-ai
-					useAI = false;
+					// Local provider: no consent needed, data stays on machine
+					progressNotice.setMessage("Daily Digest: Generating AI summary (local)\u2026");
+					aiSummary = await summarizeDay(
+						targetDate, categorized, searches, shellCmds,
+						claudeSessions, aiConfig, this.settings.profile
+					);
 				}
 			}
 
+			progressNotice.hide();
+
 			// ── Render ───────────────────────────
 			const renderNotice = new Notice("Daily Digest: Rendering markdown\u2026", 0);
+			const aiProviderUsed = useAI && aiSummary !== null ? provider : "none";
 			const md = renderMarkdown(
 				targetDate,
 				visits,
@@ -219,7 +240,7 @@ export default class DailyDigestPlugin extends Plugin {
 				claudeSessions,
 				categorized,
 				aiSummary,
-				useAI && aiSummary !== null
+				aiProviderUsed
 			);
 
 			// ── Write to vault ───────────────────

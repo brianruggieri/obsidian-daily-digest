@@ -1,8 +1,11 @@
 import { requestUrl } from "obsidian";
 import { CATEGORY_LABELS, scrubSecrets } from "./categorize";
 import { AISummary, CategorizedVisits, SearchQuery, ShellCommand, ClaudeSession } from "./types";
+import { AIProvider } from "./settings";
 
-export async function callClaude(
+// ── Anthropic caller ────────────────────────────────────
+
+async function callAnthropic(
 	prompt: string,
 	apiKey: string,
 	model: string,
@@ -34,16 +37,82 @@ export async function callClaude(
 	}
 }
 
-export async function summarizeDay(
+// ── Local model caller (OpenAI-compatible) ──────────────
+
+async function callLocal(
+	prompt: string,
+	endpoint: string,
+	model: string,
+	maxTokens = 800
+): Promise<string> {
+	const baseUrl = endpoint.replace(/\/+$/, "");
+	const url = `${baseUrl}/v1/chat/completions`;
+
+	try {
+		const response = await requestUrl({
+			url,
+			method: "POST",
+			contentType: "application/json",
+			body: JSON.stringify({
+				model,
+				max_tokens: maxTokens,
+				temperature: 0.3,
+				messages: [
+					{
+						role: "system",
+						content:
+							"You are a concise summarization assistant. " +
+							"Return only valid JSON with no markdown fences or preamble.",
+					},
+					{ role: "user", content: prompt },
+				],
+			}),
+		});
+
+		if (response.status === 200) {
+			const data = response.json;
+			return data.choices[0].message.content.trim();
+		}
+		return `[AI summary unavailable: HTTP ${response.status}]`;
+	} catch (e) {
+		return `[AI summary unavailable: ${e}]`;
+	}
+}
+
+// ── Provider router ─────────────────────────────────────
+
+export interface AICallConfig {
+	provider: AIProvider;
+	anthropicApiKey: string;
+	anthropicModel: string;
+	localEndpoint: string;
+	localModel: string;
+}
+
+async function callAI(
+	prompt: string,
+	config: AICallConfig,
+	maxTokens = 800
+): Promise<string> {
+	if (config.provider === "anthropic") {
+		return callAnthropic(prompt, config.anthropicApiKey, config.anthropicModel, maxTokens);
+	}
+	if (config.provider === "local") {
+		return callLocal(prompt, config.localEndpoint, config.localModel, maxTokens);
+	}
+	return "[AI summary unavailable: no provider configured]";
+}
+
+// ── Prompt builder & summarizer ─────────────────────────
+
+function buildPrompt(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
-	apiKey: string,
-	model: string,
 	profile: string
-): Promise<AISummary> {
+): string {
 	const catLines: string[] = [];
 	for (const [cat, visits] of Object.entries(categorized)) {
 		const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
@@ -70,7 +139,7 @@ export async function summarizeDay(
 		day: "numeric",
 	});
 
-	const prompt = `You are summarizing a person's digital activity for ${dateStr}.
+	return `You are summarizing a person's digital activity for ${dateStr}.
 Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
 
 ## Browser activity by category:
@@ -100,8 +169,19 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
 Do not include categories with zero visits.`;
+}
 
-	const raw = await callClaude(prompt, apiKey, model, 1000);
+export async function summarizeDay(
+	date: Date,
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	shellCmds: ShellCommand[],
+	claudeSessions: ClaudeSession[],
+	config: AICallConfig,
+	profile: string
+): Promise<AISummary> {
+	const prompt = buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile);
+	const raw = await callAI(prompt, config, 1000);
 
 	// Strip markdown fences if the model wrapped it
 	const cleaned = raw
