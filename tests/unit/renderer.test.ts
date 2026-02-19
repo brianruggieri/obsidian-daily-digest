@@ -75,7 +75,7 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("1 visits");
 		expect(md).toContain("1 searches");
 		expect(md).toContain("1 commands");
-		expect(md).toContain("1 Claude prompts");
+		expect(md).toContain("1 AI prompts");
 	});
 
 	it("includes notable section", () => {
@@ -90,9 +90,9 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("react hooks tutorial");
 	});
 
-	it("includes Claude section", () => {
+	it("includes Claude Code section", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleShell, sampleClaude, sampleCategorized, sampleAISummary);
-		expect(md).toContain("Claude / AI Work");
+		expect(md).toContain("Claude Code / AI Work");
 		expect(md).toContain("Fix the auth bug");
 	});
 

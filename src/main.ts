@@ -223,7 +223,7 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
 			const rawShellCmds = readShellHistory(this.settings, since);
 
-			progressNotice.setMessage("Daily Digest: Reading Claude sessions\u2026");
+			progressNotice.setMessage("Daily Digest: Reading Claude Code sessions\u2026");
 			const rawClaudeSessions = readClaudeSessions(this.settings, since);
 
 			// ── Sensitivity Filter ──────────────

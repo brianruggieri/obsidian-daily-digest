@@ -210,7 +210,7 @@ export function chunkActivityData(
 			const tr = timeRange(sessions);
 
 			const lines: string[] = [
-				`Claude AI Sessions – ${proj} (${sessions.length} prompts)`,
+				`Claude Code Sessions – ${proj} (${sessions.length} prompts)`,
 				`Prompts: ${prompts.join(" | ")}`,
 			];
 			if (tr) lines.push(`Time range: ${tr.start} – ${tr.end}`);

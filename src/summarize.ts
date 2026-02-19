@@ -52,7 +52,7 @@ ${catLines.length ? catLines.join("\n") : "  (none)"}
 ## Search queries:
 ${searchList.length ? searchList.map((q) => `  - ${q}`).join("\n") : "  (none)"}
 
-## Claude / AI prompts:
+## Claude Code / AI prompts:
 ${claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)"}
 
 ## Shell commands (secrets redacted):

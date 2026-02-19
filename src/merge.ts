@@ -19,7 +19,7 @@ const GENERATED_HEADINGS = new Set([
 	"Cognitive Patterns",
 	"Knowledge Insights",
 	"Searches",
-	"Claude / AI Work",
+	"Claude Code / AI Work",
 	"Browser Activity",
 	"Shell",
 	"Reflection",
