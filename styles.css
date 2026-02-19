@@ -1,1 +1,101 @@
-/* Daily Digest - minimal styling */
+/* Daily Digest — Privacy Modals & Settings */
+
+/* ── Onboarding Modal ─────────────────────── */
+
+.daily-digest-onboarding-modal .modal-content {
+	max-width: 600px;
+}
+
+.dd-onboarding-intro p {
+	margin-bottom: 1em;
+	line-height: 1.6;
+}
+
+.dd-onboarding-subtitle {
+	color: var(--text-muted);
+	font-size: 0.9em;
+	margin-bottom: 0.5em;
+}
+
+/* ── Privacy Callout Boxes ────────────────── */
+
+.dd-privacy-callout,
+.dd-ai-warning-callout,
+.dd-sync-warning {
+	background: var(--background-secondary);
+	border-left: 3px solid var(--interactive-accent);
+	padding: 12px 16px;
+	margin: 12px 0;
+	border-radius: 4px;
+}
+
+.dd-ai-warning-callout {
+	border-left-color: var(--text-warning);
+}
+
+.dd-sync-warning {
+	border-left-color: var(--text-muted);
+	font-size: 0.9em;
+}
+
+.dd-privacy-callout p,
+.dd-ai-warning-callout p,
+.dd-sync-warning p {
+	margin: 0;
+	line-height: 1.5;
+}
+
+/* ── Data Preview Modal ───────────────────── */
+
+.daily-digest-preview-modal .modal-content {
+	max-width: 500px;
+}
+
+.dd-preview-stats {
+	margin: 12px 0;
+	padding-left: 20px;
+}
+
+.dd-preview-stats li {
+	margin-bottom: 4px;
+}
+
+.dd-preview-destination {
+	background: var(--background-secondary);
+	border-left: 3px solid var(--text-warning);
+	padding: 10px 14px;
+	margin: 12px 0;
+	border-radius: 4px;
+}
+
+.dd-preview-destination p {
+	margin: 0;
+}
+
+.dd-preview-buttons {
+	margin-top: 16px;
+}
+
+/* ── Settings Callout Boxes ───────────────── */
+
+.dd-settings-callout {
+	background: var(--background-secondary);
+	border-left: 3px solid var(--interactive-accent);
+	padding: 10px 14px;
+	margin: 8px 0 16px 0;
+	border-radius: 4px;
+	font-size: 0.9em;
+}
+
+.dd-settings-callout p {
+	margin: 0;
+	line-height: 1.5;
+}
+
+.dd-settings-callout-warn {
+	border-left-color: var(--text-warning);
+}
+
+.dd-settings-callout-info {
+	border-left-color: var(--text-muted);
+}

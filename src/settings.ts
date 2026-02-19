@@ -1,5 +1,6 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import DailyDigestPlugin from "./main";
+import { PRIVACY_DESCRIPTIONS } from "./privacy";
 
 export interface DailyDigestSettings {
 	dailyFolder: string;
@@ -18,6 +19,8 @@ export interface DailyDigestSettings {
 	enableShell: boolean;
 	enableClaude: boolean;
 	claudeSessionsDir: string;
+	hasCompletedOnboarding: boolean;
+	privacyConsentVersion: number;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -32,11 +35,13 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	anthropicApiKey: "",
 	aiModel: "claude-haiku-4-5",
 	profile: "",
-	enableAI: true,
-	enableBrowser: true,
-	enableShell: true,
-	enableClaude: true,
+	enableAI: false,
+	enableBrowser: false,
+	enableShell: false,
+	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
+	hasCompletedOnboarding: false,
+	privacyConsentVersion: 0,
 };
 
 const BROWSER_OPTIONS: Record<string, string> = {
@@ -115,18 +120,58 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ── Privacy & Data ───────────────────────────
+		new Setting(containerEl).setName("Privacy & Data").setHeading();
+
+		const enabledSources: string[] = [];
+		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
+		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
+		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code session logs");
+
+		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });
+		if (enabledSources.length > 0) {
+			accessCallout.createEl("p", {
+				text: `Currently accessing: ${enabledSources.join(", ")}.`,
+			});
+		} else {
+			accessCallout.createEl("p", {
+				text: "No external data sources are currently enabled. Enable sources below to collect activity data.",
+			});
+		}
+
+		const transmitCallout = containerEl.createDiv({
+			cls: "dd-settings-callout dd-settings-callout-warn",
+		});
+		if (this.plugin.settings.enableAI) {
+			transmitCallout.createEl("p", {
+				text:
+					"AI Summarization is ON. When you generate a note, collected data " +
+					"will be sent to Anthropic's API (api.anthropic.com) for processing.",
+			});
+		} else {
+			transmitCallout.createEl("p", {
+				text:
+					"AI Summarization is OFF. All data stays on your computer. " +
+					"No data is transmitted externally.",
+			});
+		}
+
 		// ── Data Sources ─────────────────────────────
 		new Setting(containerEl).setName("Data sources").setHeading();
 
 		new Setting(containerEl)
 			.setName("Browser history")
-			.setDesc("Collect visited URLs and search queries from browsers")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.browser.access + " " +
+				PRIVACY_DESCRIPTIONS.browser.destination
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableBrowser)
 					.onChange(async (value) => {
 						this.plugin.settings.enableBrowser = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
@@ -148,25 +193,33 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Shell history")
-			.setDesc("Collect commands from zsh/bash history")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.shell.access + " " +
+				PRIVACY_DESCRIPTIONS.shell.destination
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableShell)
 					.onChange(async (value) => {
 						this.plugin.settings.enableShell = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
 		new Setting(containerEl)
 			.setName("Claude sessions")
-			.setDesc("Collect prompts from Claude Code sessions")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.claude.access + " " +
+				PRIVACY_DESCRIPTIONS.claude.destination
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableClaude)
 					.onChange(async (value) => {
 						this.plugin.settings.enableClaude = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
@@ -238,24 +291,33 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		// ── AI ───────────────────────────────────────
+		// ── AI Summarization ─────────────────────────
 		new Setting(containerEl).setName("AI summarization").setHeading();
 
 		new Setting(containerEl)
 			.setName("Enable AI summaries")
-			.setDesc("Use Anthropic API to generate daily summaries, themes, and reflections")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.ai.access + " " +
+				PRIVACY_DESCRIPTIONS.ai.destination
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableAI)
 					.onChange(async (value) => {
 						this.plugin.settings.enableAI = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
 		new Setting(containerEl)
 			.setName("Anthropic API key")
-			.setDesc("Your Anthropic API key (or set ANTHROPIC_API_KEY environment variable)")
+			.setDesc(
+				"Your Anthropic API key. Stored in this plugin's data.json file " +
+				"within your vault. If your vault is synced, this key may be " +
+				"uploaded to your sync provider. Alternative: set the " +
+				"ANTHROPIC_API_KEY environment variable instead and leave this blank."
+			)
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text.setPlaceholder("sk-ant-...")
@@ -265,6 +327,16 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		const apiKeyNote = containerEl.createDiv({
+			cls: "dd-settings-callout dd-settings-callout-info",
+		});
+		apiKeyNote.createEl("p", {
+			text:
+				"Security note: API keys in data.json are readable by any Obsidian " +
+				"plugin and may be synced with your vault. For better security, use " +
+				"the ANTHROPIC_API_KEY environment variable and leave the field above blank.",
+		});
 
 		new Setting(containerEl)
 			.setName("AI model")
@@ -279,6 +351,21 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						this.plugin.settings.aiModel = value;
 						await this.plugin.saveSettings();
 					})
+			);
+
+		// ── Advanced ─────────────────────────────────
+		new Setting(containerEl).setName("Advanced").setHeading();
+
+		new Setting(containerEl)
+			.setName("Reset privacy onboarding")
+			.setDesc("Show the first-run privacy disclosure modal again next time the plugin loads.")
+			.addButton((btn) =>
+				btn.setButtonText("Reset").onClick(async () => {
+					this.plugin.settings.hasCompletedOnboarding = false;
+					this.plugin.settings.privacyConsentVersion = 0;
+					await this.plugin.saveSettings();
+					new Notice("Onboarding will be shown again when Obsidian restarts.");
+				})
 			);
 	}
 }

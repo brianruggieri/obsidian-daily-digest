@@ -4,6 +4,11 @@ import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./c
 import { categorizeVisits } from "./categorize";
 import { summarizeDay } from "./summarize";
 import { renderMarkdown } from "./renderer";
+import {
+	OnboardingModal,
+	DataPreviewModal,
+	shouldShowOnboarding,
+} from "./privacy";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -96,6 +101,20 @@ export default class DailyDigestPlugin extends Plugin {
 
 		// Settings tab
 		this.addSettingTab(new DailyDigestSettingTab(this.app, this));
+
+		// Privacy onboarding check
+		if (shouldShowOnboarding(this.settings)) {
+			this.app.workspace.onLayoutReady(() => {
+				new OnboardingModal(
+					this.app,
+					this.settings,
+					async (updatedSettings) => {
+						this.settings = updatedSettings;
+						await this.saveSettings();
+					}
+				).open();
+			});
+		}
 	}
 
 	async loadSettings(): Promise<void> {
@@ -113,9 +132,23 @@ export default class DailyDigestPlugin extends Plugin {
 	}
 
 	private async generateNote(targetDate: Date, skipAI = false): Promise<void> {
+		// Ensure onboarding is complete
+		if (shouldShowOnboarding(this.settings)) {
+			new Notice("Please complete Daily Digest setup first.", 5000);
+			new OnboardingModal(
+				this.app,
+				this.settings,
+				async (updatedSettings) => {
+					this.settings = updatedSettings;
+					await this.saveSettings();
+				}
+			).open();
+			return;
+		}
+
 		const since = new Date(targetDate.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
 		const apiKey = this.settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY || "";
-		const useAI = this.settings.enableAI && !skipAI && !!apiKey;
+		let useAI = this.settings.enableAI && !skipAI && !!apiKey;
 
 		if (this.settings.enableAI && !skipAI && !apiKey) {
 			new Notice("No Anthropic API key configured. Running without AI summaries. Set it in Daily Digest settings.", 8000);
@@ -139,24 +172,45 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
-			// ── AI Summary ───────────────────────
+			// ── AI Summary (with user confirmation) ─
 			let aiSummary = null;
 			if (useAI) {
-				progressNotice.setMessage("Daily Digest: Generating AI summary\u2026");
-				aiSummary = await summarizeDay(
-					targetDate,
-					categorized,
-					searches,
-					shellCmds,
-					claudeSessions,
-					apiKey,
-					this.settings.aiModel,
-					this.settings.profile
-				);
+				progressNotice.hide();
+
+				const result = await new DataPreviewModal(this.app, {
+					visitCount: visits.length,
+					searchCount: searches.length,
+					shellCount: shellCmds.length,
+					claudeCount: claudeSessions.length,
+				}).openAndWait();
+
+				if (result === "cancel") {
+					this.statusBarItem.setText("Daily Digest ready");
+					new Notice("Daily Digest: Generation cancelled.");
+					return;
+				}
+
+				if (result === "proceed-with-ai") {
+					const aiNotice = new Notice("Daily Digest: Generating AI summary\u2026", 0);
+					aiSummary = await summarizeDay(
+						targetDate,
+						categorized,
+						searches,
+						shellCmds,
+						claudeSessions,
+						apiKey,
+						this.settings.aiModel,
+						this.settings.profile
+					);
+					aiNotice.hide();
+				} else {
+					// proceed-without-ai
+					useAI = false;
+				}
 			}
 
 			// ── Render ───────────────────────────
-			progressNotice.setMessage("Daily Digest: Rendering markdown\u2026");
+			const renderNotice = new Notice("Daily Digest: Rendering markdown\u2026", 0);
 			const md = renderMarkdown(
 				targetDate,
 				visits,
@@ -164,14 +218,15 @@ export default class DailyDigestPlugin extends Plugin {
 				shellCmds,
 				claudeSessions,
 				categorized,
-				aiSummary
+				aiSummary,
+				useAI && aiSummary !== null
 			);
 
 			// ── Write to vault ───────────────────
-			progressNotice.setMessage("Daily Digest: Writing to vault\u2026");
+			renderNotice.setMessage("Daily Digest: Writing to vault\u2026");
 			const filePath = await this.writeToVault(targetDate, md);
 
-			progressNotice.hide();
+			renderNotice.hide();
 			this.statusBarItem.setText("Daily Digest ready");
 
 			const stats = `${visits.length} visits, ${searches.length} searches, ${shellCmds.length} commands, ${claudeSessions.length} prompts`;
@@ -183,9 +238,8 @@ export default class DailyDigestPlugin extends Plugin {
 				await this.app.workspace.getLeaf(false).openFile(file);
 			}
 		} catch (e) {
-			progressNotice.hide();
-			this.statusBarItem.setText("Daily Digest: error");
 			new Notice(`Daily Digest error: ${e}`, 10000);
+			this.statusBarItem.setText("Daily Digest: error");
 			console.error("Daily Digest error:", e);
 		}
 	}
