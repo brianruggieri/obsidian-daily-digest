@@ -41,6 +41,10 @@ export interface DailyDigestSettings {
 	sensitivityCategories: SensitivityCategory[];
 	sensitivityCustomDomains: string;
 	sensitivityAction: "exclude" | "redact";
+	enablePatterns: boolean;
+	patternCooccurrenceWindow: number;
+	patternMinClusterSize: number;
+	trackRecurrence: boolean;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 }
@@ -80,6 +84,10 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityCategories: [] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 	sensitivityAction: "exclude" as "exclude" | "redact",
+	enablePatterns: false,
+	patternCooccurrenceWindow: 30,
+	patternMinClusterSize: 3,
+	trackRecurrence: true,
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 };
@@ -941,6 +949,92 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							"shell commands, or Claude prompts are sent to Anthropic.",
 					});
 				}
+			}
+		}
+
+		// ── Pattern Extraction ───────────────────────
+		if (this.plugin.settings.enableAI && this.plugin.settings.enableClassification) {
+			new Setting(containerEl)
+				.setName("Pattern extraction (advanced)")
+				.setHeading();
+
+			new Setting(containerEl)
+				.setName("Enable pattern extraction")
+				.setDesc(
+					"Extract temporal clusters, topic co-occurrences, entity relations, " +
+					"and recurrence signals from classified events. Adds focus scores, " +
+					"topic maps, and knowledge delta analysis to your daily notes."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enablePatterns)
+						.onChange(async (value) => {
+							this.plugin.settings.enablePatterns = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			if (this.plugin.settings.enablePatterns) {
+				new Setting(containerEl)
+					.setName("Co-occurrence window")
+					.setDesc(
+						"Time window in minutes for detecting topic co-occurrences. " +
+						"Events within the same window are considered related."
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 120, 10)
+							.setValue(this.plugin.settings.patternCooccurrenceWindow)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.patternCooccurrenceWindow = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				new Setting(containerEl)
+					.setName("Minimum cluster size")
+					.setDesc(
+						"Minimum number of events to form a temporal cluster. " +
+						"Lower values detect more clusters but may include noise."
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(2, 10, 1)
+							.setValue(this.plugin.settings.patternMinClusterSize)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.patternMinClusterSize = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				new Setting(containerEl)
+					.setName("Track recurrence")
+					.setDesc(
+						"Persist topic history across days to detect recurring interests, " +
+						"returning topics, and rising trends. Stored locally in your vault " +
+						"under .daily-digest/topic-history.json."
+					)
+					.addToggle((toggle) =>
+						toggle
+							.setValue(this.plugin.settings.trackRecurrence)
+							.onChange(async (value) => {
+								this.plugin.settings.trackRecurrence = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				const patternCallout = containerEl.createDiv({
+					cls: "dd-settings-callout",
+				});
+				patternCallout.createEl("p", {
+					text:
+						"Pattern extraction is entirely local and statistical — no LLM calls. " +
+						"It analyzes classified events to find activity clusters, topic connections, " +
+						"and curiosity patterns. Results appear as new sections in your daily note.",
+				});
 			}
 		}
 

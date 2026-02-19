@@ -160,6 +160,68 @@ export interface SensitivityFilterResult {
 	byCategory: Record<string, number>;
 }
 
+// ── Pattern Extraction Types (Phase 3) ──────────────────
+
+export interface TemporalCluster {
+	hourStart: number;           // 0-23
+	hourEnd: number;             // 0-23
+	activityType: ActivityType;
+	eventCount: number;
+	topics: string[];
+	entities: string[];
+	intensity: number;           // events per hour in this cluster
+	label: string;               // e.g. "debugging spike 2-4pm"
+}
+
+export interface TopicCooccurrence {
+	topicA: string;
+	topicB: string;
+	strength: number;            // 0.0-1.0 normalized
+	sharedEvents: number;
+	window: string;              // time window label
+}
+
+export interface EntityRelation {
+	entityA: string;
+	entityB: string;
+	cooccurrences: number;
+	contexts: string[];          // activity types where they co-occur
+}
+
+export interface RecurrenceSignal {
+	topic: string;
+	frequency: number;           // appearances in time window
+	trend: "rising" | "stable" | "declining" | "new" | "returning";
+	firstSeen?: string;          // ISO date
+	lastSeen?: string;           // ISO date
+	dayCount: number;            // number of days topic appeared
+}
+
+export interface KnowledgeDelta {
+	newTopics: string[];         // topics not seen in vault
+	recurringTopics: string[];   // topics that match existing vault tags/notes
+	novelEntities: string[];     // entities not previously encountered
+	connections: string[];       // cross-topic connections discovered today
+}
+
+export interface PatternAnalysis {
+	temporalClusters: TemporalCluster[];
+	topicCooccurrences: TopicCooccurrence[];
+	entityRelations: EntityRelation[];
+	recurrenceSignals: RecurrenceSignal[];
+	knowledgeDelta: KnowledgeDelta;
+	focusScore: number;          // 0.0-1.0, higher = more focused day
+	topActivityTypes: { type: ActivityType; count: number; pct: number }[];
+	peakHours: { hour: number; count: number }[];
+}
+
+export interface PatternConfig {
+	enabled: boolean;
+	cooccurrenceWindow: number;  // minutes for co-occurrence grouping
+	minClusterSize: number;      // minimum events to form a temporal cluster
+	trackRecurrence: boolean;    // persist topic history for recurrence detection
+}
+
 // ── RAG Types ───────────────────────────────────────────
 
 export interface ActivityChunk {

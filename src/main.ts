@@ -9,10 +9,12 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult } from "./types";
+import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "./types";
 import { sanitizeCollectedData } from "./sanitize";
 import { classifyEvents } from "./classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "./sensitivity";
+import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./patterns";
+import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -297,6 +299,72 @@ export default class DailyDigestPlugin extends Plugin {
 				}
 			}
 
+			// ── Pattern Extraction (Phase 3) ────
+			let knowledgeSections: KnowledgeSections | undefined;
+			if (this.settings.enablePatterns && classification && classification.events.length > 0) {
+				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
+				const patternConfig: PatternConfig = {
+					enabled: true,
+					cooccurrenceWindow: this.settings.patternCooccurrenceWindow,
+					minClusterSize: this.settings.patternMinClusterSize,
+					trackRecurrence: this.settings.trackRecurrence,
+				};
+
+				// Load topic history for recurrence detection
+				let topicHistory: TopicHistory = buildEmptyTopicHistory();
+				const historyPath = ".daily-digest/topic-history.json";
+				if (patternConfig.trackRecurrence) {
+					try {
+						const existing = this.app.vault.getAbstractFileByPath(historyPath);
+						if (existing instanceof TFile) {
+							const raw = await this.app.vault.read(existing);
+							topicHistory = JSON.parse(raw) as TopicHistory;
+						}
+					} catch (e) {
+						console.debug("Daily Digest: No topic history found, starting fresh:", e);
+					}
+				}
+
+				const todayStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
+				try {
+					const patterns: PatternAnalysis = extractPatterns(
+						classification, patternConfig, topicHistory, todayStr
+					);
+					knowledgeSections = generateKnowledgeSections(patterns);
+
+					console.debug(
+						`Daily Digest: Extracted ${patterns.temporalClusters.length} clusters, ` +
+						`${patterns.topicCooccurrences.length} co-occurrences, ` +
+						`${patterns.entityRelations.length} entity relations, ` +
+						`focus score ${Math.round(patterns.focusScore * 100)}%`
+					);
+
+					// Persist updated topic history
+					if (patternConfig.trackRecurrence) {
+						const allTopics = [...new Set(classification.events.flatMap((e) => e.topics))];
+						const updatedHistory = updateTopicHistory(topicHistory, allTopics, todayStr);
+						try {
+							const historyFolder = ".daily-digest";
+							const folderObj = this.app.vault.getAbstractFileByPath(historyFolder);
+							if (!folderObj) {
+								await this.app.vault.createFolder(historyFolder);
+							}
+							const historyFile = this.app.vault.getAbstractFileByPath(historyPath);
+							const historyJson = JSON.stringify(updatedHistory, null, 2);
+							if (historyFile instanceof TFile) {
+								await this.app.vault.modify(historyFile, historyJson);
+							} else {
+								await this.app.vault.create(historyPath, historyJson);
+							}
+						} catch (e) {
+							console.warn("Daily Digest: Failed to persist topic history:", e);
+						}
+					}
+				} catch (e) {
+					console.warn("Daily Digest: Pattern extraction failed, continuing without:", e);
+				}
+			}
+
 			// ── AI Summary ───────────────────────
 			let aiSummary = null;
 			if (useAI) {
@@ -378,7 +446,8 @@ export default class DailyDigestPlugin extends Plugin {
 				claudeSessions,
 				categorized,
 				aiSummary,
-				aiProviderUsed
+				aiProviderUsed,
+				knowledgeSections
 			);
 
 			// ── Write to vault ───────────────────
