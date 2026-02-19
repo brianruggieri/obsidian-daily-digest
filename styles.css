@@ -179,6 +179,64 @@
 	font-size: 0.8em;
 }
 
+/* ── Browser Profile Picker ─────────────── */
+
+/*
+ * Outer wrapper for the per-browser toggle list.
+ * Visual separator keeps it distinct from the Detect button row above.
+ */
+.dd-browser-configs {
+	margin: 8px 0;
+	padding: 8px 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Each browser row (master toggle) sits flush with Settings item padding */
+.dd-browser-configs > .setting-item {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.dd-browser-configs > .setting-item:last-child {
+	border-bottom: none;
+}
+
+/*
+ * Per-profile sub-toggles, indented beneath their parent browser.
+ * Uses Obsidian CSS variables so it respects any user theme.
+ */
+.dd-browser-profile-sub {
+	padding-left: 28px;
+	padding-bottom: 4px;
+	border-top: none;
+}
+
+.dd-browser-profile-sub .setting-item {
+	padding: 3px 0;
+	border-bottom: none;
+}
+
+/* Profile names are slightly muted to visually subordinate them */
+.dd-browser-profile-sub .setting-item-name {
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+/* Folder path hint (shown when displayName ≠ profileDir) */
+.dd-browser-profile-sub .setting-item-description {
+	font-size: 0.78em;
+	color: var(--text-faint);
+}
+
+/*
+ * Status line under the Re-scan button.
+ * Styled in muted text — it's informational, not instructional.
+ */
+.dd-browser-status {
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
 /* ── Local Model Setup Guide ────────────── */
 
 .dd-setup-guide {

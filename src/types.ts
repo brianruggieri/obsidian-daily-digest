@@ -64,36 +64,98 @@ export interface CollectedData {
 	aiSummary: AISummary | null;
 }
 
-export interface BrowserConfig {
-	history: string;
-	type: "chromium" | "firefox" | "safari";
+// ── Browser Profile Types ────────────────────────────────
+
+/**
+ * A single browser profile detected on disk.
+ * Contains only what's needed for display and collection — no credentials,
+ * no cookies, no encrypted fields, no account email addresses.
+ */
+export interface DetectedProfile {
+	/** Directory name on disk: "Default", "Profile 1", "Profile 2", etc. */
+	profileDir: string;
+	/**
+	 * Human-readable label for the UI.
+	 * Chromium: read from Local State → profile.info_cache[dir].name only.
+	 * Firefox: read from profiles.ini → Name= field only.
+	 * Falls back to profileDir if the display name can't be determined.
+	 */
+	displayName: string;
+	/** Absolute, fully-resolved path to the History (or places.sqlite) file. */
+	historyPath: string;
+	/** Whether the History file exists and is readable right now. */
+	hasHistory: boolean;
 }
 
-// Browser history paths by OS. The `history` field is only used for Chromium browsers;
-// Firefox and Safari resolve their paths at runtime via OS detection.
-export const BROWSER_PATHS: Record<string, Record<string, BrowserConfig>> = {
+/**
+ * Settings record for a single installed browser.
+ * Stored in settings.browserConfigs[].
+ */
+export interface BrowserInstallConfig {
+	/** Browser identifier: "chrome" | "brave" | "edge" | "firefox" | "safari" */
+	browserId: string;
+	/** Master toggle — when false, this browser is entirely skipped. */
+	enabled: boolean;
+	/** All profiles detected on the last scan. */
+	profiles: DetectedProfile[];
+	/** profileDir values the user has opted in to collect. */
+	selectedProfiles: string[];
+}
+
+/**
+ * Internal config used by browser-profiles.ts for per-OS path resolution.
+ * Not stored in settings — only used during detection.
+ */
+export interface BrowserPathConfig {
+	/** Browser type determines which SQLite schema to query. */
+	type: "chromium" | "firefox" | "safari";
+	/** Per-OS base directories for the User Data folder (Chromium) or profiles dir (Firefox). */
+	userDataDirs: Partial<Record<"darwin" | "win32" | "linux", string>>;
+}
+
+/**
+ * Per-OS User Data base directories for each supported browser.
+ * Used exclusively by browser-profiles.ts during profile detection.
+ * Paths use ~/ and %LOCALAPPDATA% prefixes — resolved at runtime by expandHome().
+ */
+export const BROWSER_PATH_CONFIGS: Record<string, BrowserPathConfig> = {
 	chrome: {
-		darwin: { history: "~/Library/Application Support/Google/Chrome/Default/History", type: "chromium" },
-		win32:  { history: "%LOCALAPPDATA%/Google/Chrome/User Data/Default/History", type: "chromium" },
-		linux:  { history: "~/.config/google-chrome/Default/History", type: "chromium" },
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Google/Chrome",
+			win32:  "%LOCALAPPDATA%/Google/Chrome/User Data",
+			linux:  "~/.config/google-chrome",
+		},
 	},
 	brave: {
-		darwin: { history: "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History", type: "chromium" },
-		win32:  { history: "%LOCALAPPDATA%/BraveSoftware/Brave-Browser/User Data/Default/History", type: "chromium" },
-		linux:  { history: "~/.config/BraveSoftware/Brave-Browser/Default/History", type: "chromium" },
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/BraveSoftware/Brave-Browser",
+			win32:  "%LOCALAPPDATA%/BraveSoftware/Brave-Browser/User Data",
+			linux:  "~/.config/BraveSoftware/Brave-Browser",
+		},
 	},
 	edge: {
-		darwin: { history: "~/Library/Application Support/Microsoft Edge/Default/History", type: "chromium" },
-		win32:  { history: "%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/History", type: "chromium" },
-		linux:  { history: "~/.config/microsoft-edge/Default/History", type: "chromium" },
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Microsoft Edge",
+			win32:  "%LOCALAPPDATA%/Microsoft/Edge/User Data",
+			linux:  "~/.config/microsoft-edge",
+		},
 	},
 	firefox: {
-		darwin: { history: "", type: "firefox" },
-		win32:  { history: "", type: "firefox" },
-		linux:  { history: "", type: "firefox" },
+		type: "firefox",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Firefox",
+			win32:  "%APPDATA%/Mozilla/Firefox",
+			linux:  "~/.mozilla/firefox",
+		},
 	},
 	safari: {
-		darwin: { history: "~/Library/Safari/History.db", type: "safari" },
+		type: "safari",
+		userDataDirs: {
+			darwin: "~/Library/Safari",
+		},
 	},
 };
 

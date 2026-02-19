@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, copyFileSync, unlinkSync, readdirSync, statSync } from "fs";
 import { homedir, tmpdir, platform } from "os";
+// Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
 import initSqlJs from "sql.js";
 // @ts-ignore — wasm loaded as binary by esbuild
@@ -11,7 +12,6 @@ import {
 	SearchQuery,
 	ShellCommand,
 	ClaudeSession,
-	BROWSER_PATHS,
 	SEARCH_ENGINES,
 	EXCLUDE_DOMAINS,
 } from "./types";
@@ -23,11 +23,11 @@ function expandHome(p: string): string {
 	// Windows: expand %LOCALAPPDATA% and %APPDATA%
 	if (p.startsWith("%LOCALAPPDATA%")) {
 		const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-		return join(localAppData, p.slice("%LOCALAPPDATA%".length + 1));
+		return join(localAppData, p.slice("%LOCALAPPDATA%/".length));
 	}
 	if (p.startsWith("%APPDATA%")) {
 		const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-		return join(appData, p.slice("%APPDATA%".length + 1));
+		return join(appData, p.slice("%APPDATA%/".length));
 	}
 	return p;
 }
@@ -81,14 +81,17 @@ function chromeEpochToDate(ts: number): Date {
 	return new Date((ts / 1_000_000 - 11644473600) * 1000);
 }
 
-async function readChromiumHistory(dbPath: string, since: Date): Promise<BrowserVisit[]> {
-	const expanded = expandHome(dbPath);
-	if (!existsSync(expanded)) return [];
+/**
+ * Reads Chromium-based browser history from an absolute, pre-resolved History file path.
+ * The path is set at profile detection time — no runtime path expansion needed here.
+ */
+async function readChromiumHistory(historyPath: string, since: Date): Promise<BrowserVisit[]> {
+	if (!existsSync(historyPath)) return [];
 
 	const sinceChrome = BigInt(Math.floor((since.getTime() / 1000 + 11644473600) * 1_000_000));
 	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
 
-	const rows = await querySqlite(expanded, sql);
+	const rows = await querySqlite(historyPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -105,41 +108,17 @@ async function readChromiumHistory(dbPath: string, since: Date): Promise<Browser
 	return results;
 }
 
-function findFirefoxProfilesDir(): string {
-	const os = platform();
-	if (os === "win32") {
-		const appdata = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-		return join(appdata, "Mozilla", "Firefox", "Profiles");
-	} else if (os === "linux") {
-		return join(homedir(), ".mozilla", "firefox");
-	} else {
-		// macOS
-		return join(homedir(), "Library", "Application Support", "Firefox", "Profiles");
-	}
-}
-
-function findFirefoxProfile(): string | null {
-	const profilesDir = findFirefoxProfilesDir();
-	if (!existsSync(profilesDir)) return null;
-
-	const entries = readdirSync(profilesDir);
-	for (const entry of entries) {
-		const placesPath = join(profilesDir, entry, "places.sqlite");
-		if (existsSync(placesPath)) {
-			return placesPath;
-		}
-	}
-	return null;
-}
-
-async function readFirefoxHistory(since: Date): Promise<BrowserVisit[]> {
-	const dbPath = findFirefoxProfile();
-	if (!dbPath) return [];
+/**
+ * Reads Firefox history from an absolute, pre-resolved places.sqlite path.
+ * The path is sourced from profiles.ini at detection time, not auto-discovered here.
+ */
+async function readFirefoxHistoryFromPath(placesPath: string, since: Date): Promise<BrowserVisit[]> {
+	if (!existsSync(placesPath)) return [];
 
 	const sinceMicro = Math.floor(since.getTime() * 1000);
 	const sql = `SELECT p.url, p.title, h.visit_date FROM moz_historyvisits h JOIN moz_places p ON h.place_id = p.id WHERE h.visit_date > ${sinceMicro} ORDER BY h.visit_date DESC`;
 
-	const rows = await querySqlite(dbPath, sql);
+	const rows = await querySqlite(placesPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -155,15 +134,20 @@ async function readFirefoxHistory(since: Date): Promise<BrowserVisit[]> {
 	return results;
 }
 
-async function readSafariHistory(since: Date): Promise<BrowserVisit[]> {
-	const dbPath = expandHome("~/Library/Safari/History.db");
-	if (!existsSync(dbPath)) return [];
+/**
+ * Reads Safari history from its fixed single-database location.
+ * Safari has no profiles — always reads from ~/Library/Safari/History.db.
+ * macOS only; will return [] on other platforms.
+ */
+async function readSafariHistory(historyPath: string, since: Date): Promise<BrowserVisit[]> {
+	if (platform() !== "darwin") return [];
+	if (!existsSync(historyPath)) return [];
 
-	// Apple epoch: seconds since 2001-01-01
+	// Apple epoch: seconds since 2001-01-01 00:00:00 UTC
 	const sinceApple = since.getTime() / 1000 - 978307200;
 	const sql = `SELECT i.url, v.title, v.visit_time FROM history_visits v JOIN history_items i ON v.history_item = i.id WHERE v.visit_time > ${sinceApple} ORDER BY v.visit_time DESC`;
 
-	const rows = await querySqlite(dbPath, sql);
+	const rows = await querySqlite(historyPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -179,36 +163,58 @@ async function readSafariHistory(since: Date): Promise<BrowserVisit[]> {
 	return results;
 }
 
+/**
+ * Collects browser history from all user-selected browser profiles.
+ *
+ * Iterates settings.browserConfigs — browsers that are enabled with at least
+ * one selected profile. Each enabled profile is read independently and
+ * deduplicated by URL across all browsers/profiles.
+ *
+ * Browsers with browserConfig.enabled = false are entirely skipped.
+ * Profiles not in selectedProfiles are entirely skipped.
+ */
 export async function collectBrowserHistory(
 	settings: DailyDigestSettings,
 	since: Date
 ): Promise<{ visits: BrowserVisit[]; searches: SearchQuery[] }> {
 	if (!settings.enableBrowser) return { visits: [], searches: [] };
 
+	// Support both new browserConfigs and legacy browsers[] (migration fallback)
+	const configs = settings.browserConfigs;
+	if (configs.length === 0) return { visits: [], searches: [] };
+
 	const allVisits: BrowserVisit[] = [];
 	const seenUrls = new Set<string>();
 
-	const os = platform();
-	for (const browser of settings.browsers) {
-		const byOs = BROWSER_PATHS[browser];
-		if (!byOs) continue;
-		const info = byOs[os] ?? byOs["darwin"]; // fallback for unknown OS
-		if (!info) continue;
+	for (const browserConfig of configs) {
+		if (!browserConfig.enabled) continue;
 
-		let visits: BrowserVisit[] = [];
-		if (info.type === "chromium") {
-			visits = await readChromiumHistory(info.history, since);
-		} else if (info.type === "firefox") {
-			visits = await readFirefoxHistory(since);
-		} else if (info.type === "safari") {
-			if (os !== "darwin") continue; // Safari is macOS only
-			visits = await readSafariHistory(since);
-		}
+		const enabledProfiles = browserConfig.profiles.filter(
+			(p) => browserConfig.selectedProfiles.includes(p.profileDir) && p.hasHistory
+		);
 
-		for (const v of visits) {
-			if (!seenUrls.has(v.url)) {
-				seenUrls.add(v.url);
-				allVisits.push(v);
+		for (const profile of enabledProfiles) {
+			let visits: BrowserVisit[] = [];
+
+			try {
+				if (browserConfig.browserId === "safari") {
+					visits = await readSafariHistory(profile.historyPath, since);
+				} else if (browserConfig.browserId === "firefox") {
+					visits = await readFirefoxHistoryFromPath(profile.historyPath, since);
+				} else {
+					// Chromium: chrome, brave, edge
+					visits = await readChromiumHistory(profile.historyPath, since);
+				}
+			} catch {
+				// If one profile fails, continue with others
+				continue;
+			}
+
+			for (const v of visits) {
+				if (!seenUrls.has(v.url)) {
+					seenUrls.add(v.url);
+					allVisits.push(v);
+				}
 			}
 		}
 	}

@@ -126,6 +126,37 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		await this.migrateLegacyBrowserSettings();
+	}
+
+	/**
+	 * One-time migration: browsers: string[] → browserConfigs: BrowserInstallConfig[]
+	 *
+	 * Existing users who had `browsers: ["chrome", "firefox"]` in their settings will
+	 * get skeleton BrowserInstallConfig entries (enabled=true, no profiles yet). They
+	 * must click "Detect Browsers & Profiles" to populate profiles, but their browser
+	 * selection is preserved and they won't lose any other settings.
+	 */
+	private async migrateLegacyBrowserSettings(): Promise<void> {
+		// Cast through unknown first — DailyDigestSettings no longer has a `browsers` field,
+		// but data.json from older versions may still contain it.
+		const rawSettings = this.settings as unknown as Record<string, unknown>;
+		const legacy = rawSettings["browsers"];
+		if (
+			Array.isArray(legacy) &&
+			legacy.length > 0 &&
+			this.settings.browserConfigs.length === 0
+		) {
+			this.settings.browserConfigs = (legacy as string[]).map((id) => ({
+				browserId: id,
+				enabled: true,
+				profiles: [],
+				selectedProfiles: [],
+			}));
+			// Remove the stale field so it doesn't linger in data.json
+			delete rawSettings["browsers"];
+			await this.saveSettings();
+		}
 	}
 
 	async saveSettings(): Promise<void> {
