@@ -6,15 +6,24 @@
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:unit": "vitest run tests/unit",
+		"test:integration": "vitest run tests/integration",
+		"test:eval": "DAILY_DIGEST_AI_EVAL=true vitest run tests/eval",
+		"test:eval:local": "DAILY_DIGEST_AI_EVAL=true DAILY_DIGEST_AI_EVAL_PROVIDER=local vitest run tests/eval",
+		"test:coverage": "vitest run --coverage"
 	},
 	"keywords": [],
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
+		"@vitest/coverage-v8": "^4.0.18",
 		"esbuild": "0.25.5",
 		"tslib": "2.4.0",
-		"typescript": "^5.8.3"
+		"typescript": "^5.8.3",
+		"vitest": "^4.0.18"
 	},
 	"dependencies": {
 		"obsidian": "latest"
