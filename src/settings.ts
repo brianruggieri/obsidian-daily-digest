@@ -5,6 +5,9 @@ import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "./
 import { getCategoryInfo, getTotalBuiltinDomains } from "./sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "./browser-profiles";
 
+/** Secret ID used in Obsidian's shared SecretStorage (>=1.11.4). */
+export const SECRET_ID = "anthropic-api-key";
+
 export type AIProvider = "none" | "local" | "anthropic";
 
 export interface DailyDigestSettings {
@@ -718,33 +721,66 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 			} else {
 				// ── Anthropic settings ───────────────
-				new Setting(containerEl)
-					.setName("Anthropic API key")
-					.setDesc(
-						"Your Anthropic API key. Stored in this plugin's data.json file " +
-						"within your vault. If your vault is synced, this key may be " +
-						"uploaded to your sync provider. Alternative: set the " +
-						"ANTHROPIC_API_KEY environment variable instead and leave this blank."
-					)
-					.addText((text) => {
-						text.inputEl.type = "password";
-						text.setPlaceholder("sk-ant-...")
-							.setValue(this.plugin.settings.anthropicApiKey)
-							.onChange(async (value) => {
-								this.plugin.settings.anthropicApiKey = value;
-								await this.plugin.saveSettings();
-							});
-					});
+				if (this.plugin.hasSecretStorage) {
+					// Obsidian >=1.11.4: use SecretStorage (not synced, not in data.json)
+					const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
 
-				const apiKeyNote = containerEl.createDiv({
-					cls: "dd-settings-callout dd-settings-callout-info",
-				});
-				apiKeyNote.createEl("p", {
-					text:
-						"Security note: API keys in data.json are readable by any Obsidian " +
-						"plugin and may be synced with your vault. For better security, use " +
-						"the ANTHROPIC_API_KEY environment variable and leave the field above blank.",
-				});
+					new Setting(containerEl)
+						.setName("Anthropic API key")
+						.setDesc(
+							"Your Anthropic API key. Stored securely in Obsidian's secret " +
+							"storage — not in data.json, not synced with your vault. " +
+							"Alternative: set the ANTHROPIC_API_KEY environment variable instead."
+						)
+						.addText((text) => {
+							text.inputEl.type = "password";
+							text.setPlaceholder("sk-ant-...")
+								.setValue(currentKey)
+								.onChange((value) => {
+									this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
+								});
+						});
+
+					const apiKeyNote = containerEl.createDiv({
+						cls: "dd-settings-callout dd-settings-callout-info",
+					});
+					apiKeyNote.createEl("p", {
+						text:
+							"This key is stored in Obsidian's secure secret storage, separate " +
+							"from your vault files. It will not be synced or committed to git.",
+					});
+				} else {
+					// Obsidian <1.11.4: fall back to data.json storage
+					new Setting(containerEl)
+						.setName("Anthropic API key")
+						.setDesc(
+							"Your Anthropic API key. Stored in this plugin's data.json file " +
+							"within your vault. If your vault is synced, this key may be " +
+							"uploaded to your sync provider. Alternative: set the " +
+							"ANTHROPIC_API_KEY environment variable instead and leave this blank. " +
+							"Upgrade to Obsidian 1.11.4+ for secure secret storage."
+						)
+						.addText((text) => {
+							text.inputEl.type = "password";
+							text.setPlaceholder("sk-ant-...")
+								.setValue(this.plugin.settings.anthropicApiKey)
+								.onChange(async (value) => {
+									this.plugin.settings.anthropicApiKey = value;
+									await this.plugin.saveSettings();
+								});
+						});
+
+					const apiKeyNote = containerEl.createDiv({
+						cls: "dd-settings-callout dd-settings-callout-warn",
+					});
+					apiKeyNote.createEl("p", {
+						text:
+							"Security note: API keys in data.json are readable by any Obsidian " +
+							"plugin and may be synced with your vault. Upgrade to Obsidian " +
+							"1.11.4+ for secure secret storage, or use the ANTHROPIC_API_KEY " +
+							"environment variable.",
+					});
+				}
 
 				new Setting(containerEl)
 					.setName("AI model")
