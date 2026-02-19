@@ -8,6 +8,11 @@ main.js
 # Obsidian plugin data
 data.json
 
+# Environment variables (API keys)
+.env
+.env.local
+.env.*.local
+
 # OS
 .DS_Store
 
