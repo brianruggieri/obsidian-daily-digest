@@ -174,7 +174,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const enabledSources: string[] = [];
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
 		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
-		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code session logs");
+		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
 
 		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });
 		if (enabledSources.length > 0) {
@@ -264,7 +264,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Claude sessions")
+			.setName("Claude Code sessions")
 			.setDesc(
 				PRIVACY_DESCRIPTIONS.claude.access + " " +
 				PRIVACY_DESCRIPTIONS.claude.destination
@@ -280,8 +280,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Claude sessions directory")
-			.setDesc("Path to Claude Code sessions (uses ~ for home)")
+			.setName("Claude Code sessions directory")
+			.setDesc("Path to Claude Code session logs (uses ~ for home)")
 			.addText((text) =>
 				text
 					.setPlaceholder("~/.claude/projects")
@@ -335,7 +335,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Max Claude sessions")
+			.setName("Max Claude Code sessions")
 			.addSlider((slider) =>
 				slider
 					.setLimits(5, 100, 5)
@@ -946,7 +946,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							"With Anthropic selected: classification is highly recommended. " +
 							"When enabled, the AI summary prompt contains only activity types, " +
 							"topics, and entity names — zero raw URLs, search queries, " +
-							"shell commands, or Claude prompts are sent to Anthropic.",
+							"shell commands, or Claude Code prompts are sent to Anthropic.",
 					});
 				}
 			}

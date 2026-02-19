@@ -102,7 +102,7 @@ export function renderMarkdown(
 	// ── Stats ────────────────────────────────────
 	lines.push(
 		`*${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
-			`${shell.length} commands \u00B7 ${claudeSessions.length} Claude prompts \u00B7 ` +
+			`${shell.length} commands \u00B7 ${claudeSessions.length} AI prompts \u00B7 ` +
 			`${Object.keys(categorized).length} categories*`
 	);
 	lines.push("");
@@ -227,9 +227,9 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
-	// ── Claude sessions ──────────────────────────
+	// ── Claude Code sessions ─────────────────────
 	if (claudeSessions.length) {
-		lines.push("## \u{1F916} Claude / AI Work");
+		lines.push("## \u{1F916} Claude Code / AI Work");
 		lines.push("");
 		for (const e of claudeSessions) {
 			const ts = formatTime(e.time);

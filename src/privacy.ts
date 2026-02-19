@@ -53,7 +53,7 @@ export const PRIVACY_DESCRIPTIONS = {
 			"Anthropic API: data is sent to api.anthropic.com via HTTPS.",
 		warning:
 			"If using Anthropic API, your browser history, search queries, shell " +
-			"commands, and Claude prompts are sent to Anthropic's servers for " +
+			"commands, and Claude Code prompts are sent to Anthropic's servers for " +
 			"processing. Using a local model keeps everything on your machine.",
 	},
 	rag: {
@@ -319,7 +319,7 @@ export class DataPreviewModal extends Modal {
 		}
 		if (this.stats.claudeCount > 0) {
 			statsList.createEl("li", {
-				text: `${this.stats.claudeCount} Claude Code prompts`,
+				text: `${this.stats.claudeCount} Claude Code session prompts`,
 			});
 		}
 		if (this.stats.excludedCount && this.stats.excludedCount > 0) {
@@ -376,7 +376,7 @@ export class DataPreviewModal extends Modal {
 			}
 
 			if (samples.claude.length > 0) {
-				sampleContent.createEl("h4", { text: "Claude prompts" });
+				sampleContent.createEl("h4", { text: "Claude Code prompts" });
 				const claudeList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
 				for (const s of samples.claude) {
 					claudeList.createEl("li", { text: s.text });
