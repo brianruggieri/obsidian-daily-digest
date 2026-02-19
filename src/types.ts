@@ -32,6 +32,10 @@ export interface AISummary {
 	category_summaries: Record<string, string>;
 	notable: string[];
 	questions: string[];
+	// Phase 4: De-identified meta-insights (Anthropic only, patterns required)
+	meta_insights?: string[];       // cognitive pattern observations from aggregated data
+	quirky_signals?: string[];      // unusual combos, contradictions, unformalized interests
+	focus_narrative?: string;       // AI narrative about focus/fragmentation patterns
 }
 
 export interface CollectedData {

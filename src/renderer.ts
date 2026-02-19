@@ -113,6 +113,38 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
+	// ── Meta Insights (Phase 4) ─────────────────
+	if (aiSummary?.meta_insights?.length || aiSummary?.quirky_signals?.length || aiSummary?.focus_narrative) {
+		lines.push("## \u{1F52D} Cognitive Patterns");
+		lines.push("");
+
+		if (aiSummary.focus_narrative) {
+			lines.push(`> ${aiSummary.focus_narrative}`);
+			lines.push("");
+		}
+
+		if (aiSummary.meta_insights?.length) {
+			lines.push("### Insights");
+			lines.push("");
+			for (const insight of aiSummary.meta_insights) {
+				lines.push(`- ${insight}`);
+			}
+			lines.push("");
+		}
+
+		if (aiSummary.quirky_signals?.length) {
+			lines.push("### \u{1F50E} Unusual Signals");
+			lines.push("");
+			for (const signal of aiSummary.quirky_signals) {
+				lines.push(`- ${signal}`);
+			}
+			lines.push("");
+		}
+
+		lines.push("---");
+		lines.push("");
+	}
+
 	// ── Knowledge Insights (Phase 3) ────────────
 	if (knowledge) {
 		lines.push("## \u{1F9E0} Knowledge Insights");

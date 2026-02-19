@@ -301,6 +301,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 			// ── Pattern Extraction (Phase 3) ────
 			let knowledgeSections: KnowledgeSections | undefined;
+			let extractedPatterns: PatternAnalysis | undefined;
 			if (this.settings.enablePatterns && classification && classification.events.length > 0) {
 				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
 				const patternConfig: PatternConfig = {
@@ -330,6 +331,7 @@ export default class DailyDigestPlugin extends Plugin {
 					const patterns: PatternAnalysis = extractPatterns(
 						classification, patternConfig, topicHistory, todayStr
 					);
+					extractedPatterns = patterns;
 					knowledgeSections = generateKnowledgeSections(patterns);
 
 					console.debug(
@@ -402,17 +404,19 @@ export default class DailyDigestPlugin extends Plugin {
 
 					if (result === "proceed-with-ai") {
 						const aiNotice = new Notice(
-							classification
-								? "Daily Digest: Summarizing classified abstractions (Anthropic)\u2026"
-								: ragConfig?.enabled
-									? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
-									: "Daily Digest: Generating AI summary (Anthropic)\u2026",
+							extractedPatterns
+								? "Daily Digest: Analyzing de-identified patterns (Anthropic)\u2026"
+								: classification
+									? "Daily Digest: Summarizing classified abstractions (Anthropic)\u2026"
+									: ragConfig?.enabled
+										? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
+										: "Daily Digest: Generating AI summary (Anthropic)\u2026",
 							0
 						);
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, shellCmds,
 							claudeSessions, aiConfig, this.settings.profile,
-							ragConfig, classification
+							ragConfig, classification, extractedPatterns
 						);
 						aiNotice.hide();
 					} else {
@@ -428,7 +432,7 @@ export default class DailyDigestPlugin extends Plugin {
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, shellCmds,
 						claudeSessions, aiConfig, this.settings.profile,
-						ragConfig, classification
+						ragConfig, classification, extractedPatterns
 					);
 				}
 			}
