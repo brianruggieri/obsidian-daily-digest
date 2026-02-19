@@ -7,22 +7,29 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"lint": "eslint src/",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:unit": "vitest run tests/unit",
 		"test:integration": "vitest run tests/integration",
 		"test:eval": "DAILY_DIGEST_AI_EVAL=true vitest run tests/eval",
 		"test:eval:local": "DAILY_DIGEST_AI_EVAL=true DAILY_DIGEST_AI_EVAL_PROVIDER=local vitest run tests/eval",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"deploy": "npm run build && node deploy.mjs",
+		"deploy:dev": "node esbuild.config.mjs production && node deploy.mjs"
 	},
 	"keywords": [],
 	"license": "MIT",
 	"devDependencies": {
-		"@types/node": "^16.11.6",
+		"@eslint/js": "^9.30.1",
+		"@types/node": "^22.0.0",
 		"@vitest/coverage-v8": "^4.0.18",
 		"esbuild": "0.25.5",
+		"globals": "^14.0.0",
 		"tslib": "2.4.0",
 		"typescript": "^5.8.3",
+		"typescript-eslint": "^8.35.1",
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {

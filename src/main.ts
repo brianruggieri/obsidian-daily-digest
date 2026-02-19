@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile, TFolder, Modal, Setting, App } from "obsidian";
+import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./collectors";
 import { categorizeVisits } from "./categorize";
@@ -478,7 +478,6 @@ export default class DailyDigestPlugin extends Plugin {
 
 	private async writeToVault(date: Date, content: string): Promise<string> {
 		// Build the file path
-		const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 		const template = this.settings.filenameTemplate || "YYYY-MM-DD";
 		const filename =
 			template

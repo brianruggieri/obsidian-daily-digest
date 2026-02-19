@@ -20,7 +20,10 @@ data.json
 .claude-flow/
 .claude/
 
-# Editor
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
 *.swp
 *.swo
 *~
