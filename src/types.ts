@@ -101,6 +101,44 @@ export interface SanitizeConfig {
 	scrubEmails: boolean;
 }
 
+// ── Classification Types (Phase 2) ──────────────────────
+
+export type ActivityType =
+	| "research" | "debugging" | "implementation" | "infrastructure"
+	| "writing" | "learning" | "admin" | "communication"
+	| "browsing" | "planning" | "unknown";
+
+export type IntentType =
+	| "compare" | "implement" | "evaluate" | "read" | "troubleshoot"
+	| "configure" | "explore" | "communicate" | "unknown";
+
+export interface StructuredEvent {
+	timestamp: string;
+	source: "browser" | "search" | "shell" | "claude";
+	activityType: ActivityType;
+	topics: string[];
+	entities: string[];
+	intent: IntentType;
+	confidence: number;
+	category?: string;
+	summary: string;
+}
+
+export interface ClassificationResult {
+	events: StructuredEvent[];
+	totalProcessed: number;
+	llmClassified: number;
+	ruleClassified: number;
+	processingTimeMs: number;
+}
+
+export interface ClassificationConfig {
+	enabled: boolean;
+	endpoint: string;
+	model: string;
+	batchSize: number;
+}
+
 // ── RAG Types ───────────────────────────────────────────
 
 export interface ActivityChunk {
