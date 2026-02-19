@@ -1,7 +1,7 @@
 import { CATEGORY_LABELS, scrubSecrets } from "./categorize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent } from "./types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
 
 // Re-export for consumers that import from summarize
@@ -442,7 +442,23 @@ export async function summarizeDay(
 		.trim();
 
 	try {
-		return JSON.parse(cleaned) as AISummary;
+		const summary = JSON.parse(cleaned) as AISummary;
+		// Derive structured prompts with stable IDs from plain question strings
+		if (summary.questions?.length) {
+			const seen = new Set<string>();
+			summary.prompts = summary.questions.map((q) => {
+				let id = slugifyQuestion(q);
+				// Deduplicate IDs by appending a suffix
+				const base = id;
+				let n = 2;
+				while (seen.has(id)) {
+					id = `${base}_${n++}`;
+				}
+				seen.add(id);
+				return { id, question: q };
+			});
+		}
+		return summary;
 	} catch {
 		return {
 			headline: "Activity summary unavailable",

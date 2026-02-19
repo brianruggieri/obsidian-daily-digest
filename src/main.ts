@@ -15,6 +15,7 @@ import { classifyEvents } from "./classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "./sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
+import { extractUserContent, mergeContent, createBackup, hasUserEdits } from "./merge";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -496,10 +497,33 @@ export default class DailyDigestPlugin extends Plugin {
 			}
 		}
 
-		// Write or overwrite
 		const existing = this.app.vault.getAbstractFileByPath(filePath);
 		if (existing instanceof TFile) {
-			await this.app.vault.modify(existing, content);
+			// ── Merge with existing content ─────────────
+			const existingContent = await this.app.vault.read(existing);
+			const extraction = extractUserContent(existingContent);
+
+			// Create backup BEFORE any modification (safety net)
+			if (hasUserEdits(extraction)) {
+				try {
+					const backupPath = await createBackup(
+						this.app.vault as never,
+						filePath,
+						existingContent,
+					);
+					console.debug(`Daily Digest: Backup created at ${backupPath}`);
+				} catch (e) {
+					// Backup failed — abort to protect user data
+					throw new Error(
+						`Daily Digest: Cannot create backup of existing note. ` +
+						`Aborting to protect your data. Error: ${e}`
+					);
+				}
+			}
+
+			// Merge user content into newly generated note
+			const merged = mergeContent(content, extraction);
+			await this.app.vault.modify(existing, merged);
 		} else {
 			await this.app.vault.create(filePath, content);
 		}

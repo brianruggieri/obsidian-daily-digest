@@ -6,6 +6,7 @@ import {
 	ClaudeSession,
 	SearchQuery,
 	ShellCommand,
+	slugifyQuestion,
 } from "./types";
 import { AIProvider } from "./settings";
 import { KnowledgeSections } from "./knowledge";
@@ -62,6 +63,11 @@ export function renderMarkdown(
 	lines.push(`categories: [${catTags.join(", ")}]`);
 	if (aiSummary?.themes?.length) {
 		lines.push(`themes: [${aiSummary.themes.join(", ")}]`);
+	}
+	// Add prompt IDs to frontmatter for Dataview discoverability
+	const prompts = aiSummary?.prompts ?? [];
+	if (prompts.length) {
+		lines.push(`prompts: [${prompts.map((p) => p.id).join(", ")}]`);
 	}
 	if (knowledge) {
 		// Add focus score and activity types to frontmatter
@@ -286,14 +292,24 @@ export function renderMarkdown(
 	}
 
 	// ── Reflection ───────────────────────────────
-	if (aiSummary?.questions?.length) {
+	if (prompts.length) {
+		lines.push("## \u{1FA9E} Reflection");
+		lines.push("");
+		for (const p of prompts) {
+			lines.push(`### ${p.question}`);
+			lines.push(`answer_${p.id}:: `);
+			lines.push("");
+		}
+	} else if (aiSummary?.questions?.length) {
+		// Fallback: plain questions without structured IDs
 		lines.push("## \u{1FA9E} Reflection");
 		lines.push("");
 		for (const q of aiSummary.questions) {
-			lines.push(`- ${q}`);
-			lines.push("  - _your answer here_");
+			const id = slugifyQuestion(q);
+			lines.push(`### ${q}`);
+			lines.push(`answer_${id}:: `);
+			lines.push("");
 		}
-		lines.push("");
 	}
 
 	// ── Notes ────────────────────────────────────
