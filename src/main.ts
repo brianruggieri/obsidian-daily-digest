@@ -260,7 +260,7 @@ export default class DailyDigestPlugin extends Plugin {
 		try {
 			// ── Collect ──────────────────────────
 			progressNotice.setMessage("Daily Digest: Reading browser history\u2026");
-			let { visits: rawVisits, searches: rawSearches } = collectBrowserHistory(this.settings, since);
+			let { visits: rawVisits, searches: rawSearches } = await collectBrowserHistory(this.settings, since);
 
 			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
 			const rawShellCmds = readShellHistory(this.settings, since);

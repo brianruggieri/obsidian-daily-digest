@@ -1,7 +1,9 @@
-import { execSync } from "child_process";
 import { existsSync, readFileSync, copyFileSync, unlinkSync, readdirSync, statSync } from "fs";
-import { homedir, tmpdir } from "os";
+import { homedir, tmpdir, platform } from "os";
 import { join, basename } from "path";
+import initSqlJs from "sql.js";
+// @ts-ignore — wasm loaded as binary by esbuild
+import sqlWasm from "sql.js/dist/sql-wasm.wasm";
 import { DailyDigestSettings } from "./settings";
 import { scrubSecrets } from "./categorize";
 import {
@@ -18,6 +20,15 @@ function expandHome(p: string): string {
 	if (p.startsWith("~/")) {
 		return join(homedir(), p.slice(2));
 	}
+	// Windows: expand %LOCALAPPDATA% and %APPDATA%
+	if (p.startsWith("%LOCALAPPDATA%")) {
+		const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
+		return join(localAppData, p.slice("%LOCALAPPDATA%".length + 1));
+	}
+	if (p.startsWith("%APPDATA%")) {
+		const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
+		return join(appData, p.slice("%APPDATA%".length + 1));
+	}
 	return p;
 }
 
@@ -25,11 +36,11 @@ function tmpPath(suffix: string): string {
 	return join(tmpdir(), `daily-digest-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`);
 }
 
-// ── SQLite via CLI ───────────────────────────────
-// Obsidian plugins can't easily bundle native SQLite modules,
-// so we shell out to the sqlite3 CLI which is pre-installed on macOS.
+// ── SQLite via sql.js (WebAssembly) ──────────────
+// Uses sql.js (SQLite compiled to WASM) — no native binaries, no CLI dependency,
+// works on macOS, Windows, and Linux. The wasm binary is bundled inline by esbuild.
 
-function querySqlite(dbPath: string, sql: string): string[][] {
+async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	const tmp = tmpPath(".db");
 	try {
 		copyFileSync(dbPath, tmp);
@@ -41,16 +52,20 @@ function querySqlite(dbPath: string, sql: string): string[][] {
 			copyFileSync(dbPath + "-shm", tmp + "-shm");
 		}
 
-		const result = execSync(
-			`sqlite3 -separator '|||' "${tmp}" "${sql.replace(/"/g, '\\"')}"`,
-			{ encoding: "utf-8", timeout: 10000, maxBuffer: 10 * 1024 * 1024 }
-		);
-
-		return result
-			.trim()
-			.split("\n")
-			.filter((line) => line.length > 0)
-			.map((line) => line.split("|||"));
+		const SQL = await initSqlJs({ wasmBinary: sqlWasm });
+		const buf = readFileSync(tmp);
+		const db = new SQL.Database(buf);
+		try {
+			const results: string[][] = [];
+			const stmt = db.prepare(sql);
+			while (stmt.step()) {
+				results.push(stmt.get().map((v) => (v === null ? "" : String(v))));
+			}
+			stmt.free();
+			return results;
+		} finally {
+			db.close();
+		}
 	} catch {
 		return [];
 	} finally {
@@ -66,14 +81,14 @@ function chromeEpochToDate(ts: number): Date {
 	return new Date((ts / 1_000_000 - 11644473600) * 1000);
 }
 
-function readChromiumHistory(dbPath: string, since: Date): BrowserVisit[] {
+async function readChromiumHistory(dbPath: string, since: Date): Promise<BrowserVisit[]> {
 	const expanded = expandHome(dbPath);
 	if (!existsSync(expanded)) return [];
 
 	const sinceChrome = BigInt(Math.floor((since.getTime() / 1000 + 11644473600) * 1_000_000));
 	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
 
-	const rows = querySqlite(expanded, sql);
+	const rows = await querySqlite(expanded, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -90,8 +105,21 @@ function readChromiumHistory(dbPath: string, since: Date): BrowserVisit[] {
 	return results;
 }
 
+function findFirefoxProfilesDir(): string {
+	const os = platform();
+	if (os === "win32") {
+		const appdata = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
+		return join(appdata, "Mozilla", "Firefox", "Profiles");
+	} else if (os === "linux") {
+		return join(homedir(), ".mozilla", "firefox");
+	} else {
+		// macOS
+		return join(homedir(), "Library", "Application Support", "Firefox", "Profiles");
+	}
+}
+
 function findFirefoxProfile(): string | null {
-	const profilesDir = expandHome("~/Library/Application Support/Firefox/Profiles");
+	const profilesDir = findFirefoxProfilesDir();
 	if (!existsSync(profilesDir)) return null;
 
 	const entries = readdirSync(profilesDir);
@@ -104,14 +132,14 @@ function findFirefoxProfile(): string | null {
 	return null;
 }
 
-function readFirefoxHistory(since: Date): BrowserVisit[] {
+async function readFirefoxHistory(since: Date): Promise<BrowserVisit[]> {
 	const dbPath = findFirefoxProfile();
 	if (!dbPath) return [];
 
 	const sinceMicro = Math.floor(since.getTime() * 1000);
 	const sql = `SELECT p.url, p.title, h.visit_date FROM moz_historyvisits h JOIN moz_places p ON h.place_id = p.id WHERE h.visit_date > ${sinceMicro} ORDER BY h.visit_date DESC`;
 
-	const rows = querySqlite(dbPath, sql);
+	const rows = await querySqlite(dbPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -127,7 +155,7 @@ function readFirefoxHistory(since: Date): BrowserVisit[] {
 	return results;
 }
 
-function readSafariHistory(since: Date): BrowserVisit[] {
+async function readSafariHistory(since: Date): Promise<BrowserVisit[]> {
 	const dbPath = expandHome("~/Library/Safari/History.db");
 	if (!existsSync(dbPath)) return [];
 
@@ -135,7 +163,7 @@ function readSafariHistory(since: Date): BrowserVisit[] {
 	const sinceApple = since.getTime() / 1000 - 978307200;
 	const sql = `SELECT i.url, v.title, v.visit_time FROM history_visits v JOIN history_items i ON v.history_item = i.id WHERE v.visit_time > ${sinceApple} ORDER BY v.visit_time DESC`;
 
-	const rows = querySqlite(dbPath, sql);
+	const rows = await querySqlite(dbPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
@@ -151,26 +179,30 @@ function readSafariHistory(since: Date): BrowserVisit[] {
 	return results;
 }
 
-export function collectBrowserHistory(
+export async function collectBrowserHistory(
 	settings: DailyDigestSettings,
 	since: Date
-): { visits: BrowserVisit[]; searches: SearchQuery[] } {
+): Promise<{ visits: BrowserVisit[]; searches: SearchQuery[] }> {
 	if (!settings.enableBrowser) return { visits: [], searches: [] };
 
 	const allVisits: BrowserVisit[] = [];
 	const seenUrls = new Set<string>();
 
+	const os = platform();
 	for (const browser of settings.browsers) {
-		const info = BROWSER_PATHS[browser];
+		const byOs = BROWSER_PATHS[browser];
+		if (!byOs) continue;
+		const info = byOs[os] ?? byOs["darwin"]; // fallback for unknown OS
 		if (!info) continue;
 
 		let visits: BrowserVisit[] = [];
 		if (info.type === "chromium") {
-			visits = readChromiumHistory(info.history, since);
+			visits = await readChromiumHistory(info.history, since);
 		} else if (info.type === "firefox") {
-			visits = readFirefoxHistory(since);
+			visits = await readFirefoxHistory(since);
 		} else if (info.type === "safari") {
-			visits = readSafariHistory(since);
+			if (os !== "darwin") continue; // Safari is macOS only
+			visits = await readSafariHistory(since);
 		}
 
 		for (const v of visits) {
