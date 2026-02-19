@@ -139,6 +139,27 @@ export interface ClassificationConfig {
 	batchSize: number;
 }
 
+// ── Sensitivity Filter Types ────────────────────────────
+
+export type SensitivityCategory =
+	| "adult" | "gambling" | "dating" | "health"
+	| "finance" | "drugs" | "weapons" | "piracy"
+	| "vpn_proxy" | "job_search" | "social_personal"
+	| "custom";
+
+export interface SensitivityConfig {
+	enabled: boolean;
+	categories: SensitivityCategory[];
+	customDomains: string[];
+	action: "exclude" | "redact";
+}
+
+export interface SensitivityFilterResult {
+	kept: BrowserVisit[];
+	filtered: number;
+	byCategory: Record<string, number>;
+}
+
 // ── RAG Types ───────────────────────────────────────────
 
 export interface ActivityChunk {

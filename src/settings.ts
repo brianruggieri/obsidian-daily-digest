@@ -1,7 +1,8 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
-import { SanitizationLevel } from "./types";
+import { SanitizationLevel, SensitivityCategory } from "./types";
+import { getCategoryInfo, getTotalBuiltinDomains } from "./sensitivity";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
@@ -36,6 +37,10 @@ export interface DailyDigestSettings {
 	excludedDomains: string;
 	redactPaths: boolean;
 	scrubEmails: boolean;
+	enableSensitivityFilter: boolean;
+	sensitivityCategories: SensitivityCategory[];
+	sensitivityCustomDomains: string;
+	sensitivityAction: "exclude" | "redact";
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 }
@@ -71,6 +76,10 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	excludedDomains: "",
 	redactPaths: true,
 	scrubEmails: true,
+	enableSensitivityFilter: false,
+	sensitivityCategories: [] as SensitivityCategory[],
+	sensitivityCustomDomains: "",
+	sensitivityAction: "exclude" as "exclude" | "redact",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 };
@@ -420,6 +429,137 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					"Secrets (API keys, tokens, passwords, JWTs) are always scrubbed " +
 					"from all output regardless of these settings. These controls " +
 					"provide additional defense-in-depth.",
+			});
+		}
+
+		// ── Sensitivity Filter ───────────────────────
+		new Setting(containerEl).setName("Sensitivity filter").setHeading();
+
+		const totalDomains = getTotalBuiltinDomains();
+
+		new Setting(containerEl)
+			.setName("Enable sensitivity filter")
+			.setDesc(
+				`Automatically filter visits to sensitive domains (${totalDomains} built-in ` +
+				`across 11 categories). Works like an adblock list for your daily notes — ` +
+				`prevents embarrassing or private domains from appearing in your activity log.`
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableSensitivityFilter)
+					.onChange(async (value) => {
+						this.plugin.settings.enableSensitivityFilter = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableSensitivityFilter) {
+			new Setting(containerEl)
+				.setName("Filter action")
+				.setDesc(
+					"Exclude: remove matching visits entirely. " +
+					"Redact: keep the visit but replace URL and title with a category label."
+				)
+				.addDropdown((dropdown) =>
+					dropdown
+						.addOption("exclude", "Exclude (remove entirely)")
+						.addOption("redact", "Redact (replace with category label)")
+						.setValue(this.plugin.settings.sensitivityAction)
+						.onChange(async (value) => {
+							this.plugin.settings.sensitivityAction = value as "exclude" | "redact";
+							await this.plugin.saveSettings();
+						})
+				);
+
+			// Category toggles
+			const catInfo = getCategoryInfo();
+			const enabledCats = new Set(this.plugin.settings.sensitivityCategories);
+
+			const catContainer = containerEl.createDiv({ cls: "dd-sensitivity-categories" });
+			const catHeading = new Setting(catContainer)
+				.setName("Categories")
+				.setDesc(
+					`Select which types of domains to filter. ` +
+					`${enabledCats.size} of ${Object.keys(catInfo).length - 1} categories enabled.`
+				);
+
+			// Quick-select buttons
+			catHeading.addButton((btn) =>
+				btn.setButtonText("All").onClick(async () => {
+					this.plugin.settings.sensitivityCategories = Object.keys(catInfo)
+						.filter((k) => k !== "custom") as SensitivityCategory[];
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+			catHeading.addButton((btn) =>
+				btn.setButtonText("None").onClick(async () => {
+					this.plugin.settings.sensitivityCategories = [];
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+			catHeading.addButton((btn) =>
+				btn.setButtonText("Recommended").onClick(async () => {
+					this.plugin.settings.sensitivityCategories = [
+						"adult", "gambling", "dating", "health", "drugs",
+					];
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+			// Individual category toggles
+			for (const [key, info] of Object.entries(catInfo)) {
+				if (key === "custom") continue;
+				const cat = key as SensitivityCategory;
+				new Setting(catContainer)
+					.setName(`${info.label} (${info.count})`)
+					.setDesc(info.description)
+					.addToggle((toggle) =>
+						toggle
+							.setValue(enabledCats.has(cat))
+							.onChange(async (value) => {
+								const cats = new Set(this.plugin.settings.sensitivityCategories);
+								if (value) {
+									cats.add(cat);
+								} else {
+									cats.delete(cat);
+								}
+								this.plugin.settings.sensitivityCategories = [...cats];
+								await this.plugin.saveSettings();
+							})
+					);
+			}
+
+			// Custom domains
+			new Setting(containerEl)
+				.setName("Custom sensitive domains")
+				.setDesc(
+					"Additional domains to filter, comma-separated. " +
+					"Supports path prefixes (e.g. reddit.com/r/subreddit)."
+				)
+				.addTextArea((text) => {
+					text.inputEl.rows = 3;
+					text.inputEl.cols = 40;
+					text.setPlaceholder("example.com, reddit.com/r/mysubreddit")
+						.setValue(this.plugin.settings.sensitivityCustomDomains)
+						.onChange(async (value) => {
+							this.plugin.settings.sensitivityCustomDomains = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			const sensitivityCallout = containerEl.createDiv({
+				cls: "dd-settings-callout dd-settings-callout-info",
+			});
+			sensitivityCallout.createEl("p", {
+				text:
+					"The sensitivity filter runs before all other processing. Filtered " +
+					"domains never reach AI models, the vault note, or any external " +
+					"service. The built-in list covers well-known sites; add custom " +
+					"domains for anything specific to your situation.",
 			});
 		}
 
