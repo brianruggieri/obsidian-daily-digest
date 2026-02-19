@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
+import { SanitizationLevel } from "./types";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
@@ -27,6 +28,11 @@ export interface DailyDigestSettings {
 	enableRAG: boolean;
 	embeddingModel: string;
 	ragTopK: number;
+	enableSanitization: boolean;
+	sanitizationLevel: SanitizationLevel;
+	excludedDomains: string;
+	redactPaths: boolean;
+	scrubEmails: boolean;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 }
@@ -54,6 +60,11 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableRAG: false,
 	embeddingModel: "nomic-embed-text",
 	ragTopK: 8,
+	enableSanitization: true,
+	sanitizationLevel: "standard" as SanitizationLevel,
+	excludedDomains: "",
+	redactPaths: true,
+	scrubEmails: true,
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 };
@@ -312,6 +323,99 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// ── Data Sanitization ────────────────────────
+		new Setting(containerEl).setName("Data sanitization").setHeading();
+
+		new Setting(containerEl)
+			.setName("Enable sanitization")
+			.setDesc(
+				"Scrub sensitive tokens, auth parameters, email addresses, and " +
+				"IP addresses from all collected data before AI processing or " +
+				"vault storage. Highly recommended when using Anthropic API."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableSanitization)
+					.onChange(async (value) => {
+						this.plugin.settings.enableSanitization = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableSanitization) {
+			new Setting(containerEl)
+				.setName("Sanitization level")
+				.setDesc(
+					"Standard: strip tokens, sensitive URL params, emails, IPs. " +
+					"Aggressive: also reduce URLs to domain+path only (removes all query strings)."
+				)
+				.addDropdown((dropdown) =>
+					dropdown
+						.addOption("standard", "Standard")
+						.addOption("aggressive", "Aggressive")
+						.setValue(this.plugin.settings.sanitizationLevel)
+						.onChange(async (value) => {
+							this.plugin.settings.sanitizationLevel = value as SanitizationLevel;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Excluded domains")
+				.setDesc(
+					"Visits to these domains will be excluded entirely from collection. " +
+					"Comma-separated patterns (e.g. mybank.com, healthportal.com, vpn.)."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("mybank.com, internal.corp.com")
+						.setValue(this.plugin.settings.excludedDomains)
+						.onChange(async (value) => {
+							this.plugin.settings.excludedDomains = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Redact file paths")
+				.setDesc(
+					"Replace home directory paths (/Users/you/...) with ~/ in all output."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.redactPaths)
+						.onChange(async (value) => {
+							this.plugin.settings.redactPaths = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Redact email addresses")
+				.setDesc(
+					"Replace email addresses with [EMAIL] in all output."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.scrubEmails)
+						.onChange(async (value) => {
+							this.plugin.settings.scrubEmails = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			const sanitizeCallout = containerEl.createDiv({
+				cls: "dd-settings-callout dd-settings-callout-info",
+			});
+			sanitizeCallout.createEl("p", {
+				text:
+					"Secrets (API keys, tokens, passwords, JWTs) are always scrubbed " +
+					"from all output regardless of these settings. These controls " +
+					"provide additional defense-in-depth.",
+			});
+		}
 
 		// ── AI Summarization ─────────────────────────
 		new Setting(containerEl).setName("AI summarization").setHeading();

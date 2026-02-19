@@ -9,7 +9,8 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig } from "./types";
+import { RAGConfig, SanitizeConfig } from "./types";
+import { sanitizeCollectedData } from "./sanitize";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -186,16 +187,44 @@ export default class DailyDigestPlugin extends Plugin {
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
+		// Build sanitization config
+		const sanitizeConfig: SanitizeConfig = {
+			enabled: this.settings.enableSanitization,
+			level: this.settings.sanitizationLevel,
+			excludedDomains: this.settings.excludedDomains
+				.split(",")
+				.map((d) => d.trim())
+				.filter((d) => d),
+			redactPaths: this.settings.redactPaths,
+			scrubEmails: this.settings.scrubEmails,
+		};
+
 		try {
 			// ── Collect ──────────────────────────
 			progressNotice.setMessage("Daily Digest: Reading browser history\u2026");
-			const { visits, searches } = collectBrowserHistory(this.settings, since);
+			const { visits: rawVisits, searches: rawSearches } = collectBrowserHistory(this.settings, since);
 
 			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
-			const shellCmds = readShellHistory(this.settings, since);
+			const rawShellCmds = readShellHistory(this.settings, since);
 
 			progressNotice.setMessage("Daily Digest: Reading Claude sessions\u2026");
-			const claudeSessions = readClaudeSessions(this.settings, since);
+			const rawClaudeSessions = readClaudeSessions(this.settings, since);
+
+			// ── Sanitize ────────────────────────
+			progressNotice.setMessage("Daily Digest: Sanitizing data\u2026");
+			const sanitized = sanitizeCollectedData(
+				rawVisits, rawSearches, rawShellCmds, rawClaudeSessions,
+				sanitizeConfig
+			);
+			const visits = sanitized.visits;
+			const searches = sanitized.searches;
+			const shellCmds = sanitized.shellCommands;
+			const claudeSessions = sanitized.claudeSessions;
+			const excludedCount = sanitized.excludedVisitCount;
+
+			if (excludedCount > 0) {
+				console.debug(`Daily Digest: Excluded ${excludedCount} visits by domain filter`);
+			}
 
 			// ── Categorize ───────────────────────
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
@@ -213,6 +242,21 @@ export default class DailyDigestPlugin extends Plugin {
 						searchCount: searches.length,
 						shellCount: shellCmds.length,
 						claudeCount: claudeSessions.length,
+						excludedCount,
+						samples: {
+							visits: visits.slice(0, 5).map((v) => ({
+								text: `${v.domain || "unknown"} - ${(v.title || "").slice(0, 60) || v.url}`,
+							})),
+							searches: searches.slice(0, 5).map((s) => ({
+								text: s.query,
+							})),
+							shell: shellCmds.slice(0, 5).map((c) => ({
+								text: c.cmd.slice(0, 80),
+							})),
+							claude: claudeSessions.slice(0, 3).map((c) => ({
+								text: c.prompt.slice(0, 100),
+							})),
+						},
 					}).openAndWait();
 
 					if (result === "cancel") {

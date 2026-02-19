@@ -242,11 +242,23 @@ export class OnboardingModal extends Modal {
 
 // ── Data Preview Modal ──────────────────────────────────
 
+export interface DataPreviewSample {
+	text: string;
+	time?: string;
+}
+
 export interface DataPreviewStats {
 	visitCount: number;
 	searchCount: number;
 	shellCount: number;
 	claudeCount: number;
+	excludedCount?: number;
+	samples?: {
+		visits: DataPreviewSample[];
+		searches: DataPreviewSample[];
+		shell: DataPreviewSample[];
+		claude: DataPreviewSample[];
+	};
 }
 
 export type DataPreviewResult =
@@ -302,13 +314,74 @@ export class DataPreviewModal extends Modal {
 		}
 		if (this.stats.shellCount > 0) {
 			statsList.createEl("li", {
-				text: `${this.stats.shellCount} shell commands (secrets redacted)`,
+				text: `${this.stats.shellCount} shell commands (sanitized)`,
 			});
 		}
 		if (this.stats.claudeCount > 0) {
 			statsList.createEl("li", {
 				text: `${this.stats.claudeCount} Claude Code prompts`,
 			});
+		}
+		if (this.stats.excludedCount && this.stats.excludedCount > 0) {
+			statsList.createEl("li", {
+				text: `${this.stats.excludedCount} visits excluded by domain filter`,
+				cls: "dd-preview-excluded",
+			});
+		}
+
+		// ── Scrubbed data samples ────────────────
+		if (this.stats.samples) {
+			const sampleSection = contentEl.createDiv({ cls: "dd-preview-samples" });
+			const sampleToggle = sampleSection.createEl("p", {
+				cls: "dd-preview-toggle",
+				text: "\u25B6 Show sample data (sanitized)",
+			});
+			const sampleContent = sampleSection.createDiv({
+				cls: "dd-preview-sample-content",
+			});
+			sampleContent.style.display = "none";
+
+			sampleToggle.addEventListener("click", () => {
+				const visible = sampleContent.style.display !== "none";
+				sampleContent.style.display = visible ? "none" : "block";
+				sampleToggle.textContent = visible
+					? "\u25B6 Show sample data (sanitized)"
+					: "\u25BC Sample data (sanitized)";
+			});
+
+			const { samples } = this.stats;
+
+			if (samples.visits.length > 0) {
+				sampleContent.createEl("h4", { text: "Browser visits" });
+				const visitList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
+				for (const s of samples.visits) {
+					visitList.createEl("li", { text: s.text });
+				}
+			}
+
+			if (samples.searches.length > 0) {
+				sampleContent.createEl("h4", { text: "Search queries" });
+				const searchList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
+				for (const s of samples.searches) {
+					searchList.createEl("li", { text: s.text });
+				}
+			}
+
+			if (samples.shell.length > 0) {
+				sampleContent.createEl("h4", { text: "Shell commands" });
+				const shellList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
+				for (const s of samples.shell) {
+					shellList.createEl("li", { text: s.text, cls: "dd-preview-mono" });
+				}
+			}
+
+			if (samples.claude.length > 0) {
+				sampleContent.createEl("h4", { text: "Claude prompts" });
+				const claudeList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
+				for (const s of samples.claude) {
+					claudeList.createEl("li", { text: s.text });
+				}
+			}
 		}
 
 		const destination = contentEl.createDiv({
