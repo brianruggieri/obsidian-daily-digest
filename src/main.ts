@@ -9,8 +9,9 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig, SanitizeConfig } from "./types";
+import { RAGConfig, SanitizeConfig, ClassificationConfig, ClassificationResult } from "./types";
 import { sanitizeCollectedData } from "./sanitize";
+import { classifyEvents } from "./classify";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -230,6 +231,36 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
+			// ── Classify (Phase 2) ──────────────
+			let classification: ClassificationResult | undefined;
+			if (this.settings.enableClassification && useAI) {
+				const classifyModel = this.settings.classificationModel || this.settings.localModel;
+				if (classifyModel && this.settings.localEndpoint) {
+					progressNotice.setMessage("Daily Digest: Classifying events (local LLM)\u2026");
+					const classConfig: ClassificationConfig = {
+						enabled: true,
+						endpoint: this.settings.localEndpoint,
+						model: classifyModel,
+						batchSize: this.settings.classificationBatchSize,
+					};
+					try {
+						classification = await classifyEvents(
+							visits, searches, shellCmds, claudeSessions,
+							categorized, classConfig
+						);
+						console.debug(
+							`Daily Digest: Classified ${classification.totalProcessed} events ` +
+							`(${classification.llmClassified} LLM, ${classification.ruleClassified} rule) ` +
+							`in ${classification.processingTimeMs}ms`
+						);
+					} catch (e) {
+						console.warn("Daily Digest: Classification failed, continuing without:", e);
+					}
+				} else {
+					console.debug("Daily Digest: Classification enabled but no local model/endpoint configured");
+				}
+			}
+
 			// ── AI Summary ───────────────────────
 			let aiSummary = null;
 			if (useAI) {
@@ -267,14 +298,17 @@ export default class DailyDigestPlugin extends Plugin {
 
 					if (result === "proceed-with-ai") {
 						const aiNotice = new Notice(
-							ragConfig?.enabled
-								? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
-								: "Daily Digest: Generating AI summary (Anthropic)\u2026",
+							classification
+								? "Daily Digest: Summarizing classified abstractions (Anthropic)\u2026"
+								: ragConfig?.enabled
+									? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
+									: "Daily Digest: Generating AI summary (Anthropic)\u2026",
 							0
 						);
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, shellCmds,
-							claudeSessions, aiConfig, this.settings.profile, ragConfig
+							claudeSessions, aiConfig, this.settings.profile,
+							ragConfig, classification
 						);
 						aiNotice.hide();
 					} else {
@@ -289,7 +323,8 @@ export default class DailyDigestPlugin extends Plugin {
 					);
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, shellCmds,
-						claudeSessions, aiConfig, this.settings.profile, ragConfig
+						claudeSessions, aiConfig, this.settings.profile,
+						ragConfig, classification
 					);
 				}
 			}

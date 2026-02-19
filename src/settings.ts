@@ -25,6 +25,9 @@ export interface DailyDigestSettings {
 	enableShell: boolean;
 	enableClaude: boolean;
 	claudeSessionsDir: string;
+	enableClassification: boolean;
+	classificationModel: string;
+	classificationBatchSize: number;
 	enableRAG: boolean;
 	embeddingModel: string;
 	ragTopK: number;
@@ -57,6 +60,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableShell: false,
 	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
+	enableClassification: false,
+	classificationModel: "",
+	classificationBatchSize: 8,
 	enableRAG: false,
 	embeddingModel: "nomic-embed-text",
 	ragTopK: 8,
@@ -708,6 +714,91 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						text:
 							"RAG requires a local model server for embedding generation. " +
 							"Configure a local server endpoint above.",
+					});
+				}
+			}
+		}
+
+		// ── Event Classification ─────────────────────
+		if (this.plugin.settings.enableAI) {
+			new Setting(containerEl)
+				.setName("Event classification (advanced)")
+				.setHeading();
+
+			new Setting(containerEl)
+				.setName("Enable event classification")
+				.setDesc(
+					"Classify raw activity events into structured abstractions " +
+					"(activity type, topics, entities, intent) using a local LLM. " +
+					"When Anthropic is the AI provider, only these abstractions " +
+					"are sent externally — never raw URLs, queries, or commands."
+				)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enableClassification)
+						.onChange(async (value) => {
+							this.plugin.settings.enableClassification = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			if (this.plugin.settings.enableClassification) {
+				new Setting(containerEl)
+					.setName("Classification model")
+					.setDesc(
+						"Local model for event classification. Leave blank to use " +
+						"the same model as AI summarization. Smaller models (3B) " +
+						"work well for classification."
+					)
+					.addText((text) =>
+						text
+							.setPlaceholder("(same as AI model)")
+							.setValue(this.plugin.settings.classificationModel)
+							.onChange(async (value) => {
+								this.plugin.settings.classificationModel = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				new Setting(containerEl)
+					.setName("Batch size")
+					.setDesc(
+						"Number of events per classification batch. " +
+						"Larger batches are faster but may reduce accuracy."
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(4, 16, 2)
+							.setValue(this.plugin.settings.classificationBatchSize)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.classificationBatchSize = value;
+								await this.plugin.saveSettings();
+							})
+					);
+
+				const classifyCallout = containerEl.createDiv({
+					cls: "dd-settings-callout",
+				});
+				classifyCallout.createEl("p", {
+					text:
+						"Classification always runs locally on your machine. " +
+						"It adds ~2-5 seconds per batch but ensures only structured " +
+						"abstractions (topics, entities, activity types) reach " +
+						"external APIs. Raw data never leaves your machine.",
+				});
+
+				if (this.plugin.settings.aiProvider === "anthropic") {
+					const privacyCallout = containerEl.createDiv({
+						cls: "dd-settings-callout dd-settings-callout-info",
+					});
+					privacyCallout.createEl("p", {
+						text:
+							"With Anthropic selected: classification is highly recommended. " +
+							"When enabled, the AI summary prompt contains only activity types, " +
+							"topics, and entity names — zero raw URLs, search queries, " +
+							"shell commands, or Claude prompts are sent to Anthropic.",
 					});
 				}
 			}
