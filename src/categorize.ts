@@ -124,34 +124,5 @@ export function categorizeVisits(visits: BrowserVisit[]): CategorizedVisits {
 	return result;
 }
 
-// ── Secret Scrubbing ─────────────────────────────
-
-const SECRET_PATTERNS: [RegExp, string][] = [
-	[
-		/(?:export\s+)?(\w*(?:password|passwd|secret|token|key|api_?key|auth|bearer|credential)\w*)\s*=\s*\S+/gi,
-		"$1=[REDACTED]",
-	],
-	[
-		/(authorization:\s*(?:bearer|basic|token)\s+)\S+/gi,
-		"$1[REDACTED]",
-	],
-	[
-		/((?:postgres|mysql|mongodb|redis):\/\/[^:]+:)[^@]+(@)/gi,
-		"$1[REDACTED]$2",
-	],
-	[
-		/(AKIA[A-Z0-9]{16})/g,
-		"[AWS_KEY_REDACTED]",
-	],
-	[
-		/\b([A-Za-z0-9+/]{40,}={0,2})\b/g,
-		"[TOKEN_REDACTED]",
-	],
-];
-
-export function scrubSecrets(text: string): string {
-	for (const [pattern, replacement] of SECRET_PATTERNS) {
-		text = text.replace(pattern, replacement);
-	}
-	return text;
-}
+// Note: scrubSecrets() is defined in sanitize.ts (comprehensive 15-pattern version).
+// Import from "./sanitize" — do NOT duplicate here.

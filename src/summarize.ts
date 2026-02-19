@@ -1,4 +1,5 @@
-import { CATEGORY_LABELS, scrubSecrets } from "./categorize";
+import { CATEGORY_LABELS } from "./categorize";
+import { scrubSecrets } from "./sanitize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion } from "./types";

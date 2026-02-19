@@ -38,11 +38,14 @@ export async function callAnthropic(
 
 		if (response.status === 200) {
 			const data = response.json;
-			return data.content[0].text.trim();
+			const text = data?.content?.[0]?.text;
+			if (typeof text === "string") return text.trim();
+			return "[AI summary unavailable: unexpected response shape]";
 		}
 		return `[AI summary unavailable: HTTP ${response.status}]`;
 	} catch (e) {
-		return `[AI summary unavailable: ${e}]`;
+		const msg = e instanceof Error ? e.message : String(e);
+		return `[AI summary unavailable: ${msg}]`;
 	}
 }
 
@@ -93,7 +96,9 @@ export async function callLocal(
 			});
 			if (!resp.ok) return `[AI summary unavailable: HTTP ${resp.status}]`;
 			const data = await resp.json();
-			return data.choices[0].message.content.trim();
+			const text = data?.choices?.[0]?.message?.content;
+			if (typeof text === "string") return text.trim();
+			return "[AI summary unavailable: unexpected response shape]";
 		} else {
 			const response = await requestUrl({
 				url,
@@ -103,12 +108,15 @@ export async function callLocal(
 			});
 			if (response.status === 200) {
 				const data = response.json;
-				return data.choices[0].message.content.trim();
+				const text = data?.choices?.[0]?.message?.content;
+				if (typeof text === "string") return text.trim();
+				return "[AI summary unavailable: unexpected response shape]";
 			}
 			return `[AI summary unavailable: HTTP ${response.status}]`;
 		}
 	} catch (e) {
-		return `[AI summary unavailable: ${e}]`;
+		const msg = e instanceof Error ? e.message : String(e);
+		return `[AI summary unavailable: ${msg}]`;
 	}
 }
 
