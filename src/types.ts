@@ -89,6 +89,18 @@ export const EXCLUDE_DOMAINS = new Set([
 	"127.0.0.1",
 ]);
 
+// ── Sanitization Types ───────────────────────────────────
+
+export type SanitizationLevel = "standard" | "aggressive";
+
+export interface SanitizeConfig {
+	enabled: boolean;
+	level: SanitizationLevel;
+	excludedDomains: string[];
+	redactPaths: boolean;
+	scrubEmails: boolean;
+}
+
 // ── RAG Types ───────────────────────────────────────────
 
 export interface ActivityChunk {

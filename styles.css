@@ -76,6 +76,67 @@
 	margin-top: 16px;
 }
 
+/* ── Data Preview Samples ────────────────── */
+
+.dd-preview-samples {
+	margin: 12px 0;
+}
+
+.dd-preview-toggle {
+	cursor: pointer;
+	color: var(--text-accent);
+	font-size: 0.9em;
+	user-select: none;
+	margin: 8px 0;
+}
+
+.dd-preview-toggle:hover {
+	text-decoration: underline;
+}
+
+.dd-preview-sample-content {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 8px 12px;
+	margin-top: 4px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.dd-preview-sample-content h4 {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	margin: 8px 0 4px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.dd-preview-sample-content h4:first-child {
+	margin-top: 0;
+}
+
+.dd-preview-items {
+	padding-left: 16px;
+	margin: 4px 0;
+}
+
+.dd-preview-items li {
+	font-size: 0.85em;
+	line-height: 1.4;
+	margin-bottom: 2px;
+	word-break: break-all;
+}
+
+.dd-preview-mono {
+	font-family: var(--font-monospace);
+	font-size: 0.8em !important;
+}
+
+.dd-preview-excluded {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
 /* ── Settings Callout Boxes ───────────────── */
 
 .dd-settings-callout {
