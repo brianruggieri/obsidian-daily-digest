@@ -1,0 +1,57 @@
+name: Release Obsidian Plugin
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check & build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify tag matches manifest version
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          manifest_version=$(node -e "console.log(JSON.parse(require('fs').readFileSync('manifest.json','utf8')).version)")
+          if [ "$tag" != "$manifest_version" ]; then
+            echo "::error::Tag '$tag' does not match manifest.json version '$manifest_version'"
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+
+          # Build the list of assets to upload
+          assets=(main.js manifest.json)
+          if [ -f styles.css ]; then
+            assets+=(styles.css)
+          fi
+
+          gh release create "$tag" \
+            --title="$tag" \
+            --draft \
+            "${assets[@]}"

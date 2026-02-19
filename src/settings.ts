@@ -1054,7 +1054,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private async detectLocalModels(containerEl: HTMLElement): Promise<void> {
+	private async detectLocalModels(_containerEl: HTMLElement): Promise<void> {
 		const endpoint = this.plugin.settings.localEndpoint.replace(/\/+$/, "");
 		const notice = new Notice("Detecting local models\u2026", 0);
 

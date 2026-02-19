@@ -354,7 +354,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 				if (!line.trim()) continue;
 				try {
 					const obj = JSON.parse(line);
-					let ts = obj.timestamp || obj.created_at;
+					const ts = obj.timestamp || obj.created_at;
 					let dt: Date | null = null;
 
 					if (ts) {
