@@ -8,6 +8,7 @@ import {
 	ShellCommand,
 } from "./types";
 import { AIProvider } from "./settings";
+import { KnowledgeSections } from "./knowledge";
 
 function formatTime(d: Date | null): string {
 	if (!d) return "";
@@ -34,7 +35,8 @@ export function renderMarkdown(
 	claudeSessions: ClaudeSession[],
 	categorized: CategorizedVisits,
 	aiSummary: AISummary | null,
-	aiProviderUsed: AIProvider | "none" = "none"
+	aiProviderUsed: AIProvider | "none" = "none",
+	knowledge?: KnowledgeSections
 ): string {
 	const today = formatDate(date);
 	const dow = dayOfWeek(date);
@@ -50,7 +52,8 @@ export function renderMarkdown(
 	const catTags = Object.keys(categorized).filter((k) => k !== "other");
 
 	// ── Frontmatter ──────────────────────────────
-	const allTags = ["daily", "daily-digest", ...catTags, ...themeTags];
+	const knowledgeTags = knowledge?.tags ?? [];
+	const allTags = ["daily", "daily-digest", ...catTags, ...themeTags, ...knowledgeTags];
 	lines.push("---");
 	lines.push(`date: ${today}`);
 	lines.push(`day: ${dow}`);
@@ -59,6 +62,10 @@ export function renderMarkdown(
 	lines.push(`categories: [${catTags.join(", ")}]`);
 	if (aiSummary?.themes?.length) {
 		lines.push(`themes: [${aiSummary.themes.join(", ")}]`);
+	}
+	if (knowledge) {
+		// Add focus score and activity types to frontmatter
+		lines.push(`focus_score: ${knowledge.focusSummary.match(/\d+%/)?.[0] || "N/A"}`);
 	}
 	lines.push("---");
 	lines.push("");
@@ -103,6 +110,69 @@ export function renderMarkdown(
 		for (const item of aiSummary.notable) {
 			lines.push(`- ${item}`);
 		}
+		lines.push("");
+	}
+
+	// ── Knowledge Insights (Phase 3) ────────────
+	if (knowledge) {
+		lines.push("## \u{1F9E0} Knowledge Insights");
+		lines.push("");
+
+		// Focus summary
+		lines.push(`> ${knowledge.focusSummary}`);
+		lines.push("");
+
+		// Temporal clusters
+		if (knowledge.temporalInsights.length > 0) {
+			lines.push("### \u{23F0} Activity Clusters");
+			lines.push("");
+			for (const insight of knowledge.temporalInsights) {
+				lines.push(`- ${insight}`);
+			}
+			lines.push("");
+		}
+
+		// Topic map
+		if (knowledge.topicMap.length > 0) {
+			lines.push("### \u{1F5FA}\u{FE0F} Topic Map");
+			lines.push("");
+			for (const line of knowledge.topicMap) {
+				lines.push(`- ${line}`);
+			}
+			lines.push("");
+		}
+
+		// Entity graph
+		if (knowledge.entityGraph.length > 0) {
+			lines.push("### \u{1F517} Entity Relations");
+			lines.push("");
+			for (const line of knowledge.entityGraph) {
+				lines.push(`- ${line}`);
+			}
+			lines.push("");
+		}
+
+		// Recurrence signals
+		if (knowledge.recurrenceNotes.length > 0) {
+			lines.push("### \u{1F504} Recurrence Patterns");
+			lines.push("");
+			for (const note of knowledge.recurrenceNotes) {
+				lines.push(`- ${note}`);
+			}
+			lines.push("");
+		}
+
+		// Knowledge delta
+		if (knowledge.knowledgeDeltaLines.length > 0) {
+			lines.push("### \u{1F4A1} Knowledge Delta");
+			lines.push("");
+			for (const line of knowledge.knowledgeDeltaLines) {
+				lines.push(`- ${line}`);
+			}
+			lines.push("");
+		}
+
+		lines.push("---");
 		lines.push("");
 	}
 
