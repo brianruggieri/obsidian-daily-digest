@@ -395,6 +395,76 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						"All data stays on your machine. The local server receives your " +
 						"activity data over localhost only. No internet connection is used.",
 				});
+
+				// ── Quick start guide ────────────────
+				const guide = containerEl.createDiv({ cls: "dd-setup-guide" });
+				const guideToggle = new Setting(guide)
+					.setName("Quick start guide")
+					.setDesc("How to set up a local AI model");
+
+				const guideContent = guide.createDiv({ cls: "dd-setup-guide-content" });
+				guideContent.style.display = "none";
+
+				guideToggle.addButton((btn) =>
+					btn.setButtonText("Show").onClick(() => {
+						const visible = guideContent.style.display !== "none";
+						guideContent.style.display = visible ? "none" : "block";
+						btn.setButtonText(visible ? "Show" : "Hide");
+					})
+				);
+
+				// Ollama section
+				guideContent.createEl("h4", { text: "Ollama (recommended)" });
+				const ollamaSteps = guideContent.createEl("ol");
+				ollamaSteps.createEl("li").createEl("span", {
+					text: "Install: ",
+				}).parentElement!.createEl("code", { text: "brew install ollama" });
+				const li2 = ollamaSteps.createEl("li");
+				li2.createEl("span", { text: "Pull a model: " });
+				li2.createEl("code", { text: "ollama pull llama3.2" });
+				const li3 = ollamaSteps.createEl("li");
+				li3.createEl("span", { text: "Start server: " });
+				li3.createEl("code", { text: "ollama serve" });
+				ollamaSteps.createEl("li", {
+					text: "Click Detect above to find available models",
+				});
+
+				const ollamaNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
+				ollamaNote.createEl("p", {
+					text:
+						"Recommended models: llama3.2 (3B, fast), mistral (7B, balanced), " +
+						"phi3 (3.8B, good for summarization). Smaller models are faster " +
+						"but may produce less polished summaries.",
+				});
+
+				// LM Studio section
+				guideContent.createEl("h4", { text: "LM Studio" });
+				const lmSteps = guideContent.createEl("ol");
+				lmSteps.createEl("li", {
+					text: "Download from lmstudio.ai",
+				});
+				lmSteps.createEl("li", {
+					text: "Download a model from the built-in browser",
+				});
+				const li3b = lmSteps.createEl("li");
+				li3b.createEl("span", {
+					text: "Start the local server (default: ",
+				});
+				li3b.createEl("code", { text: "http://localhost:1234" });
+				li3b.appendText(")");
+				lmSteps.createEl("li", {
+					text: "Update the endpoint above, then click Detect",
+				});
+
+				// Other servers
+				guideContent.createEl("h4", { text: "Other OpenAI-compatible servers" });
+				const otherNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
+				otherNote.createEl("p", {
+					text:
+						"Any server exposing /v1/chat/completions works: llama.cpp server, " +
+						"LocalAI, vLLM, text-generation-webui with OpenAI extension, etc. " +
+						"Set the endpoint URL and model name accordingly.",
+				});
 			} else {
 				// ── Anthropic settings ───────────────
 				new Setting(containerEl)
