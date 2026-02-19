@@ -161,6 +161,24 @@
 	border-left-color: var(--text-muted);
 }
 
+/* ── Sensitivity Filter ─────────────────── */
+
+.dd-sensitivity-categories {
+	margin: 8px 0;
+	padding: 8px 0;
+	border-top: 1px solid var(--background-modifier-border);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dd-sensitivity-categories .setting-item {
+	padding: 4px 0;
+	border-bottom: none;
+}
+
+.dd-sensitivity-categories .setting-item-description {
+	font-size: 0.8em;
+}
+
 /* ── Local Model Setup Guide ────────────── */
 
 .dd-setup-guide {

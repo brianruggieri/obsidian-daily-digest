@@ -9,9 +9,10 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig, SanitizeConfig, ClassificationConfig, ClassificationResult } from "./types";
+import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult } from "./types";
 import { sanitizeCollectedData } from "./sanitize";
 import { classifyEvents } from "./classify";
+import { filterSensitiveDomains, filterSensitiveSearches } from "./sensitivity";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -200,16 +201,50 @@ export default class DailyDigestPlugin extends Plugin {
 			scrubEmails: this.settings.scrubEmails,
 		};
 
+		// Build sensitivity config
+		const sensitivityConfig: SensitivityConfig = {
+			enabled: this.settings.enableSensitivityFilter,
+			categories: this.settings.sensitivityCategories,
+			customDomains: this.settings.sensitivityCustomDomains
+				.split(",")
+				.map((d) => d.trim())
+				.filter((d) => d),
+			action: this.settings.sensitivityAction,
+		};
+
 		try {
 			// ── Collect ──────────────────────────
 			progressNotice.setMessage("Daily Digest: Reading browser history\u2026");
-			const { visits: rawVisits, searches: rawSearches } = collectBrowserHistory(this.settings, since);
+			let { visits: rawVisits, searches: rawSearches } = collectBrowserHistory(this.settings, since);
 
 			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
 			const rawShellCmds = readShellHistory(this.settings, since);
 
 			progressNotice.setMessage("Daily Digest: Reading Claude sessions\u2026");
 			const rawClaudeSessions = readClaudeSessions(this.settings, since);
+
+			// ── Sensitivity Filter ──────────────
+			let sensitivityFiltered = 0;
+			if (sensitivityConfig.enabled) {
+				progressNotice.setMessage("Daily Digest: Applying sensitivity filter\u2026");
+				const visitResult = filterSensitiveDomains(rawVisits, sensitivityConfig);
+				rawVisits = visitResult.kept;
+				sensitivityFiltered += visitResult.filtered;
+
+				const searchResult = filterSensitiveSearches(rawSearches, sensitivityConfig);
+				rawSearches = searchResult.kept;
+				sensitivityFiltered += searchResult.filtered;
+
+				if (sensitivityFiltered > 0) {
+					const catBreakdown = Object.entries(visitResult.byCategory)
+						.map(([cat, count]) => `${cat}: ${count}`)
+						.join(", ");
+					console.debug(
+						`Daily Digest: Sensitivity filter removed ${sensitivityFiltered} items` +
+						(catBreakdown ? ` (${catBreakdown})` : "")
+					);
+				}
+			}
 
 			// ── Sanitize ────────────────────────
 			progressNotice.setMessage("Daily Digest: Sanitizing data\u2026");
@@ -223,6 +258,7 @@ export default class DailyDigestPlugin extends Plugin {
 			const claudeSessions = sanitized.claudeSessions;
 			const excludedCount = sanitized.excludedVisitCount;
 
+			const totalExcluded = excludedCount + sensitivityFiltered;
 			if (excludedCount > 0) {
 				console.debug(`Daily Digest: Excluded ${excludedCount} visits by domain filter`);
 			}
@@ -273,7 +309,7 @@ export default class DailyDigestPlugin extends Plugin {
 						searchCount: searches.length,
 						shellCount: shellCmds.length,
 						claudeCount: claudeSessions.length,
-						excludedCount,
+						excludedCount: totalExcluded,
 						samples: {
 							visits: visits.slice(0, 5).map((v) => ({
 								text: `${v.domain || "unknown"} - ${(v.title || "").slice(0, 60) || v.url}`,
