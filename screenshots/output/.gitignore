@@ -1,0 +1,5 @@
+# Generated screenshots — not committed.
+# Run `npm run screenshots` to regenerate.
+# Baselines live in screenshots/baseline/ and ARE committed.
+*
+!.gitignore
