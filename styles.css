@@ -137,6 +137,19 @@
 	font-style: italic;
 }
 
+/* ── Settings Section Heading Icons ───────── */
+
+.dd-heading-icon {
+	margin-right: 6px;
+	vertical-align: middle;
+	color: var(--text-muted);
+}
+
+.dd-heading-icon svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
 /* ── Settings Callout Boxes ───────────────── */
 
 .dd-settings-callout {
