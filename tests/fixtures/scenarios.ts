@@ -76,7 +76,7 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 			{ cmd: "psql postgres://admin:supersecret@db.example.com:5432/production", time: BASE_DATE },
 			{ cmd: "ssh -i /Users/testuser/.ssh/id_rsa bastion.example.com", time: BASE_DATE },
 			{ cmd: "npm publish --token npm_abcdefghijklmnopqrstuvwxyz1234567890", time: BASE_DATE },
-			{ cmd: "stripe listen --api-key sk_live_abcdefghijklmnopqrstuvwxyz", time: BASE_DATE },
+			{ cmd: "stripe listen --api-key sk_test_abcdefghijklmnopqrstuvwxyz", time: BASE_DATE },
 		],
 		dirtyClaude: [
 			{
@@ -91,7 +91,7 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 			},
 		],
 		expectedRedactions: [
-			"ghp_", "sk-ant-", "sk-1234", "AKIA", "npm_", "sk_live_",
+			"ghp_", "sk-ant-", "sk-1234", "AKIA", "npm_", "sk_test_",
 			"Bearer eyJ", "supersecret", "password123", "auth_code_secret",
 			"/Users/testuser", "testuser@personal-email.com",
 		],

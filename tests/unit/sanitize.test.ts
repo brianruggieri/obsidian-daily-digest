@@ -52,12 +52,12 @@ describe("scrubSecrets", () => {
 	});
 
 	it("redacts Stripe secret keys", () => {
-		expect(scrubSecrets("sk_live_abcdefghijklmnopqrstuvwxyz"))
+		expect(scrubSecrets("sk_test_abcdefghijklmnopqrstuvwxyz"))
 			.toContain("[STRIPE_KEY_REDACTED]");
 	});
 
 	it("redacts Stripe publishable keys", () => {
-		expect(scrubSecrets("pk_live_abcdefghijklmnopqrstuvwxyz"))
+		expect(scrubSecrets("pk_test_abcdefghijklmnopqrstuvwxyz"))
 			.toContain("[STRIPE_KEY_REDACTED]");
 	});
 
