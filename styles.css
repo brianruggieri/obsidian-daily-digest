@@ -140,9 +140,11 @@
 /* ── Settings Section Heading Icons ───────── */
 
 .dd-heading-icon {
-	margin-right: 6px;
-	vertical-align: middle;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
 	color: var(--text-muted);
+	margin-right: 6px;
 }
 
 .dd-heading-icon svg {

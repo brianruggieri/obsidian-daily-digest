@@ -117,9 +117,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// ── General ──────────────────────────────────
+		// ━━ 1. General ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 		const generalHeading = new Setting(containerEl).setName("General").setHeading();
-		setIcon(generalHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "settings");
+		this.prependIcon(generalHeading.nameEl, "settings");
 
 		new Setting(containerEl)
 			.setName("Daily notes folder")
@@ -161,23 +161,136 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
+		// ━━ 2. Data Sources ━━━━━━━━━━━━━━━━━━━━━━━━━
+		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
+		this.prependIcon(dataHeading.nameEl, "database");
+
+		// ── Browser history ───────────────────────────
 		new Setting(containerEl)
-			.setName("Profile hint")
-			.setDesc("Context hint for AI summaries (e.g. 'software engineer at a SaaS startup')")
-			.addText((text) =>
-				text
-					.setPlaceholder("optional")
-					.setValue(this.plugin.settings.profile)
+			.setName("Browser history")
+			.setDesc(PRIVACY_DESCRIPTIONS.browser.access + " " + PRIVACY_DESCRIPTIONS.browser.destination)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableBrowser)
 					.onChange(async (value) => {
-						this.plugin.settings.profile = value;
+						this.plugin.settings.enableBrowser = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
-		// ── Privacy & Data ───────────────────────────
-		const privacyHeading = new Setting(containerEl).setName("Privacy & Data").setHeading();
-		setIcon(privacyHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "shield");
+		if (this.plugin.settings.enableBrowser) {
+			this.renderBrowserProfileSection(containerEl);
 
+			new Setting(containerEl)
+				.setName("Max browser visits")
+				.addSlider((slider) =>
+					slider
+						.setLimits(10, 200, 10)
+						.setValue(this.plugin.settings.maxBrowserVisits)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.maxBrowserVisits = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Max searches")
+				.addSlider((slider) =>
+					slider
+						.setLimits(10, 100, 5)
+						.setValue(this.plugin.settings.maxSearches)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.maxSearches = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		// ── Shell history ─────────────────────────────
+		new Setting(containerEl)
+			.setName("Shell history")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.shell.access + " " +
+				PRIVACY_DESCRIPTIONS.shell.destination
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableShell)
+					.onChange(async (value) => {
+						this.plugin.settings.enableShell = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableShell) {
+			new Setting(containerEl)
+				.setName("Max shell commands")
+				.addSlider((slider) =>
+					slider
+						.setLimits(10, 100, 5)
+						.setValue(this.plugin.settings.maxShellCommands)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.maxShellCommands = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		// ── Claude Code sessions ──────────────────────
+		new Setting(containerEl)
+			.setName("Claude Code sessions")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.claude.access + " " +
+				PRIVACY_DESCRIPTIONS.claude.destination
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableClaude)
+					.onChange(async (value) => {
+						this.plugin.settings.enableClaude = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableClaude) {
+			new Setting(containerEl)
+				.setName("Claude Code sessions directory")
+				.setDesc("Path to Claude Code session logs (uses ~ for home)")
+				.addText((text) =>
+					text
+						.setPlaceholder("~/.claude/projects")
+						.setValue(this.plugin.settings.claudeSessionsDir)
+						.onChange(async (value) => {
+							this.plugin.settings.claudeSessionsDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Max Claude Code sessions")
+				.addSlider((slider) =>
+					slider
+						.setLimits(5, 100, 5)
+						.setValue(this.plugin.settings.maxClaudeSessions)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.maxClaudeSessions = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
+		const privacyHeading = new Setting(containerEl).setName("Privacy & filtering").setHeading();
+		this.prependIcon(privacyHeading.nameEl, "shield");
+
+		// Status callouts (informational banners)
 		const enabledSources: string[] = [];
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
 		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
@@ -190,7 +303,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		} else {
 			accessCallout.createEl("p", {
-				text: "No external data sources are currently enabled. Enable sources below to collect activity data.",
+				text: "No external data sources are currently enabled. Enable sources above to collect activity data.",
 			});
 		}
 
@@ -219,133 +332,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
-		// ── Data Sources ─────────────────────────────
-		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
-		setIcon(dataHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "database");
-
-		// ── Browser history ───────────────────────────
-		new Setting(containerEl)
-			.setName("Browser history")
-			.setDesc(PRIVACY_DESCRIPTIONS.browser.access + " " + PRIVACY_DESCRIPTIONS.browser.destination)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableBrowser)
-					.onChange(async (value) => {
-						this.plugin.settings.enableBrowser = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
-
-		if (this.plugin.settings.enableBrowser) {
-			this.renderBrowserProfileSection(containerEl);
-		}
-
-		new Setting(containerEl)
-			.setName("Shell history")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.shell.access + " " +
-				PRIVACY_DESCRIPTIONS.shell.destination
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableShell)
-					.onChange(async (value) => {
-						this.plugin.settings.enableShell = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Claude Code sessions")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.claude.access + " " +
-				PRIVACY_DESCRIPTIONS.claude.destination
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableClaude)
-					.onChange(async (value) => {
-						this.plugin.settings.enableClaude = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Claude Code sessions directory")
-			.setDesc("Path to Claude Code session logs (uses ~ for home)")
-			.addText((text) =>
-				text
-					.setPlaceholder("~/.claude/projects")
-					.setValue(this.plugin.settings.claudeSessionsDir)
-					.onChange(async (value) => {
-						this.plugin.settings.claudeSessionsDir = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// ── Limits ───────────────────────────────────
-		const limitsHeading = new Setting(containerEl).setName("Limits").setHeading();
-		setIcon(limitsHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "gauge");
-
-		new Setting(containerEl)
-			.setName("Max browser visits")
-			.addSlider((slider) =>
-				slider
-					.setLimits(10, 200, 10)
-					.setValue(this.plugin.settings.maxBrowserVisits)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.maxBrowserVisits = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Max searches")
-			.addSlider((slider) =>
-				slider
-					.setLimits(10, 100, 5)
-					.setValue(this.plugin.settings.maxSearches)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.maxSearches = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Max shell commands")
-			.addSlider((slider) =>
-				slider
-					.setLimits(10, 100, 5)
-					.setValue(this.plugin.settings.maxShellCommands)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.maxShellCommands = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Max Claude Code sessions")
-			.addSlider((slider) =>
-				slider
-					.setLimits(5, 100, 5)
-					.setValue(this.plugin.settings.maxClaudeSessions)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.maxClaudeSessions = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// ── Data Sanitization ────────────────────────
-		const sanitizeHeading = new Setting(containerEl).setName("Data sanitization").setHeading();
-		setIcon(sanitizeHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "eraser");
-
+		// ── Sanitization ──────────────────────────────
 		new Setting(containerEl)
 			.setName("Enable sanitization")
 			.setDesc(
@@ -436,10 +423,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
-		// ── Sensitivity Filter ───────────────────────
-		const sensitivityHeading = new Setting(containerEl).setName("Sensitivity filter").setHeading();
-		setIcon(sensitivityHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "eye-off");
-
+		// ── Sensitivity filter ────────────────────────
 		const totalDomains = getTotalBuiltinDomains();
 
 		new Setting(containerEl)
@@ -568,9 +552,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
-		// ── AI Summarization ─────────────────────────
+		// ━━ 4. AI Summarization ━━━━━━━━━━━━━━━━━━━━━━
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
-		setIcon(aiHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "sparkles");
+		this.prependIcon(aiHeading.nameEl, "sparkles");
 
 		new Setting(containerEl)
 			.setName("Enable AI summaries")
@@ -590,6 +574,19 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		if (this.plugin.settings.enableAI) {
+			new Setting(containerEl)
+				.setName("Profile hint")
+				.setDesc("Context hint for AI summaries (e.g. 'software engineer at a SaaS startup')")
+				.addText((text) =>
+					text
+						.setPlaceholder("optional")
+						.setValue(this.plugin.settings.profile)
+						.onChange(async (value) => {
+							this.plugin.settings.profile = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
 			new Setting(containerEl)
 				.setName("AI provider")
 				.setDesc(
@@ -806,12 +803,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					);
 			}
 
-			// ── RAG Pipeline (Advanced) ─────────────
-			const ragHeading = new Setting(containerEl)
-				.setName("RAG pipeline (advanced)")
+			// ── Advanced AI processing ───────────────
+			const advAiHeading = new Setting(containerEl)
+				.setName("Advanced AI processing")
 				.setHeading();
-			setIcon(ragHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "brain");
+			this.prependIcon(advAiHeading.nameEl, "cpu");
 
+			// RAG pipeline
 			new Setting(containerEl)
 				.setName("Enable RAG chunking")
 				.setDesc(
@@ -897,15 +895,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					});
 				}
 			}
-		}
 
-		// ── Event Classification ─────────────────────
-		if (this.plugin.settings.enableAI) {
-			const classifyHeading = new Setting(containerEl)
-				.setName("Event classification (advanced)")
-				.setHeading();
-			setIcon(classifyHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "tags");
-
+			// Event classification
 			new Setting(containerEl)
 				.setName("Enable event classification")
 				.setDesc(
@@ -982,99 +973,92 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							"shell commands, or Claude Code prompts are sent to Anthropic.",
 					});
 				}
-			}
-		}
 
-		// ── Pattern Extraction ───────────────────────
-		if (this.plugin.settings.enableAI && this.plugin.settings.enableClassification) {
-			const patternHeading = new Setting(containerEl)
-				.setName("Pattern extraction (advanced)")
-				.setHeading();
-			setIcon(patternHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "network");
-
-			new Setting(containerEl)
-				.setName("Enable pattern extraction")
-				.setDesc(
-					"Extract temporal clusters, topic co-occurrences, entity relations, " +
-					"and recurrence signals from classified events. Adds focus scores, " +
-					"topic maps, and knowledge delta analysis to your daily notes."
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.enablePatterns)
-						.onChange(async (value) => {
-							this.plugin.settings.enablePatterns = value;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
-
-			if (this.plugin.settings.enablePatterns) {
+				// Pattern extraction (requires classification)
 				new Setting(containerEl)
-					.setName("Co-occurrence window")
+					.setName("Enable pattern extraction")
 					.setDesc(
-						"Time window in minutes for detecting topic co-occurrences. " +
-						"Events within the same window are considered related."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 120, 10)
-							.setValue(this.plugin.settings.patternCooccurrenceWindow)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.patternCooccurrenceWindow = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Minimum cluster size")
-					.setDesc(
-						"Minimum number of events to form a temporal cluster. " +
-						"Lower values detect more clusters but may include noise."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(2, 10, 1)
-							.setValue(this.plugin.settings.patternMinClusterSize)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.patternMinClusterSize = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Track recurrence")
-					.setDesc(
-						"Persist topic history across days to detect recurring interests, " +
-						"returning topics, and rising trends. Stored locally in your vault " +
-						"under .daily-digest/topic-history.json."
+						"Extract temporal clusters, topic co-occurrences, entity relations, " +
+						"and recurrence signals from classified events. Adds focus scores, " +
+						"topic maps, and knowledge delta analysis to your daily notes."
 					)
 					.addToggle((toggle) =>
 						toggle
-							.setValue(this.plugin.settings.trackRecurrence)
+							.setValue(this.plugin.settings.enablePatterns)
 							.onChange(async (value) => {
-								this.plugin.settings.trackRecurrence = value;
+								this.plugin.settings.enablePatterns = value;
 								await this.plugin.saveSettings();
+								this.display();
 							})
 					);
 
-				const patternCallout = containerEl.createDiv({
-					cls: "dd-settings-callout",
-				});
-				patternCallout.createEl("p", {
-					text:
-						"Pattern extraction is entirely local and statistical — no LLM calls. " +
-						"It analyzes classified events to find activity clusters, topic connections, " +
-						"and curiosity patterns. Results appear as new sections in your daily note.",
-				});
+				if (this.plugin.settings.enablePatterns) {
+					new Setting(containerEl)
+						.setName("Co-occurrence window")
+						.setDesc(
+							"Time window in minutes for detecting topic co-occurrences. " +
+							"Events within the same window are considered related."
+						)
+						.addSlider((slider) =>
+							slider
+								.setLimits(10, 120, 10)
+								.setValue(this.plugin.settings.patternCooccurrenceWindow)
+								.setDynamicTooltip()
+								.onChange(async (value) => {
+									this.plugin.settings.patternCooccurrenceWindow = value;
+									await this.plugin.saveSettings();
+								})
+						);
+
+					new Setting(containerEl)
+						.setName("Minimum cluster size")
+						.setDesc(
+							"Minimum number of events to form a temporal cluster. " +
+							"Lower values detect more clusters but may include noise."
+						)
+						.addSlider((slider) =>
+							slider
+								.setLimits(2, 10, 1)
+								.setValue(this.plugin.settings.patternMinClusterSize)
+								.setDynamicTooltip()
+								.onChange(async (value) => {
+									this.plugin.settings.patternMinClusterSize = value;
+									await this.plugin.saveSettings();
+								})
+						);
+
+					new Setting(containerEl)
+						.setName("Track recurrence")
+						.setDesc(
+							"Persist topic history across days to detect recurring interests, " +
+							"returning topics, and rising trends. Stored locally in your vault " +
+							"under .daily-digest/topic-history.json."
+						)
+						.addToggle((toggle) =>
+							toggle
+								.setValue(this.plugin.settings.trackRecurrence)
+								.onChange(async (value) => {
+									this.plugin.settings.trackRecurrence = value;
+									await this.plugin.saveSettings();
+								})
+						);
+
+					const patternCallout = containerEl.createDiv({
+						cls: "dd-settings-callout",
+					});
+					patternCallout.createEl("p", {
+						text:
+							"Pattern extraction is entirely local and statistical — no LLM calls. " +
+							"It analyzes classified events to find activity clusters, topic connections, " +
+							"and curiosity patterns. Results appear as new sections in your daily note.",
+					});
+				}
 			}
 		}
 
-		// ── Advanced ─────────────────────────────────
+		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 		const advancedHeading = new Setting(containerEl).setName("Advanced").setHeading();
-		setIcon(advancedHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "wrench");
+		this.prependIcon(advancedHeading.nameEl, "wrench");
 
 		new Setting(containerEl)
 			.setName("Reset privacy onboarding")
@@ -1087,6 +1071,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					new Notice("Onboarding will be shown again when Obsidian restarts.");
 				})
 			);
+	}
+
+	/** Prepend a Lucide icon before the text content of a heading element. */
+	private prependIcon(el: HTMLElement, iconId: string): void {
+		const span = createSpan({ cls: "dd-heading-icon" });
+		setIcon(span, iconId);
+		el.prepend(span);
 	}
 
 	private async detectLocalModels(_containerEl: HTMLElement): Promise<void> {
