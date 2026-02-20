@@ -2,7 +2,7 @@
 	"id": "daily-digest",
 	"name": "Daily Digest",
 	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
+	"minAppVersion": "1.11.0",
 	"description": "Compile browser history, search queries, shell commands, and Claude Code sessions into an AI-summarized daily note.",
 	"author": "Brian Ruggieri",
 	"isDesktopOnly": true
