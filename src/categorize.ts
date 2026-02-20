@@ -18,6 +18,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"hub.docker.com", "vercel.com", "netlify.com", "railway.app",
 		"render.com", "fly.io", "heroku.com", "aws.amazon.com",
 		"console.cloud.google.com", "portal.azure.com", "cloudflare.com",
+		"grafana.com", "rust-lang.org",
 		"replit.com", "codepen.io", "codesandbox.io", "cursor.sh",
 		"anthropic.com", "openai.com", "huggingface.co", "langchain.com",
 		"docs.", "developer.", "api.",
