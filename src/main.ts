@@ -2,7 +2,8 @@ import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./collectors";
 import { categorizeVisits } from "./categorize";
-import { summarizeDay, AICallConfig } from "./summarize";
+import { summarizeDay } from "./summarize";
+import { AICallConfig } from "./ai-client";
 import { renderMarkdown } from "./renderer";
 import {
 	OnboardingModal,
@@ -15,7 +16,8 @@ import { classifyEvents } from "./classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "./sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
-import { extractUserContent, mergeContent, createBackup, hasUserEdits } from "./merge";
+import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
+import * as log from "./log";
 
 class DatePickerModal extends Modal {
 	onSubmit: (date: Date) => void;
@@ -200,7 +202,7 @@ export default class DailyDigestPlugin extends Plugin {
 		this.settings.anthropicApiKey = "";
 		await this.saveSettings();
 
-		console.debug(
+		log.debug(
 			"Daily Digest: Migrated Anthropic API key from data.json to SecretStorage."
 		);
 	}
@@ -315,7 +317,7 @@ export default class DailyDigestPlugin extends Plugin {
 					const catBreakdown = Object.entries(visitResult.byCategory)
 						.map(([cat, count]) => `${cat}: ${count}`)
 						.join(", ");
-					console.debug(
+					log.debug(
 						`Daily Digest: Sensitivity filter removed ${sensitivityFiltered} items` +
 						(catBreakdown ? ` (${catBreakdown})` : "")
 					);
@@ -336,7 +338,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 			const totalExcluded = excludedCount + sensitivityFiltered;
 			if (excludedCount > 0) {
-				console.debug(`Daily Digest: Excluded ${excludedCount} visits by domain filter`);
+				log.debug(`Daily Digest: Excluded ${excludedCount} visits by domain filter`);
 			}
 
 			// ── Categorize ───────────────────────
@@ -360,16 +362,16 @@ export default class DailyDigestPlugin extends Plugin {
 							visits, searches, shellCmds, claudeSessions,
 							categorized, classConfig
 						);
-						console.debug(
+						log.debug(
 							`Daily Digest: Classified ${classification.totalProcessed} events ` +
 							`(${classification.llmClassified} LLM, ${classification.ruleClassified} rule) ` +
 							`in ${classification.processingTimeMs}ms`
 						);
 					} catch (e) {
-						console.warn("Daily Digest: Classification failed, continuing without:", e);
+						log.warn("Daily Digest: Classification failed, continuing without:", e);
 					}
 				} else {
-					console.debug("Daily Digest: Classification enabled but no local model/endpoint configured");
+					log.debug("Daily Digest: Classification enabled but no local model/endpoint configured");
 				}
 			}
 
@@ -396,7 +398,7 @@ export default class DailyDigestPlugin extends Plugin {
 							topicHistory = JSON.parse(raw) as TopicHistory;
 						}
 					} catch (e) {
-						console.debug("Daily Digest: No topic history found, starting fresh:", e);
+						log.debug("Daily Digest: No topic history found, starting fresh:", e);
 					}
 				}
 
@@ -408,7 +410,7 @@ export default class DailyDigestPlugin extends Plugin {
 					extractedPatterns = patterns;
 					knowledgeSections = generateKnowledgeSections(patterns);
 
-					console.debug(
+					log.debug(
 						`Daily Digest: Extracted ${patterns.temporalClusters.length} clusters, ` +
 						`${patterns.topicCooccurrences.length} co-occurrences, ` +
 						`${patterns.entityRelations.length} entity relations, ` +
@@ -433,11 +435,11 @@ export default class DailyDigestPlugin extends Plugin {
 								await this.app.vault.create(historyPath, historyJson);
 							}
 						} catch (e) {
-							console.warn("Daily Digest: Failed to persist topic history:", e);
+							log.warn("Daily Digest: Failed to persist topic history:", e);
 						}
 					}
 				} catch (e) {
-					console.warn("Daily Digest: Pattern extraction failed, continuing without:", e);
+					log.warn("Daily Digest: Pattern extraction failed, continuing without:", e);
 				}
 			}
 
@@ -546,7 +548,7 @@ export default class DailyDigestPlugin extends Plugin {
 		} catch (e) {
 			new Notice(`Daily Digest error: ${e}`, 10000);
 			this.statusBarItem.setText("Daily Digest: error");
-			console.error("Daily Digest error:", e);
+			log.error("Daily Digest error:", e);
 		}
 	}
 
@@ -580,11 +582,11 @@ export default class DailyDigestPlugin extends Plugin {
 			if (hasUserEdits(extraction)) {
 				try {
 					const backupPath = await createBackup(
-						this.app.vault as never,
+						this.app.vault as unknown as VaultAdapter,
 						filePath,
 						existingContent,
 					);
-					console.debug(`Daily Digest: Backup created at ${backupPath}`);
+					log.debug(`Daily Digest: Backup created at ${backupPath}`);
 				} catch (e) {
 					// Backup failed — abort to protect user data
 					throw new Error(

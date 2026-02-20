@@ -321,13 +321,17 @@ npm install
 ### Scripts
 
 ```bash
-npm run dev          # Watch mode with hot reload
-npm run build        # Type-check and production build
-npm run lint         # ESLint
-npm test             # Run all tests (unit + integration)
-npm run test:unit    # Unit tests only
-npm run test:eval    # AI evaluation tests (requires API key or local model)
-npm run deploy       # Build and copy to your local Obsidian vault
+npm run dev              # Watch mode with hot reload
+npm run build            # Type-check and production build
+npm run lint             # ESLint
+npm test                 # Run all tests (unit + integration)
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+npm run test:eval        # AI evaluation tests (requires API key or local model)
+npm run test:eval:local  # AI eval tests against local model
+npm run test:coverage    # Coverage report (v8)
+npm run deploy           # Build and copy to your local Obsidian vault
+npm run deploy:dev       # Quick deploy without full rebuild
 ```
 
 ### Testing
