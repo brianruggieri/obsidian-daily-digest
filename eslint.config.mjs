@@ -20,6 +20,13 @@ export default ts.config(
 			],
 			"@typescript-eslint/no-explicit-any": "warn",
 			"@typescript-eslint/ban-ts-comment": "off",
+			"no-console": "error",
+		},
+	},
+	{
+		files: ["src/log.ts"],
+		rules: {
+			"no-console": "off",
 		},
 	},
 	{

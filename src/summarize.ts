@@ -4,9 +4,7 @@ import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
-
-// Re-export for consumers that import from summarize
-export type { AICallConfig } from "./ai-client";
+import * as log from "./log";
 
 // ── Prompt builder & summarizer ─────────────────────────
 
@@ -376,7 +374,7 @@ export async function summarizeDay(
 		// Phase 4: Maximum privacy — aggregated patterns only
 		prompt = buildDeidentifiedPrompt(date, patterns, profile);
 		maxTokens = 1500; // Larger response for meta-insights
-		console.debug(
+		log.debug(
 			`Daily Digest: Using de-identified prompt for Anthropic ` +
 			`(${patterns.temporalClusters.length} clusters, ` +
 			`focus ${Math.round(patterns.focusScore * 100)}%, ` +
@@ -385,7 +383,7 @@ export async function summarizeDay(
 	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
 		// Phase 2: Per-event abstractions — no raw data
 		prompt = buildClassifiedPrompt(date, classification, profile);
-		console.debug(
+		log.debug(
 			`Daily Digest: Using classified prompt for Anthropic ` +
 			`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
 		);
@@ -406,12 +404,12 @@ export async function summarizeDay(
 					ragConfig.topK
 				);
 				prompt = buildRAGPrompt(date, retrieved, profile);
-				console.debug(
+				log.debug(
 					`Daily Digest RAG: Using RAG prompt (${retrieved.length} chunks, ` +
 					`~${estimateTokens(prompt)} tokens)`
 				);
 			} catch (e) {
-				console.warn(
+				log.warn(
 					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
 					e
 				);
@@ -420,7 +418,7 @@ export async function summarizeDay(
 				);
 			}
 		} else {
-			console.debug(
+			log.debug(
 				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
 				`${totalTokens} tokens — too small)`
 			);

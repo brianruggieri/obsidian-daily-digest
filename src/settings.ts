@@ -1,9 +1,10 @@
 import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
-import DailyDigestPlugin from "./main";
+import type DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
 import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "./types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "./sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "./browser-profiles";
+import * as log from "./log";
 
 /** Secret ID used in Obsidian's shared SecretStorage (>=1.11.4). */
 export const SECRET_ID = "anthropic-api-key";
@@ -1119,7 +1120,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					models = data.models.map((m) => m.name);
 				}
 			} catch (e1) {
-				console.debug("Daily Digest: Ollama /api/tags failed:", e1);
+				log.debug("Daily Digest: Ollama /api/tags failed:", e1);
 				// Fall back to OpenAI-compatible /v1/models
 				try {
 					const data = (await doFetch(`${endpoint}/v1/models`)) as {
@@ -1129,7 +1130,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						models = data.data.map((m) => m.id);
 					}
 				} catch (e2) {
-					console.debug("Daily Digest: /v1/models failed:", e2);
+					log.debug("Daily Digest: /v1/models failed:", e2);
 				}
 			}
 

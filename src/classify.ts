@@ -12,6 +12,7 @@ import {
 } from "./types";
 import { callLocal } from "./ai-client";
 import { categorizeDomain } from "./categorize";
+import * as log from "./log";
 
 // ── Raw Event Normalization ─────────────────────────────
 
@@ -380,7 +381,7 @@ export async function classifyEvents(
 				}
 			}
 		} catch (e) {
-			console.warn(
+			log.warn(
 				`Daily Digest: LLM classification failed for batch, falling back to rules:`,
 				e
 			);

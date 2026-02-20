@@ -1,5 +1,6 @@
 import { requestUrl } from "obsidian";
 import { ActivityChunk, EmbeddedChunk } from "./types";
+import * as log from "./log";
 
 // ── Fetch helper (localhost-aware) ──────────────────────
 
@@ -77,7 +78,7 @@ export async function generateEmbeddings(
 		}
 		throw new Error("Unexpected embedding response format");
 	} catch (batchErr) {
-		console.debug("Daily Digest: Batch embedding failed, trying sequential:", batchErr);
+		log.debug("Daily Digest: Batch embedding failed, trying sequential:", batchErr);
 
 		// Fall back to sequential
 		const results: number[][] = [];
@@ -212,15 +213,15 @@ export async function retrieveRelevantChunks(
 	model: string,
 	topK: number
 ): Promise<EmbeddedChunk[]> {
-	console.debug(`Daily Digest RAG: Embedding ${chunks.length} chunks...`);
+	log.debug(`Daily Digest RAG: Embedding ${chunks.length} chunks...`);
 
 	// 1. Embed all activity chunks
 	const embeddedChunks = await embedChunks(chunks, endpoint, model);
-	console.debug(`Daily Digest RAG: Embedded ${embeddedChunks.length} chunks`);
+	log.debug(`Daily Digest RAG: Embedded ${embeddedChunks.length} chunks`);
 
 	// 2. Generate search queries from the data
 	const queries = autoGenerateQueries(chunks);
-	console.debug(`Daily Digest RAG: Generated ${queries.length} queries`);
+	log.debug(`Daily Digest RAG: Generated ${queries.length} queries`);
 
 	// 3. Embed the queries
 	const queryEmbeddings = await generateEmbeddings(queries, endpoint, model);
@@ -243,7 +244,7 @@ export async function retrieveRelevantChunks(
 	allRetrieved.sort((a, b) => b.score - a.score);
 	const final = allRetrieved.slice(0, topK).map((r) => r.chunk);
 
-	console.debug(
+	log.debug(
 		`Daily Digest RAG: Retrieved ${final.length} chunks (from ${embeddedChunks.length} total)`
 	);
 
