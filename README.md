@@ -52,6 +52,26 @@ You can also skip AI entirely and just get the raw, organized activity log.
 
 ---
 
+## Disclosures
+
+### Network use
+
+Daily Digest can optionally send data to **Anthropic's API** (`api.anthropic.com`) to generate AI summaries. This requires you to supply your own API key and is **disabled by default** — the plugin defaults to local AI models (Ollama, LM Studio) that keep all data on your machine. When Anthropic is enabled, a data preview is shown before any request is made, and a [4-tier privacy escalation chain](#the-privacy-escalation-chain) controls the minimum data necessary for the summary.
+
+No other network requests are made. There is no telemetry, analytics, or tracking of any kind.
+
+### Files accessed outside your vault
+
+To collect activity data, the plugin reads files from outside your Obsidian vault. These are **read-only** operations — nothing outside your vault is modified. All sources are opt-in and disabled by default.
+
+| Source | File path(s) | Why |
+|--------|-------------|-----|
+| **Browser history** | Platform-specific SQLite database inside the browser's profile directory (e.g., `~/Library/Application Support/Google/Chrome/…/History`) | To build a record of URLs you visited, including search queries extracted from them |
+| **Shell history** | `~/.zsh_history`, `~/.bash_history` | To include terminal commands in your daily record |
+| **Claude Code sessions** | `~/.claude/projects/**/*.jsonl` | To include your AI coding prompts, grouped by project |
+
+---
+
 ## Installation
 
 ### From Obsidian Community Plugins (coming soon)
@@ -418,6 +438,20 @@ Contributions are welcome! If you'd like to help:
 5. Open a pull request
 
 Please open an issue first for major changes so we can discuss the approach.
+
+### AI-assisted contributions
+
+AI-assisted contributions are welcome. If you used AI tools (Copilot, Claude, Codex, etc.), mention it in your PR description with a brief note on scope (e.g., "Claude helped with the regex" or "Codex generated initial test scaffolding"). No need to disclose trivial autocomplete.
+
+What matters is that you understand the code you're submitting and can explain your changes during review.
+
+---
+
+## Built with AI
+
+This project was developed extensively with AI coding tools, primarily [Claude Code](https://docs.anthropic.com/en/docs/claude-code). AI assisted with implementation, testing, and documentation across the codebase.
+
+All code is human-reviewed, tested (350+ test cases), and maintained by [Brian Ruggieri](https://github.com/brianruggieri). The architecture, product decisions, and quality standards are mine — the AI accelerated getting there.
 
 ---
 
