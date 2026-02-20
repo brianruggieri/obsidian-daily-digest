@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
 import DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
 import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "./types";
@@ -110,6 +110,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: DailyDigestPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		this.icon = "calendar-days";
 	}
 
 	display(): void {
@@ -117,7 +118,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// ── General ──────────────────────────────────
-		new Setting(containerEl).setName("General").setHeading();
+		const generalHeading = new Setting(containerEl).setName("General").setHeading();
+		setIcon(generalHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "settings");
 
 		new Setting(containerEl)
 			.setName("Daily notes folder")
@@ -173,7 +175,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		// ── Privacy & Data ───────────────────────────
-		new Setting(containerEl).setName("Privacy & Data").setHeading();
+		const privacyHeading = new Setting(containerEl).setName("Privacy & Data").setHeading();
+		setIcon(privacyHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "shield");
 
 		const enabledSources: string[] = [];
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
@@ -217,7 +220,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		// ── Data Sources ─────────────────────────────
-		new Setting(containerEl).setName("Data sources").setHeading();
+		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
+		setIcon(dataHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "database");
 
 		// ── Browser history ───────────────────────────
 		new Setting(containerEl)
@@ -283,7 +287,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		// ── Limits ───────────────────────────────────
-		new Setting(containerEl).setName("Limits").setHeading();
+		const limitsHeading = new Setting(containerEl).setName("Limits").setHeading();
+		setIcon(limitsHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "gauge");
 
 		new Setting(containerEl)
 			.setName("Max browser visits")
@@ -338,7 +343,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		// ── Data Sanitization ────────────────────────
-		new Setting(containerEl).setName("Data sanitization").setHeading();
+		const sanitizeHeading = new Setting(containerEl).setName("Data sanitization").setHeading();
+		setIcon(sanitizeHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "eraser");
 
 		new Setting(containerEl)
 			.setName("Enable sanitization")
@@ -431,7 +437,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		// ── Sensitivity Filter ───────────────────────
-		new Setting(containerEl).setName("Sensitivity filter").setHeading();
+		const sensitivityHeading = new Setting(containerEl).setName("Sensitivity filter").setHeading();
+		setIcon(sensitivityHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "eye-off");
 
 		const totalDomains = getTotalBuiltinDomains();
 
@@ -562,7 +569,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		// ── AI Summarization ─────────────────────────
-		new Setting(containerEl).setName("AI summarization").setHeading();
+		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
+		setIcon(aiHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "sparkles");
 
 		new Setting(containerEl)
 			.setName("Enable AI summaries")
@@ -799,9 +807,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			}
 
 			// ── RAG Pipeline (Advanced) ─────────────
-			new Setting(containerEl)
+			const ragHeading = new Setting(containerEl)
 				.setName("RAG pipeline (advanced)")
 				.setHeading();
+			setIcon(ragHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "brain");
 
 			new Setting(containerEl)
 				.setName("Enable RAG chunking")
@@ -892,9 +901,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		// ── Event Classification ─────────────────────
 		if (this.plugin.settings.enableAI) {
-			new Setting(containerEl)
+			const classifyHeading = new Setting(containerEl)
 				.setName("Event classification (advanced)")
 				.setHeading();
+			setIcon(classifyHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "tags");
 
 			new Setting(containerEl)
 				.setName("Enable event classification")
@@ -977,9 +987,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		// ── Pattern Extraction ───────────────────────
 		if (this.plugin.settings.enableAI && this.plugin.settings.enableClassification) {
-			new Setting(containerEl)
+			const patternHeading = new Setting(containerEl)
 				.setName("Pattern extraction (advanced)")
 				.setHeading();
+			setIcon(patternHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "network");
 
 			new Setting(containerEl)
 				.setName("Enable pattern extraction")
@@ -1062,7 +1073,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		// ── Advanced ─────────────────────────────────
-		new Setting(containerEl).setName("Advanced").setHeading();
+		const advancedHeading = new Setting(containerEl).setName("Advanced").setHeading();
+		setIcon(advancedHeading.nameEl.createSpan({ cls: "dd-heading-icon" }), "wrench");
 
 		new Setting(containerEl)
 			.setName("Reset privacy onboarding")
