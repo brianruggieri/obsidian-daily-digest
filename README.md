@@ -4,8 +4,7 @@
 
 One command. One note. A complete picture of what you did today.
 
-<!-- TODO: Replace with actual screenshot -->
-![Daily Digest hero screenshot](examples/screenshots/daily-digest-hero.png)
+![Daily Digest hero screenshot](screenshots/baseline/digest-hero.png)
 
 ---
 
@@ -27,8 +26,7 @@ Every day (or whenever you want), Daily Digest:
 
 The result is a note that looks like this:
 
-<!-- TODO: Replace with actual screenshot showing the meeting-heavy day variant -->
-![A different kind of day](examples/screenshots/meeting-heavy-day.png)
+![A different kind of day](screenshots/baseline/digest-meeting-day.png)
 
 ### Data sources
 
@@ -104,8 +102,7 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into your vault's plugin 
 
 When you enable the plugin for the first time, you'll see an onboarding screen:
 
-<!-- TODO: Replace with actual screenshot -->
-![Onboarding screen](examples/screenshots/onboarding.png)
+![Onboarding screen](screenshots/baseline/privacy-onboarding.png)
 
 **Everything is off by default.** You choose which data sources to enable and whether you want AI summaries. Nothing is collected until you opt in.
 
@@ -131,12 +128,11 @@ When you enable the plugin for the first time, you'll see an onboarding screen:
 
 Here's what a generated note looks like:
 
-<!-- TODO: Replace with actual screenshots -->
-![Searches and Claude Code sessions](examples/screenshots/searches-and-claude.png)
+![Searches and Claude Code sessions](screenshots/baseline/digest-searches-claude.png)
 
-![Browser activity by category](examples/screenshots/browser-activity.png)
+![Browser activity by category](screenshots/baseline/digest-browser.png)
 
-![Shell commands and reflection questions](examples/screenshots/shell-and-reflection.png)
+![Shell commands and reflection questions](screenshots/baseline/digest-shell-reflection.png)
 
 ### Structure
 
@@ -204,8 +200,7 @@ The plugin automatically selects the most private tier available based on your c
 
 When Anthropic is your provider, you also get a **data preview modal** before anything is sent — showing exactly what data will leave your machine, with the option to cancel or proceed without AI.
 
-<!-- TODO: Replace with actual screenshot -->
-![Settings panel](examples/screenshots/settings-panel.png)
+![Settings panel](screenshots/baseline/settings-default.png)
 
 ### What gets scrubbed
 
