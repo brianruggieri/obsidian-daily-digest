@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"target": "ES2022",
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
+		"outDir": "./dist",
+		"rootDir": ".",
+		"baseUrl": ".",
+		"paths": {
+			"@helpers/*": ["./helpers/*"]
+		},
+		"lib": ["DOM", "ES2022"],
+		"types": ["node", "@wdio/globals/types", "@wdio/mocha-framework", "wdio-obsidian-service"]
+	},
+	"include": [
+		"**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"vault"
+	]
+}

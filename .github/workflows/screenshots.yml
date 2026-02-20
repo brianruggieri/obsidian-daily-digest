@@ -1,0 +1,47 @@
+name: Screenshot Regression
+
+on:
+  pull_request:
+    paths:
+      - "src/settings.ts"
+      - "src/privacy.ts"
+      - "src/renderer.ts"
+      - "styles.css"
+      - "examples/*.md"
+      - "screenshots/**"
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Cache Obsidian downloads
+        uses: actions/cache@v4
+        with:
+          path: .obsidian-cache
+          key: obsidian-${{ hashFiles('manifest.json') }}
+          restore-keys: obsidian-
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Run screenshot specs
+        run: npm run screenshots
+
+      - name: Upload diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: screenshots/output/
+          retention-days: 14

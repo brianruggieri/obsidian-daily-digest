@@ -20,6 +20,10 @@ data.json
 .DS_Store
 Thumbs.db
 
+# Screenshot automation
+screenshots/vault/
+.obsidian-cache/
+
 # Claude / AI tooling
 .claude-flow/
 .claude/
