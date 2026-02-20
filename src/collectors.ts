@@ -258,9 +258,21 @@ export async function collectBrowserHistory(
 	clean.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 	searches.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 
+	// In "complete" mode, collect everything (with safety ceilings to guard
+	// against pathological cases like auto-refresh tabs). In "limited" mode,
+	// apply the user's per-source caps.
+	const VISIT_CEILING = 2000;
+	const SEARCH_CEILING = 500;
+	const visitLimit = settings.collectionMode === "complete"
+		? VISIT_CEILING
+		: settings.maxBrowserVisits;
+	const searchLimit = settings.collectionMode === "complete"
+		? SEARCH_CEILING
+		: settings.maxSearches;
+
 	return {
-		visits: clean.slice(0, settings.maxBrowserVisits),
-		searches: searches.slice(0, settings.maxSearches),
+		visits: clean.slice(0, visitLimit),
+		searches: searches.slice(0, searchLimit),
 	};
 }
 
@@ -338,7 +350,12 @@ export function readShellHistory(settings: DailyDigestSettings, since: Date): Sh
 		.sort((a, b) => (b.time!.getTime()) - (a.time!.getTime()));
 	const plain = clean.filter((e) => e.time === null);
 
-	return [...timestamped, ...plain].slice(0, settings.maxShellCommands);
+	const SHELL_CEILING = 500;
+	const shellLimit = settings.collectionMode === "complete"
+		? SHELL_CEILING
+		: settings.maxShellCommands;
+
+	return [...timestamped, ...plain].slice(0, shellLimit);
 }
 
 // ── Claude Code Sessions ─────────────────────────
@@ -440,5 +457,11 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 	}
 
 	entries.sort((a, b) => b.time.getTime() - a.time.getTime());
-	return entries.slice(0, settings.maxClaudeSessions);
+
+	const CLAUDE_CEILING = 300;
+	const claudeLimit = settings.collectionMode === "complete"
+		? CLAUDE_CEILING
+		: settings.maxClaudeSessions;
+
+	return entries.slice(0, claudeLimit);
 }

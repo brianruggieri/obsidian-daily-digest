@@ -1,0 +1,375 @@
+import { CATEGORY_LABELS } from "./categorize";
+import { estimateTokens } from "./chunker";
+import { scrubSecrets } from "./sanitize";
+import {
+	CategorizedVisits,
+	ClaudeSession,
+	SearchQuery,
+	ShellCommand,
+} from "./types";
+
+// ── Types ──────────────────────────────────────────────
+
+export interface CompressedActivity {
+	/** Pre-formatted text for the browser section of the prompt. */
+	browserText: string;
+	/** Pre-formatted text for the search section of the prompt. */
+	searchText: string;
+	/** Pre-formatted text for the shell section of the prompt. */
+	shellText: string;
+	/** Pre-formatted text for the Claude section of the prompt. */
+	claudeText: string;
+	/** Total events across all sources before compression. */
+	totalEvents: number;
+	/** Estimated token count of all compressed text combined. */
+	tokenEstimate: number;
+}
+
+// ── Helpers ────────────────────────────────────────────
+
+function formatTime(d: Date | null): string {
+	if (!d) return "??:??";
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function timeRangeStr(items: { time: Date | null }[]): string {
+	const times = items
+		.map((i) => i.time)
+		.filter((t): t is Date => t instanceof Date)
+		.sort((a, b) => a.getTime() - b.getTime());
+	if (times.length === 0) return "";
+	return `${formatTime(times[0])}–${formatTime(times[times.length - 1])}`;
+}
+
+function topN<T>(
+	items: T[],
+	keyFn: (item: T) => string,
+	limit: number
+): { key: string; count: number }[] {
+	const counts: Record<string, number> = {};
+	for (const item of items) {
+		const k = keyFn(item);
+		counts[k] = (counts[k] || 0) + 1;
+	}
+	return Object.entries(counts)
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, limit)
+		.map(([key, count]) => ({ key, count }));
+}
+
+// ── Browser compression ────────────────────────────────
+
+function compressBrowser(
+	categorized: CategorizedVisits,
+	budget: number
+): string {
+	const entries = Object.entries(categorized).filter(
+		([, visits]) => visits.length > 0
+	);
+	if (entries.length === 0) return "  (none)";
+
+	// Calculate total visits for proportional allocation
+	const totalVisits = entries.reduce((sum, [, v]) => sum + v.length, 0);
+	const lines: string[] = [];
+
+	for (const [cat, visits] of entries) {
+		const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
+		const domains = topN(visits, (v) => v.domain || "unknown", 8);
+		const domainStr = domains
+			.map((d) => `${d.key} (${d.count})`)
+			.join(", ");
+		const tr = timeRangeStr(visits);
+
+		// Proportional title budget: more visits = more sample titles
+		const share = visits.length / totalVisits;
+		const titleBudget = Math.max(2, Math.round(share * 20));
+		const titles = visits
+			.slice(0, titleBudget)
+			.map((v) => v.title?.slice(0, 60))
+			.filter((t): t is string => !!t);
+
+		let line = `  [${label}] (${visits.length} visits) domains: ${domainStr}`;
+		if (titles.length > 0) {
+			line += ` | titles: ${titles.join("; ")}`;
+		}
+		if (tr) {
+			line += ` | ${tr}`;
+		}
+
+		lines.push(line);
+	}
+
+	// If over budget, progressively compress
+	let text = lines.join("\n");
+	if (estimateTokens(text) > budget) {
+		// Remove titles, keep only domain counts and time ranges
+		const condensedLines: string[] = [];
+		for (const [cat, visits] of entries) {
+			const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
+			const domains = topN(visits, (v) => v.domain || "unknown", 5);
+			const domainStr = domains
+				.map((d) => `${d.key} (${d.count})`)
+				.join(", ");
+			const tr = timeRangeStr(visits);
+			let line = `  [${label}] (${visits.length} visits) ${domainStr}`;
+			if (tr) line += ` | ${tr}`;
+			condensedLines.push(line);
+		}
+		text = condensedLines.join("\n");
+	}
+
+	if (estimateTokens(text) > budget) {
+		// Stats-only: just category counts
+		const statsLines = entries.map(([cat, visits]) => {
+			const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
+			return `  [${label}] ${visits.length} visits`;
+		});
+		text = statsLines.join("\n");
+	}
+
+	return text;
+}
+
+// ── Search compression ─────────────────────────────────
+
+function compressSearches(
+	searches: SearchQuery[],
+	budget: number
+): string {
+	if (searches.length === 0) return "  (none)";
+
+	// Engine breakdown
+	const engines = topN(searches, (s) => s.engine, 5);
+	const engineStr = engines
+		.map((e) => `${e.key} (${e.count})`)
+		.join(", ");
+	const tr = timeRangeStr(searches);
+
+	// Try full list first
+	const queryLimit = Math.min(searches.length, 50);
+	const queries = searches.slice(0, queryLimit).map((s) => s.query);
+	let text =
+		`  ${searches.length} queries via ${engineStr}` +
+		(tr ? ` | ${tr}` : "") +
+		`\n  ${queries.join(" | ")}`;
+
+	if (estimateTokens(text) > budget) {
+		// Reduce to fewer queries
+		const reducedLimit = Math.max(5, Math.floor(budget / 3));
+		const reducedQueries = searches.slice(0, reducedLimit).map((s) => s.query);
+		const more = searches.length - reducedLimit;
+		text =
+			`  ${searches.length} queries via ${engineStr}` +
+			(tr ? ` | ${tr}` : "") +
+			`\n  ${reducedQueries.join(" | ")}` +
+			(more > 0 ? ` (+${more} more)` : "");
+	}
+
+	if (estimateTokens(text) > budget) {
+		// Stats only
+		text =
+			`  ${searches.length} queries via ${engineStr}` +
+			(tr ? ` | ${tr}` : "");
+	}
+
+	return text;
+}
+
+// ── Shell compression ──────────────────────────────────
+
+function compressShell(
+	shellCmds: ShellCommand[],
+	budget: number
+): string {
+	if (shellCmds.length === 0) return "  (none)";
+
+	const patterns = topN(
+		shellCmds,
+		(c) => c.cmd.trim().split(/\s+/)[0] || "",
+		8
+	);
+	const patternStr = patterns
+		.map((p) => `${p.key} (${p.count})`)
+		.join(", ");
+	const tr = timeRangeStr(shellCmds);
+
+	// Try including individual commands
+	const cmdLimit = Math.min(shellCmds.length, 30);
+	const cmds = shellCmds
+		.slice(0, cmdLimit)
+		.map((c) => scrubSecrets(c.cmd).slice(0, 80));
+	let text =
+		`  ${shellCmds.length} commands | patterns: ${patternStr}` +
+		(tr ? ` | ${tr}` : "") +
+		`\n  ${cmds.join(" | ")}`;
+
+	if (estimateTokens(text) > budget) {
+		// Fewer commands
+		const reducedLimit = Math.max(5, Math.floor(budget / 4));
+		const reducedCmds = shellCmds
+			.slice(0, reducedLimit)
+			.map((c) => scrubSecrets(c.cmd).slice(0, 80));
+		const more = shellCmds.length - reducedLimit;
+		text =
+			`  ${shellCmds.length} commands | patterns: ${patternStr}` +
+			(tr ? ` | ${tr}` : "") +
+			`\n  ${reducedCmds.join(" | ")}` +
+			(more > 0 ? ` (+${more} more)` : "");
+	}
+
+	if (estimateTokens(text) > budget) {
+		// Patterns only
+		text =
+			`  ${shellCmds.length} commands | patterns: ${patternStr}` +
+			(tr ? ` | ${tr}` : "");
+	}
+
+	return text;
+}
+
+// ── Claude compression ─────────────────────────────────
+
+function compressClaude(
+	sessions: ClaudeSession[],
+	budget: number
+): string {
+	if (sessions.length === 0) return "  (none)";
+
+	// Group by project
+	const byProject: Record<string, ClaudeSession[]> = {};
+	for (const s of sessions) {
+		const proj = s.project || "general";
+		if (!byProject[proj]) byProject[proj] = [];
+		byProject[proj].push(s);
+	}
+	const tr = timeRangeStr(sessions);
+
+	// Try full prompts
+	const lines: string[] = [];
+	for (const [proj, projSessions] of Object.entries(byProject)) {
+		const promptLimit = Math.min(projSessions.length, 10);
+		const prompts = projSessions
+			.slice(0, promptLimit)
+			.map((s) => s.prompt.slice(0, 120));
+		const more = projSessions.length - promptLimit;
+		lines.push(
+			`  [${proj}] (${projSessions.length} prompts)` +
+			(more > 0 ? ` (+${more} more)` : "") +
+			`\n    ${prompts.join(" | ")}`
+		);
+	}
+	let text =
+		`  ${sessions.length} total prompts` +
+		(tr ? ` | ${tr}` : "") +
+		`\n${lines.join("\n")}`;
+
+	if (estimateTokens(text) > budget) {
+		// Fewer prompts per project
+		const condensedLines: string[] = [];
+		for (const [proj, projSessions] of Object.entries(byProject)) {
+			const prompts = projSessions
+				.slice(0, 3)
+				.map((s) => s.prompt.slice(0, 80));
+			condensedLines.push(
+				`  [${proj}] (${projSessions.length} prompts): ${prompts.join(" | ")}` +
+				(projSessions.length > 3 ? ` (+${projSessions.length - 3} more)` : "")
+			);
+		}
+		text =
+			`  ${sessions.length} total prompts` +
+			(tr ? ` | ${tr}` : "") +
+			`\n${condensedLines.join("\n")}`;
+	}
+
+	if (estimateTokens(text) > budget) {
+		// Project names + counts only
+		const projLines = Object.entries(byProject)
+			.map(([proj, s]) => `${proj} (${s.length})`)
+			.join(", ");
+		text =
+			`  ${sessions.length} prompts across: ${projLines}` +
+			(tr ? ` | ${tr}` : "");
+	}
+
+	return text;
+}
+
+// ── Main entry point ───────────────────────────────────
+
+/**
+ * Compress all collected activity data to fit within a target token budget.
+ *
+ * Each source gets a proportional share of the budget based on its event
+ * count. Within each budget, compression is progressive: full detail first,
+ * then grouped summaries, then statistics only.
+ *
+ * Pure function — no LLM calls, no I/O. Runs in <10ms for 2000+ items.
+ */
+export function compressActivity(
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	shellCmds: ShellCommand[],
+	claudeSessions: ClaudeSession[],
+	budget: number
+): CompressedActivity {
+	const browserCount = Object.values(categorized).reduce(
+		(sum, v) => sum + v.length, 0
+	);
+	const totalEvents =
+		browserCount + searches.length + shellCmds.length + claudeSessions.length;
+
+	if (totalEvents === 0) {
+		return {
+			browserText: "  (none)",
+			searchText: "  (none)",
+			shellText: "  (none)",
+			claudeText: "  (none)",
+			totalEvents: 0,
+			tokenEstimate: 0,
+		};
+	}
+
+	// Proportional budget allocation (minimum 10% per active source)
+	const activeSources = [
+		browserCount > 0 ? "browser" : null,
+		searches.length > 0 ? "search" : null,
+		shellCmds.length > 0 ? "shell" : null,
+		claudeSessions.length > 0 ? "claude" : null,
+	].filter(Boolean).length;
+
+	const minShare = Math.floor(budget * 0.1);
+	const flexBudget = budget - activeSources * minShare;
+
+	const browserShare = browserCount > 0
+		? minShare + Math.round(flexBudget * browserCount / totalEvents)
+		: 0;
+	const searchShare = searches.length > 0
+		? minShare + Math.round(flexBudget * searches.length / totalEvents)
+		: 0;
+	const shellShare = shellCmds.length > 0
+		? minShare + Math.round(flexBudget * shellCmds.length / totalEvents)
+		: 0;
+	const claudeShare = claudeSessions.length > 0
+		? minShare + Math.round(flexBudget * claudeSessions.length / totalEvents)
+		: 0;
+
+	const browserText = compressBrowser(categorized, browserShare);
+	const searchText = compressSearches(searches, searchShare);
+	const shellText = compressShell(shellCmds, shellShare);
+	const claudeText = compressClaude(claudeSessions, claudeShare);
+
+	const tokenEstimate =
+		estimateTokens(browserText) +
+		estimateTokens(searchText) +
+		estimateTokens(shellText) +
+		estimateTokens(claudeText);
+
+	return {
+		browserText,
+		searchText,
+		shellText,
+		claudeText,
+		totalEvents,
+		tokenEstimate,
+	};
+}
