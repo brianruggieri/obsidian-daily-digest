@@ -2,6 +2,7 @@ import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions } from "./collectors";
 import { categorizeVisits } from "./categorize";
+import { compressActivity, CompressedActivity } from "./compress";
 import { summarizeDay } from "./summarize";
 import { AICallConfig } from "./ai-client";
 import { renderMarkdown } from "./renderer";
@@ -345,6 +346,21 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
+			// ── Compress (full-day mode) ─────────
+			let compressed: CompressedActivity | undefined;
+			if (this.settings.collectionMode === "complete") {
+				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
+				compressed = compressActivity(
+					categorized, searches, shellCmds, claudeSessions,
+					this.settings.promptBudget
+				);
+				log.debug(
+					`Daily Digest: Compressed ${compressed.totalEvents} events ` +
+					`to ~${compressed.tokenEstimate} tokens ` +
+					`(budget: ${this.settings.promptBudget})`
+				);
+			}
+
 			// ── Classify (Phase 2) ──────────────
 			let classification: ClassificationResult | undefined;
 			if (this.settings.enableClassification && useAI) {
@@ -492,7 +508,8 @@ export default class DailyDigestPlugin extends Plugin {
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, shellCmds,
 							claudeSessions, aiConfig, this.settings.profile,
-							ragConfig, classification, extractedPatterns
+							ragConfig, classification, extractedPatterns,
+							compressed
 						);
 						aiNotice.hide();
 					} else {
@@ -508,7 +525,8 @@ export default class DailyDigestPlugin extends Plugin {
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, shellCmds,
 						claudeSessions, aiConfig, this.settings.profile,
-						ragConfig, classification, extractedPatterns
+						ragConfig, classification, extractedPatterns,
+						compressed
 					);
 				}
 			}
