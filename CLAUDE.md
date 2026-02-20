@@ -118,7 +118,7 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 - `settings.ts` is the largest file (~1,350 lines) — changes here need care
 - Browser history is read from **locked SQLite databases** via sql.js WASM — the plugin copies the DB file before reading to avoid lock conflicts
 - The `styles.css` uses Obsidian CSS custom properties for theme compatibility
-- `main.js` in the repo root is the **built output** (bundled, includes ~1.2MB sql.js WASM) — do not edit directly
+- `main.js` is **gitignored** — it is built locally for development (`npm run build`) and attached to GitHub Releases by the release workflow. Do not edit or commit it directly
 - Obsidian's `requestUrl` is used for cloud API calls; native `fetch` is used for localhost (CORS bypass)
 - The merge system (`merge.ts`) must preserve user-authored content across regenerations — always create timestamped backups before modifying existing notes
 - Privacy consent is version-controlled (`CURRENT_PRIVACY_VERSION`) — bumping it re-triggers the onboarding modal
@@ -130,4 +130,4 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 - Keep commits focused on a single concern
 - Run `npm run test` and `npm run build` before committing
 - Never commit `.env` or API keys
-- `main.js` is committed as built output (required by Obsidian's plugin system)
+- `main.js` is delivered via GitHub Releases (not committed) — the release workflow builds, tests, and uploads it as a release asset
