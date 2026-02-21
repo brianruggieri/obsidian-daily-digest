@@ -402,7 +402,7 @@ export function compressActivity(
 		};
 	}
 
-	// Proportional budget allocation (minimum 10% per active source)
+	// Proportional budget allocation (minimum share per active source, capped at 10%)
 	const activeSources = [
 		browserCount > 0 ? "browser" : null,
 		searches.length > 0 ? "search" : null,
@@ -411,7 +411,10 @@ export function compressActivity(
 		gitCommits.length > 0 ? "git" : null,
 	].filter(Boolean).length;
 
-	const minShare = Math.floor(budget * 0.1);
+	// Cap minShare so activeSources * minShare never exceeds budget.
+	const minShare = activeSources > 0
+		? Math.min(Math.floor(budget * 0.1), Math.floor(budget / activeSources))
+		: 0;
 	const flexBudget = budget - activeSources * minShare;
 
 	const browserShare = browserCount > 0
