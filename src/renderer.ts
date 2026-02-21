@@ -11,6 +11,7 @@ import {
 } from "./types";
 import { AIProvider } from "./settings";
 import { KnowledgeSections } from "./knowledge";
+import { PromptLog, formatDetailsBlock } from "../scripts/lib/prompt-logger";
 
 function formatTime(d: Date | null): string {
 	if (!d) return "";
@@ -39,7 +40,8 @@ export function renderMarkdown(
 	categorized: CategorizedVisits,
 	aiSummary: AISummary | null,
 	aiProviderUsed: AIProvider | "none" = "none",
-	knowledge?: KnowledgeSections
+	knowledge?: KnowledgeSections,
+	promptLog?: PromptLog
 ): string {
 	const today = formatDate(date);
 	const dow = dayOfWeek(date);
@@ -102,6 +104,14 @@ export function renderMarkdown(
 		}
 		lines.push("---");
 		lines.push("");
+
+		// Inject prompt visibility blocks if log provided
+		if (promptLog && promptLog.length > 0) {
+			for (const entry of promptLog) {
+				lines.push("");
+				lines.push(formatDetailsBlock(entry));
+			}
+		}
 	}
 
 	// ── Stats ────────────────────────────────────
