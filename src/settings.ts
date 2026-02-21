@@ -28,12 +28,6 @@ export interface DailyDigestSettings {
 	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
 	 */
 	browserConfigs: BrowserInstallConfig[];
-	/**
-	 * @deprecated Migrated to Obsidian SecretStorage on first load (>=1.11.4).
-	 * Retained only for migration from older versions. Always "" after migration.
-	 * Read the key via DailyDigestPlugin.getAnthropicApiKey() instead.
-	 */
-	anthropicApiKey: string;
 	aiModel: string;
 	profile: string;
 	enableAI: boolean;
@@ -83,7 +77,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	// Empty until the user clicks "Detect Browsers & Profiles". Nothing is
 	// collected until the user has reviewed and enabled specific profiles.
 	browserConfigs: [],
-	anthropicApiKey: "",
 	aiModel: "claude-haiku-4-5",
 	profile: "",
 	enableAI: false,
@@ -846,66 +839,32 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 			} else {
 				// ── Anthropic settings ───────────────
-				if (this.plugin.hasSecretStorage) {
-					// Obsidian >=1.11.4: use SecretStorage (not synced, not in data.json)
-					const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
+				const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
 
-					new Setting(containerEl)
-						.setName("Anthropic API key")
-						.setDesc(
-							"Your Anthropic API key. Stored securely in Obsidian's secret " +
-							"storage — not in data.json, not synced with your vault. " +
-							"Alternative: set the ANTHROPIC_API_KEY environment variable instead."
-						)
-						.addText((text) => {
-							text.inputEl.type = "password";
-							text.setPlaceholder("sk-ant-...")
-								.setValue(currentKey)
-								.onChange((value) => {
-									this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
-								});
-						});
+				new Setting(containerEl)
+					.setName("Anthropic API key")
+					.setDesc(
+						"Your Anthropic API key. Stored securely in Obsidian's secret " +
+						"storage — not in data.json, not synced with your vault. " +
+						"Alternative: set the ANTHROPIC_API_KEY environment variable instead."
+					)
+					.addText((text) => {
+						text.inputEl.type = "password";
+						text.setPlaceholder("sk-ant-...")
+							.setValue(currentKey)
+							.onChange((value) => {
+								this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
+							});
+					});
 
-					const apiKeyNote = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-info",
-					});
-					apiKeyNote.createEl("p", {
-						text:
-							"This key is stored in Obsidian's secure secret storage, separate " +
-							"from your vault files. It will not be synced or committed to git.",
-					});
-				} else {
-					// Obsidian <1.11.4: fall back to data.json storage
-					new Setting(containerEl)
-						.setName("Anthropic API key")
-						.setDesc(
-							"Your Anthropic API key. Stored in this plugin's data.json file " +
-							"within your vault. If your vault is synced, this key may be " +
-							"uploaded to your sync provider. Alternative: set the " +
-							"ANTHROPIC_API_KEY environment variable instead and leave this blank. " +
-							"Upgrade to Obsidian 1.11.4+ for secure secret storage."
-						)
-						.addText((text) => {
-							text.inputEl.type = "password";
-							text.setPlaceholder("sk-ant-...")
-								.setValue(this.plugin.settings.anthropicApiKey)
-								.onChange(async (value) => {
-									this.plugin.settings.anthropicApiKey = value;
-									await this.plugin.saveSettings();
-								});
-						});
-
-					const apiKeyNote = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-warn",
-					});
-					apiKeyNote.createEl("p", {
-						text:
-							"Security note: API keys in data.json are readable by any Obsidian " +
-							"plugin and may be synced with your vault. Upgrade to Obsidian " +
-							"1.11.4+ for secure secret storage, or use the ANTHROPIC_API_KEY " +
-							"environment variable.",
-					});
-				}
+				const apiKeyNote = containerEl.createDiv({
+					cls: "dd-settings-callout dd-settings-callout-info",
+				});
+				apiKeyNote.createEl("p", {
+					text:
+						"This key is stored in Obsidian's secure secret storage, separate " +
+						"from your vault files. It will not be synced or committed to git.",
+				});
 
 				new Setting(containerEl)
 					.setName("AI model")
