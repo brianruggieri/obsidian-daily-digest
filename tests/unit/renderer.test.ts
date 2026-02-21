@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { renderMarkdown } from "../../src/renderer";
 import { AISummary, BrowserVisit, SearchQuery, ShellCommand, ClaudeSession, CategorizedVisits } from "../../src/types";
 import { KnowledgeSections } from "../../src/knowledge";
+import { createPromptLog, appendPromptEntry } from "../../scripts/lib/prompt-logger";
 
 const DATE = new Date("2025-06-15T00:00:00");
 
@@ -261,5 +262,47 @@ describe("knowledge insights section", () => {
 	it("omits knowledge section when not provided", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleShell, sampleClaude, [], sampleCategorized, sampleAISummary);
 		expect(md).not.toContain("Knowledge Insights");
+	});
+});
+
+// ── Prompt Log Injection ─────────────────────────────────
+
+describe("prompt log injection", () => {
+	it("injects prompt details block after AI summary when promptLog provided", () => {
+		const log = createPromptLog();
+		appendPromptEntry(log, {
+			stage: "summarize",
+			model: "claude-haiku-4-5-20251001",
+			tokenCount: 500,
+			privacyTier: 1,
+			prompt: "Test prompt text",
+		});
+
+		const md = renderMarkdown(
+			new Date("2026-02-21"),
+			[], [], [], [], [],
+			{ dev: [], work: [], finance: [], social: [], news: [], media: [], shopping: [], health: [], other: [] },
+			{ headline: "Test", tldr: "Summary", themes: [], category_summaries: {}, notable: [], questions: [] },
+			"anthropic",
+			undefined,
+			log  // new optional parameter
+		);
+
+		expect(md).toContain("<details>");
+		expect(md).toContain("claude-haiku-4-5-20251001");
+		expect(md).toContain("Test prompt text");
+		expect(md).toContain("</details>");
+	});
+
+	it("renders cleanly with no promptLog (backwards compatible)", () => {
+		const md = renderMarkdown(
+			new Date("2026-02-21"),
+			[], [], [], [], [],
+			{ dev: [], work: [], finance: [], social: [], news: [], media: [], shopping: [], health: [], other: [] },
+			null,
+			"none"
+			// no promptLog argument — must still work
+		);
+		expect(md).not.toContain("<details>");
 	});
 });
