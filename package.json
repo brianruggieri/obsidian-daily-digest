@@ -19,7 +19,10 @@
 		"deploy": "npm run build && node deploy.mjs",
 		"deploy:dev": "node esbuild.config.mjs production && node deploy.mjs",
 		"screenshots:setup": "bash screenshots/setup.sh",
-		"screenshots": "npm run screenshots:setup && npx wdio run screenshots/wdio.conf.ts"
+		"screenshots": "npm run screenshots:setup && npx wdio run screenshots/wdio.conf.ts",
+		"matrix": "tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
+		"matrix:real": "AI_MODE=real DATA_MODE=real tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
+		"matrix:assert": "MATRIX_ASSERT=true tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts"
 	},
 	"keywords": [],
 	"license": "MIT",
