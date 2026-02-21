@@ -583,7 +583,7 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 			// Get commits since the target date for this author
 			const gitLog = execSync(
 				`git log --since="${sinceISO}" --author="${email}" --all ` +
-				`--pretty=format:"%h|%s|%aI" --shortstat`,
+				`--pretty=format:"%H|%s|%aI" --shortstat`,
 				{
 					cwd: repoPath,
 					encoding: "utf-8",
