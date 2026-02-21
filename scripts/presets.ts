@@ -53,7 +53,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	enableAI: false,
 	profile: "",
 	aiProvider: "none",
-	anthropicApiKey: "",
 	localEndpoint: "http://localhost:11434",
 	localModel: "llama3.2",
 	aiModel: "claude-haiku-4-5-20251001",

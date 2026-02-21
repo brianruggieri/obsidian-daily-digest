@@ -211,7 +211,7 @@ async function runPreset(
 		// AI_MODE === "real" — call the real AI provider
 		const aiCallConfig: AICallConfig = {
 			provider: settings.aiProvider as "anthropic" | "local",
-			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? settings.anthropicApiKey ?? "",
+			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
 			anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
 			localEndpoint: settings.localEndpoint,
 			localModel: settings.localModel,
