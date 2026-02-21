@@ -8,6 +8,7 @@ import initSqlJs from "sql.js";
 import sqlWasm from "sql.js/dist/sql-wasm.wasm";
 import { DailyDigestSettings } from "./settings";
 import { scrubSecrets } from "./sanitize";
+import { warn } from "./log";
 import {
 	BrowserVisit,
 	SearchQuery,
@@ -471,7 +472,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 // ── Git History ──────────────────────────────────────────
 
 /**
- * Parse raw `git log --pretty=format:"%h|%s|%aI" --shortstat` output
+ * Parse raw `git log --pretty=format:"%H|%s|%aI" --shortstat` output
  * into GitCommit objects. Exported for testing.
  */
 export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
@@ -605,8 +606,9 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 					allCommits.push(c);
 				}
 			}
-		} catch {
+		} catch (err) {
 			// Skip repos where git commands fail — never crash the pipeline
+			warn(`git collection failed for "${repoPath}":`, err instanceof Error ? err.message : err);
 			continue;
 		}
 	}
