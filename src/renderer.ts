@@ -79,7 +79,7 @@ export function renderMarkdown(
 	}
 	if (knowledge) {
 		// Add focus score and activity types to frontmatter
-		lines.push(`focus_score: ${knowledge.focusScore.toFixed(2)}`);
+		lines.push(`focus_score: ${Math.round(knowledge.focusScore * 100)}%`);
 	}
 	if (gitCommits.length > 0) {
 		lines.push(`git-commits: ${gitCommits.length}`);

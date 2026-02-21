@@ -5,9 +5,8 @@ const VALID_MD = `---
 date: 2026-02-21
 day: Saturday
 tags: [daily, daily-digest]
-focus_score: 0.74
+focus_score: 74%
 generated: 2026-02-21 07:00
-categories: [dev]
 ---
 
 # Saturday, February 21
@@ -25,7 +24,7 @@ describe("Structural assertions", () => {
 	});
 
 	it("fails when frontmatter is missing required field", () => {
-		const bad = VALID_MD.replace("focus_score: 0.74\n", "");
+		const bad = VALID_MD.replace("focus_score: 74%\n", "");
 		const result = runStructuralAssertions(bad);
 		expect(result.passed).toBe(false);
 		expect(result.failures.some((f) => f.includes("focus_score"))).toBe(true);
@@ -58,7 +57,7 @@ describe("Quality assertions", () => {
 	});
 
 	it("fails when focus_score is out of range", () => {
-		const bad = VALID_MD.replace("focus_score: 0.74", "focus_score: 1.5");
+		const bad = VALID_MD.replace("focus_score: 74%", "focus_score: 150%");
 		const result = runQualityAssertions(bad, { aiEnabled: false });
 		expect(result.passed).toBe(false);
 		expect(result.failures.some((f) => f.includes("focus_score"))).toBe(true);
