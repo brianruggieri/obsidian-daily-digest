@@ -79,7 +79,7 @@ export function renderMarkdown(
 	}
 	if (knowledge) {
 		// Add focus score and activity types to frontmatter
-		lines.push(`focus_score: ${knowledge.focusScore.toFixed(2)}`);
+		lines.push(`focus_score: ${Math.round(knowledge.focusScore * 100)}%`);
 	}
 	if (gitCommits.length > 0) {
 		lines.push(`git-commits: ${gitCommits.length}`);
@@ -332,7 +332,7 @@ export function renderMarkdown(
 				const stats = c.filesChanged > 0
 					? ` (+${c.insertions}/-${c.deletions})`
 					: "";
-				lines.push(`- \`${c.hash}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
+				lines.push(`- \`${c.hash.slice(0, 7)}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
 			}
 			lines.push("");
 		}
