@@ -454,7 +454,7 @@ export function filterSensitiveDomains(
 	visits: BrowserVisit[],
 	config: SensitivityConfig
 ): SensitivityFilterResult {
-	if (!config.enabled || config.categories.length === 0) {
+	if (!config.enabled || (config.categories.length === 0 && config.customDomains.length === 0)) {
 		return { kept: visits, filtered: 0, byCategory: {} };
 	}
 
@@ -508,7 +508,7 @@ export function filterSensitiveSearches(
 	searches: { query: string; time: Date | null; engine: string }[],
 	config: SensitivityConfig
 ): { kept: typeof searches; filtered: number } {
-	if (!config.enabled || config.categories.length === 0) {
+	if (!config.enabled || (config.categories.length === 0 && config.customDomains.length === 0)) {
 		return { kept: searches, filtered: 0 };
 	}
 
