@@ -266,12 +266,14 @@ export interface DataPreviewStats {
 	searchCount: number;
 	shellCount: number;
 	claudeCount: number;
+	gitCount: number;
 	excludedCount?: number;
 	samples?: {
 		visits: DataPreviewSample[];
 		searches: DataPreviewSample[];
 		shell: DataPreviewSample[];
 		claude: DataPreviewSample[];
+		git: DataPreviewSample[];
 	};
 }
 
@@ -336,6 +338,11 @@ export class DataPreviewModal extends Modal {
 				text: `${this.stats.claudeCount} Claude Code session prompts`,
 			});
 		}
+		if (this.stats.gitCount > 0) {
+			statsList.createEl("li", {
+				text: `${this.stats.gitCount} git commits`,
+			});
+		}
 		if (this.stats.excludedCount && this.stats.excludedCount > 0) {
 			statsList.createEl("li", {
 				text: `${this.stats.excludedCount} visits excluded by domain filter`,
@@ -394,6 +401,14 @@ export class DataPreviewModal extends Modal {
 				const claudeList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
 				for (const s of samples.claude) {
 					claudeList.createEl("li", { text: s.text });
+				}
+			}
+
+			if (samples.git.length > 0) {
+				sampleContent.createEl("h4", { text: "Git commits" });
+				const gitList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
+				for (const s of samples.git) {
+					gitList.createEl("li", { text: s.text, cls: "dd-preview-mono" });
 				}
 			}
 		}

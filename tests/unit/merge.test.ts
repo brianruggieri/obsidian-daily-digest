@@ -45,7 +45,7 @@ const ANSWER_SLUG = `answer_${slugifyQuestion(QUESTION)}`;
 function freshNote(ai: AISummary | null = sampleAISummary): string {
 	return renderMarkdown(
 		DATE, sampleVisits, sampleSearches, sampleShell,
-		sampleClaude, sampleCategorized, ai,
+		sampleClaude, [], sampleCategorized, ai,
 	);
 }
 
@@ -500,7 +500,7 @@ describe("edge cases", () => {
 	it("handles note without AI summary (no reflection section)", () => {
 		const md = renderMarkdown(
 			DATE, sampleVisits, sampleSearches, sampleShell,
-			sampleClaude, sampleCategorized, null,
+			sampleClaude, [], sampleCategorized, null,
 		);
 		const edited = withUserNotes(md, "User wrote some notes");
 		const extraction = extractUserContent(edited);

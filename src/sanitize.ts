@@ -3,6 +3,7 @@ import {
 	SearchQuery,
 	ShellCommand,
 	ClaudeSession,
+	GitCommit,
 	SanitizationLevel,
 	SanitizeConfig,
 } from "./types";
@@ -281,6 +282,13 @@ function sanitizeClaudeSession(
 	};
 }
 
+function sanitizeGitCommit(commit: GitCommit, _config: SanitizeConfig): GitCommit {
+	return {
+		...commit,
+		message: scrubSecrets(commit.message),
+	};
+}
+
 // ── Master Orchestrator ──────────────────────────────────
 
 export interface SanitizedOutput {
@@ -288,6 +296,7 @@ export interface SanitizedOutput {
 	searches: SearchQuery[];
 	shellCommands: ShellCommand[];
 	claudeSessions: ClaudeSession[];
+	gitCommits: GitCommit[];
 	excludedVisitCount: number;
 }
 
@@ -296,6 +305,7 @@ export function sanitizeCollectedData(
 	searches: SearchQuery[],
 	shellCommands: ShellCommand[],
 	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
 	config: SanitizeConfig
 ): SanitizedOutput {
 	if (!config.enabled) {
@@ -304,6 +314,7 @@ export function sanitizeCollectedData(
 			searches,
 			shellCommands,
 			claudeSessions,
+			gitCommits,
 			excludedVisitCount: 0,
 		};
 	}
@@ -319,12 +330,14 @@ export function sanitizeCollectedData(
 	const sanitizedSearches = searches.map((s) => sanitizeSearchQuery(s, config));
 	const sanitizedShell = shellCommands.map((c) => sanitizeShellCommand(c, config));
 	const sanitizedClaude = claudeSessions.map((s) => sanitizeClaudeSession(s, config));
+	const sanitizedGit = gitCommits.map((c) => sanitizeGitCommit(c, config));
 
 	return {
 		visits: sanitizedVisits,
 		searches: sanitizedSearches,
 		shellCommands: sanitizedShell,
 		claudeSessions: sanitizedClaude,
+		gitCommits: sanitizedGit,
 		excludedVisitCount: excludedCount,
 	};
 }

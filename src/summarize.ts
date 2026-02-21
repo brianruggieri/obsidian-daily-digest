@@ -2,19 +2,21 @@ import { CATEGORY_LABELS } from "./categorize";
 import { scrubSecrets } from "./sanitize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion } from "./types";
+import { CompressedActivity } from "./compress";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
 import * as log from "./log";
 
 // ── Prompt builder & summarizer ─────────────────────────
 
-function buildPrompt(
+export function buildPrompt(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
-	profile: string
+	profile: string,
+	gitCommits: GitCommit[] = []
 ): string {
 	const catLines: string[] = [];
 	for (const [cat, visits] of Object.entries(categorized)) {
@@ -33,6 +35,7 @@ function buildPrompt(
 	const searchList = searches.slice(0, 20).map((s) => s.query);
 	const claudeList = claudeSessions.slice(0, 10).map((e) => e.prompt.slice(0, 120));
 	const shellList = shellCmds.slice(0, 15).map((e) => scrubSecrets(e.cmd).slice(0, 80));
+	const gitList = gitCommits.slice(0, 20).map((c) => `  - [${c.repo}] ${c.message.slice(0, 80)}`);
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 
 	const dateStr = date.toLocaleDateString("en-US", {
@@ -56,6 +59,64 @@ ${claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)"}
 
 ## Shell commands (secrets redacted):
 ${shellList.length ? shellList.map((c) => `  - ${c}`).join("\n") : "  (none)"}
+
+## Git commits:
+${gitList.length ? gitList.join("\n") : "  (none)"}
+
+Return ONLY a JSON object with these exact keys — no markdown, no preamble:
+{
+  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
+  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
+  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "category_summaries": {
+    "<category_name>": "1-sentence plain-English summary of what they did in this category"
+  },
+  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
+  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
+}
+
+Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
+Only include category_summaries for categories that actually had activity.
+Do not include categories with zero visits.`;
+}
+
+// ── Compressed prompt builder (full-day mode) ───────────
+// Uses pre-compressed activity data from compress.ts. This path is taken
+// when collectionMode === "complete" — it replaces the fixed-cap slicing
+// in buildPrompt with budget-aware proportional compression.
+
+function buildCompressedPrompt(
+	date: Date,
+	compressed: CompressedActivity,
+	profile: string
+): string {
+	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
+	const dateStr = date.toLocaleDateString("en-US", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+
+	return `You are summarizing a person's digital activity for ${dateStr}.
+Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
+
+Total events collected: ${compressed.totalEvents}
+
+## Browser activity by category:
+${compressed.browserText}
+
+## Search queries:
+${compressed.searchText}
+
+## Claude Code / AI prompts:
+${compressed.claudeText}
+
+## Shell commands (secrets redacted):
+${compressed.shellText}
+
+## Git commits:
+${compressed.gitText}
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
@@ -359,10 +420,21 @@ export async function summarizeDay(
 	profile: string,
 	ragConfig?: RAGConfig,
 	classification?: ClassificationResult,
-	patterns?: PatternAnalysis
+	patterns?: PatternAnalysis,
+	compressed?: CompressedActivity,
+	gitCommits: GitCommit[] = []
 ): Promise<AISummary> {
 	let prompt: string;
 	let maxTokens = 1000;
+
+	// Helper: build the best available standard/fallback prompt.
+	// In "complete" collection mode, compressed data is available and
+	// produces a budget-aware prompt. Otherwise fall back to the legacy
+	// fixed-cap prompt builder.
+	const standardPrompt = () =>
+		compressed
+			? buildCompressedPrompt(date, compressed, profile)
+			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits);
 
 	// Privacy escalation chain for Anthropic:
 	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
@@ -413,23 +485,17 @@ export async function summarizeDay(
 					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
 					e
 				);
-				prompt = buildPrompt(
-					date, categorized, searches, shellCmds, claudeSessions, profile
-				);
+				prompt = standardPrompt();
 			}
 		} else {
 			log.debug(
 				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
 				`${totalTokens} tokens — too small)`
 			);
-			prompt = buildPrompt(
-				date, categorized, searches, shellCmds, claudeSessions, profile
-			);
+			prompt = standardPrompt();
 		}
 	} else {
-		prompt = buildPrompt(
-			date, categorized, searches, shellCmds, claudeSessions, profile
-		);
+		prompt = standardPrompt();
 	}
 
 	const raw = await callAI(prompt, config, maxTokens);

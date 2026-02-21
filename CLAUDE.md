@@ -131,3 +131,11 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 - Run `npm run test` and `npm run build` before committing
 - Never commit `.env` or API keys
 - `main.js` is delivered via GitHub Releases (not committed) — the release workflow builds, tests, and uploads it as a release asset
+
+## Branching Conventions
+
+- **One feature per branch**, branched from `main` at the start of work
+- Branch naming: `feat/<short-name>`, `fix/<short-name>`, `chore/<short-name>`
+- Use the `superpowers:using-git-worktrees` skill at the start of every new feature session to create an isolated worktree
+- PRs merged to `main` only when the feature is complete and all tests pass
+- Never let two unrelated features accumulate on the same branch
