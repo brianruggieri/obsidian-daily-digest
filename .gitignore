@@ -27,6 +27,8 @@ screenshots/vault/
 # Claude / AI tooling
 .claude-flow/
 .claude/
+.swarm/
+.mcp.json
 .worktrees/
 
 # IDE / Editor
