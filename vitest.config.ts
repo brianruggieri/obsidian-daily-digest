@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => {
 		resolve: {
 			alias: {
 				obsidian: resolve(__dirname, "tests/mocks/obsidian.ts"),
+				"sql.js/dist/sql-wasm.wasm": resolve(__dirname, "tests/mocks/sql-wasm.ts"),
+				"sql.js": resolve(__dirname, "tests/mocks/sql-js.ts"),
 			},
 		},
 	};
