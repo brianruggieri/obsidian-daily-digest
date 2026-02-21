@@ -3,7 +3,7 @@ import { scrubSecrets } from "./sanitize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion } from "./types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
 import * as log from "./log";
 
@@ -15,7 +15,8 @@ export function buildPrompt(
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
-	profile: string
+	profile: string,
+	gitCommits: GitCommit[] = []
 ): string {
 	const catLines: string[] = [];
 	for (const [cat, visits] of Object.entries(categorized)) {
@@ -34,6 +35,7 @@ export function buildPrompt(
 	const searchList = searches.slice(0, 20).map((s) => s.query);
 	const claudeList = claudeSessions.slice(0, 10).map((e) => e.prompt.slice(0, 120));
 	const shellList = shellCmds.slice(0, 15).map((e) => scrubSecrets(e.cmd).slice(0, 80));
+	const gitList = gitCommits.slice(0, 20).map((c) => `  - [${c.repo}] ${c.message.slice(0, 80)}`);
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 
 	const dateStr = date.toLocaleDateString("en-US", {
@@ -57,6 +59,9 @@ ${claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)"}
 
 ## Shell commands (secrets redacted):
 ${shellList.length ? shellList.map((c) => `  - ${c}`).join("\n") : "  (none)"}
+
+## Git commits:
+${gitList.length ? gitList.join("\n") : "  (none)"}
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
@@ -416,7 +421,8 @@ export async function summarizeDay(
 	ragConfig?: RAGConfig,
 	classification?: ClassificationResult,
 	patterns?: PatternAnalysis,
-	compressed?: CompressedActivity
+	compressed?: CompressedActivity,
+	gitCommits: GitCommit[] = []
 ): Promise<AISummary> {
 	let prompt: string;
 	let maxTokens = 1000;
@@ -428,7 +434,7 @@ export async function summarizeDay(
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile)
-			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile);
+			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits);
 
 	// Privacy escalation chain for Anthropic:
 	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
