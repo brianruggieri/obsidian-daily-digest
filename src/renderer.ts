@@ -332,7 +332,7 @@ export function renderMarkdown(
 				const stats = c.filesChanged > 0
 					? ` (+${c.insertions}/-${c.deletions})`
 					: "";
-				lines.push(`- \`${c.hash}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
+				lines.push(`- \`${c.hash.slice(0, 7)}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
 			}
 			lines.push("");
 		}
