@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, copyFileSync, unlinkSync, readdirSync, statSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { homedir, tmpdir, platform } from "os";
 // Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
@@ -572,7 +572,7 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 
 		try {
 			// Get local user email for this repo
-			const email = execSync("git config user.email", {
+			const email = execFileSync("git", ["config", "user.email"], {
 				cwd: repoPath,
 				encoding: "utf-8",
 				timeout: 5000,
@@ -581,9 +581,16 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 			if (!email) continue;
 
 			// Get commits since the target date for this author
-			const gitLog = execSync(
-				`git log --since="${sinceISO}" --author="${email}" --all ` +
-				`--pretty=format:"%h|%s|%aI" --shortstat`,
+			const gitLog = execFileSync(
+				"git",
+				[
+					"log",
+					`--since=${sinceISO}`,
+					`--author=${email}`,
+					"--all",
+					"--pretty=format:%h|%s|%aI",
+					"--shortstat",
+				],
 				{
 					cwd: repoPath,
 					encoding: "utf-8",
