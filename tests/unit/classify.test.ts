@@ -13,7 +13,7 @@ describe("classifyEventsRuleOnly", () => {
 			dev: [{ ...visits[0], domain: "github.com" }],
 		};
 
-		const result = classifyEventsRuleOnly(visits, [], [], [], categorized);
+		const result = classifyEventsRuleOnly(visits, [], [], [], [], categorized);
 		expect(result.events).toHaveLength(1);
 		expect(result.events[0].activityType).toBe("implementation");
 		expect(result.events[0].source).toBe("browser");
@@ -25,7 +25,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ query: "react hooks best practices", time: NOW, engine: "google.com" },
 		];
 
-		const result = classifyEventsRuleOnly([], searches, [], [], {});
+		const result = classifyEventsRuleOnly([], searches, [], [], [], {});
 		expect(result.events).toHaveLength(1);
 		expect(result.events[0].activityType).toBe("research");
 		expect(result.events[0].source).toBe("search");
@@ -39,7 +39,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ cmd: "kubectl get pods", time: NOW },
 		];
 
-		const result = classifyEventsRuleOnly([], [], shell, [], {});
+		const result = classifyEventsRuleOnly([], [], shell, [], [], {});
 		expect(result.events).toHaveLength(4);
 		expect(result.events[0].activityType).toBe("implementation"); // git clone
 		expect(result.events[1].activityType).toBe("debugging");       // npm test
@@ -52,14 +52,14 @@ describe("classifyEventsRuleOnly", () => {
 			{ prompt: "Fix the auth middleware bug", time: NOW, project: "webapp" },
 		];
 
-		const result = classifyEventsRuleOnly([], [], [], claude, {});
+		const result = classifyEventsRuleOnly([], [], [], claude, [], {});
 		expect(result.events).toHaveLength(1);
 		expect(result.events[0].activityType).toBe("implementation");
 		expect(result.events[0].source).toBe("claude");
 	});
 
 	it("handles empty input", () => {
-		const result = classifyEventsRuleOnly([], [], [], [], {});
+		const result = classifyEventsRuleOnly([], [], [], [], [], {});
 		expect(result.events).toHaveLength(0);
 		expect(result.totalProcessed).toBe(0);
 		expect(result.llmClassified).toBe(0);
@@ -75,7 +75,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ query: "test", time: NOW, engine: "google.com" },
 		];
 
-		const result = classifyEventsRuleOnly(visits, searches, [], [], {
+		const result = classifyEventsRuleOnly(visits, searches, [], [], [], {
 			dev: visits.map((v) => ({ ...v, domain: "github.com" })),
 		});
 		expect(result.totalProcessed).toBe(3);
@@ -92,7 +92,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ query: "what is raft consensus", time: NOW, engine: "google.com" },
 		];
 
-		const result = classifyEventsRuleOnly([], searches, [], [], {});
+		const result = classifyEventsRuleOnly([], searches, [], [], [], {});
 		expect(result.events[0].intent).toBe("compare");
 		expect(result.events[1].intent).toBe("implement");
 		expect(result.events[2].intent).toBe("troubleshoot");
@@ -104,7 +104,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ url: "https://github.com/repo", title: "GitHub Repo", time: NOW, domain: "github.com" },
 		];
 
-		const result = classifyEventsRuleOnly(visits, [], [], [], {
+		const result = classifyEventsRuleOnly(visits, [], [], [], [], {
 			dev: [{ ...visits[0], domain: "github.com" }],
 		});
 		// Should extract "Github" as entity from domain
@@ -117,7 +117,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ url: "https://example.com", title: "Install TypeScript and React", time: NOW, domain: "example.com" },
 		];
 
-		const result = classifyEventsRuleOnly(visits, [], [], [], {
+		const result = classifyEventsRuleOnly(visits, [], [], [], [], {
 			dev: [{ ...visits[0], domain: "example.com" }],
 		});
 		const entities = result.events[0].entities;
@@ -129,7 +129,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ cmd: "git push origin feature/auth-flow", time: NOW },
 		];
 
-		const result = classifyEventsRuleOnly([], [], shell, [], {});
+		const result = classifyEventsRuleOnly([], [], shell, [], [], {});
 		expect(result.events[0].summary.length).toBeGreaterThan(0);
 		expect(result.events[0].summary.length).toBeLessThanOrEqual(100);
 	});
@@ -139,7 +139,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ url: "https://github.com/a", title: "A", time: NOW, domain: "github.com" },
 		];
 
-		const result = classifyEventsRuleOnly(visits, [], [], [], {});
+		const result = classifyEventsRuleOnly(visits, [], [], [], [], {});
 		expect(result.events[0].timestamp).toBe(NOW.toISOString());
 	});
 
@@ -148,7 +148,7 @@ describe("classifyEventsRuleOnly", () => {
 			{ url: "https://github.com/a", title: "A", time: null, domain: "github.com" },
 		];
 
-		const result = classifyEventsRuleOnly(visits, [], [], [], {});
+		const result = classifyEventsRuleOnly(visits, [], [], [], [], {});
 		expect(result.events).toHaveLength(1);
 		expect(result.events[0].timestamp).toBe("");
 	});

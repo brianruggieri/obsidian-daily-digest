@@ -33,12 +33,12 @@ const TODAY = "2025-06-15";
 function buildPipelinePrompts() {
 	const persona = fullStackDeveloper(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude,
+		persona.visits, persona.searches, persona.shell, persona.claude, [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions,
+		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(
@@ -253,12 +253,12 @@ ${deidentified.slice(-800)}
 			];
 
 			const sanitized = sanitizeCollectedData(
-				dirtyVisits, dirtySearches, dirtyShell, dirtyClaude,
+				dirtyVisits, dirtySearches, dirtyShell, dirtyClaude, [],
 				defaultSanitizeConfig()
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(
-				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions,
+				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
 				categorized
 			);
 			const prompt = buildClassifiedPrompt(DATE, classification, "");

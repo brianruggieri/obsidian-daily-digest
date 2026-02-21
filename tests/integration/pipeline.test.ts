@@ -19,6 +19,7 @@ function runPipeline(persona: PersonaOutput) {
 		persona.searches,
 		persona.shell,
 		persona.claude,
+		[],
 		sanitizeConfig
 	);
 
@@ -31,6 +32,7 @@ function runPipeline(persona: PersonaOutput) {
 		sanitized.searches,
 		sanitized.shellCommands,
 		sanitized.claudeSessions,
+		sanitized.gitCommits,
 		categorized
 	);
 
@@ -53,6 +55,7 @@ function runPipeline(persona: PersonaOutput) {
 		sanitized.searches,
 		sanitized.shellCommands,
 		sanitized.claudeSessions,
+		sanitized.gitCommits,
 		categorized,
 		null, // no AI summary in unit test
 		"none",
