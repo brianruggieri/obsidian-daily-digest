@@ -30,12 +30,12 @@ const TODAY = "2025-06-15";
 function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude,
+		persona.visits, persona.searches, persona.shell, persona.claude, [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions,
+		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	return buildClassifiedPrompt(DATE, classification, "");
@@ -44,12 +44,12 @@ function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof f
 function buildDeidentifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude,
+		persona.visits, persona.searches, persona.shell, persona.claude, [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions,
+		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(
@@ -175,7 +175,7 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("dirty data is properly sanitized before reaching prompts", async () => {
 			const dirty = privacyTestScenario();
 			const sanitized = sanitizeCollectedData(
-				dirty.visits, dirty.searches, dirty.shell, dirty.claude,
+				dirty.visits, dirty.searches, dirty.shell, dirty.claude, [],
 				defaultSanitizeConfig()
 			);
 
@@ -221,12 +221,12 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("three prompt tiers have correct privacy ordering", async () => {
 			const persona = fullStackDeveloper(DATE);
 			const sanitized = sanitizeCollectedData(
-				persona.visits, persona.searches, persona.shell, persona.claude,
+				persona.visits, persona.searches, persona.shell, persona.claude, [],
 				defaultSanitizeConfig()
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(
-				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions,
+				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
 				categorized
 			);
 			const patterns = extractPatterns(

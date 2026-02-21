@@ -22,7 +22,7 @@ function makeTimestamps(count: number): Date[] {
 
 describe("compressActivity", () => {
 	it("returns empty markers for zero events", () => {
-		const result = compressActivity({}, [], [], [], 3000);
+		const result = compressActivity({}, [], [], [], [], 3000);
 		expect(result.totalEvents).toBe(0);
 		expect(result.tokenEstimate).toBe(0);
 		expect(result.browserText).toBe("  (none)");
@@ -55,7 +55,7 @@ describe("compressActivity", () => {
 		});
 
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, searches, shell, claude, 3000);
+		const result = compressActivity(categorized, searches, shell, claude, [], 3000);
 
 		expect(result.totalEvents).toBe(30 + searches.length + 15 + 5);
 		expect(result.tokenEstimate).toBeGreaterThan(0);
@@ -99,7 +99,7 @@ describe("compressActivity", () => {
 		});
 
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, searches, shell, claude, 3000);
+		const result = compressActivity(categorized, searches, shell, claude, [], 3000);
 
 		const expectedTotal = 400 + searches.length + 80 + 30;
 		expect(result.totalEvents).toBe(expectedTotal);
@@ -132,7 +132,7 @@ describe("compressActivity", () => {
 		});
 
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, searches, shell, [], 3000);
+		const result = compressActivity(categorized, searches, shell, [], [], 3000);
 
 		// Browser should get the lion's share of the token budget
 		const browserTokens = estimateTokens(result.browserText);
@@ -147,7 +147,7 @@ describe("compressActivity", () => {
 			timestamps: makeTimestamps(100),
 		});
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, [], [], [], 2000);
+		const result = compressActivity(categorized, [], [], [], [], 2000);
 
 		expect(result.totalEvents).toBe(100);
 		expect(result.browserText).not.toBe("  (none)");
@@ -183,7 +183,7 @@ describe("compressActivity", () => {
 
 		const categorized = categorizeVisits(visits);
 		// Very tight budget — should force stats-only compression
-		const result = compressActivity(categorized, searches, shell, [], 500);
+		const result = compressActivity(categorized, searches, shell, [], [], 500);
 
 		const expectedTotal = 300 + searches.length + 50;
 		expect(result.totalEvents).toBe(expectedTotal);
@@ -199,7 +199,7 @@ describe("compressActivity", () => {
 			timestamps: makeTimestamps(20),
 		});
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, [], [], [], 3000);
+		const result = compressActivity(categorized, [], [], [], [], 3000);
 
 		// Time range format includes HH:MM somewhere in the text
 		expect(result.browserText).toMatch(/\d{2}:\d{2}/);
@@ -212,7 +212,7 @@ describe("compressActivity", () => {
 			timestamps: makeTimestamps(50),
 		});
 		const categorized = categorizeVisits(visits);
-		const result = compressActivity(categorized, [], [], [], 3000);
+		const result = compressActivity(categorized, [], [], [], [], 3000);
 
 		// Should include count in parentheses like "github.com (12)"
 		expect(result.browserText).toMatch(/\(\d+\)/);
@@ -234,7 +234,7 @@ describe("compressActivity", () => {
 			}),
 		];
 
-		const result = compressActivity({}, [], [], sessions, 3000);
+		const result = compressActivity({}, [], [], sessions, [], 3000);
 
 		expect(result.claudeText).toContain("frontend");
 		expect(result.claudeText).toContain("infra");
