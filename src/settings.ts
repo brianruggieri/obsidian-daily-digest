@@ -54,6 +54,9 @@ export interface DailyDigestSettings {
 	sensitivityCategories: SensitivityCategory[];
 	sensitivityCustomDomains: string;
 	sensitivityAction: "exclude" | "redact";
+	enableGit: boolean;
+	gitParentDir: string;
+	maxGitCommits: number;
 	enablePatterns: boolean;
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
@@ -101,6 +104,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityCategories: [] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 	sensitivityAction: "exclude" as "exclude" | "redact",
+	enableGit: false,
+	gitParentDir: "",
+	maxGitCommits: 50,
 	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
