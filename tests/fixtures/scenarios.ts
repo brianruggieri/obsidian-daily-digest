@@ -147,6 +147,7 @@ export function createEmptyScenario(): PersonaOutput {
 		searches: [],
 		shell: [],
 		claude: [],
+		git: [],
 		expectedThemes: [],
 		expectedActivityTypes: [],
 		expectedFocusRange: [0, 0],
@@ -168,6 +169,7 @@ export function createSingleEventScenario(): PersonaOutput {
 		searches: [],
 		shell: [],
 		claude: [],
+		git: [],
 		expectedThemes: ["development"],
 		expectedActivityTypes: ["implementation"],
 		expectedFocusRange: [0.8, 1.0],
@@ -196,6 +198,7 @@ export function createMalformedDataScenario(): PersonaOutput {
 		claude: [
 			{ prompt: "help", time: BASE_DATE, project: "" },
 		],
+		git: [],
 		expectedThemes: [],
 		expectedActivityTypes: ["implementation"],
 		expectedFocusRange: [0, 1],

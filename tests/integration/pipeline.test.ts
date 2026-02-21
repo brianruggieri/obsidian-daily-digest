@@ -19,7 +19,7 @@ function runPipeline(persona: PersonaOutput) {
 		persona.searches,
 		persona.shell,
 		persona.claude,
-		[],
+		persona.git ?? [],
 		sanitizeConfig
 	);
 
@@ -85,7 +85,7 @@ describe("full pipeline", () => {
 
 			it("classifies all events", () => {
 				const totalInput = persona.visits.length + persona.searches.length +
-					persona.shell.length + persona.claude.length;
+					persona.shell.length + persona.claude.length + (persona.git?.length ?? 0);
 				expect(result.classification.totalProcessed).toBe(totalInput);
 			});
 
@@ -133,6 +133,7 @@ describe("pipeline edge cases", () => {
 			searches: [],
 			shell: [],
 			claude: [],
+			git: [],
 			expectedThemes: [],
 			expectedActivityTypes: [],
 			expectedFocusRange: [0, 0],
@@ -151,6 +152,7 @@ describe("pipeline edge cases", () => {
 			searches: [],
 			shell: [],
 			claude: [],
+			git: [],
 			expectedThemes: [],
 			expectedActivityTypes: ["implementation"],
 			expectedFocusRange: [0, 1],
