@@ -27,6 +27,7 @@ screenshots/vault/
 # Claude / AI tooling
 .claude-flow/
 .claude/
+.worktrees/
 
 # IDE / Editor
 .vscode/
