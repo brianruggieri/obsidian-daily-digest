@@ -4,7 +4,13 @@ export interface AssertionResult {
 }
 
 const REQUIRED_FRONTMATTER = ["date", "tags", "focus_score"];
-const PLACEHOLDER_STRINGS = ["[object Object]", "undefined", "NaN"];
+// Patterns that indicate template rendering artifacts (not content that happens to contain these words)
+const PLACEHOLDER_PATTERNS: RegExp[] = [
+	/\[object Object\]/,
+	// "undefined" as a bare value (not embedded in longer phrases like "Cannot read properties of undefined")
+	/(?:^|:\s*)undefined(?:\s*$|\n)/m,
+	/(?:^|\s)NaN(?:\s|$)/m,
+];
 const MIN_FILE_SIZE = 300;
 
 export function runStructuralAssertions(md: string): AssertionResult {
@@ -25,9 +31,10 @@ export function runStructuralAssertions(md: string): AssertionResult {
 		}
 	}
 
-	for (const placeholder of PLACEHOLDER_STRINGS) {
-		if (md.includes(placeholder)) {
-			failures.push(`Contains placeholder string: "${placeholder}"`);
+	for (const pattern of PLACEHOLDER_PATTERNS) {
+		const match = md.match(pattern);
+		if (match) {
+			failures.push(`Contains rendering artifact matching ${pattern}: "${match[0].trim()}"`);
 		}
 	}
 

@@ -221,6 +221,7 @@ describe("cognitive patterns section", () => {
 describe("knowledge insights section", () => {
 	const knowledge: KnowledgeSections = {
 		focusSummary: "Moderately focused day (focus score: 60%).",
+		focusScore: 0.60,
 		temporalInsights: ["research 10am-12pm — steady (5 events)"],
 		topicMap: ["███ OAuth ↔ PKCE (3 co-occurrences)"],
 		entityGraph: ["GitHub ↔ React (3x in implementation, debugging)"],

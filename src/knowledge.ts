@@ -19,6 +19,7 @@ import {
 
 export interface KnowledgeSections {
 	focusSummary: string;
+	focusScore: number;
 	temporalInsights: string[];
 	topicMap: string[];
 	entityGraph: string[];
@@ -32,6 +33,7 @@ export function generateKnowledgeSections(
 ): KnowledgeSections {
 	return {
 		focusSummary: buildFocusSummary(patterns),
+		focusScore: patterns.focusScore,
 		temporalInsights: buildTemporalInsights(patterns.temporalClusters, patterns.peakHours),
 		topicMap: buildTopicMap(patterns),
 		entityGraph: buildEntityGraph(patterns),
