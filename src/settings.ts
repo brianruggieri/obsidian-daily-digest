@@ -28,7 +28,6 @@ export interface DailyDigestSettings {
 	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
 	 */
 	browserConfigs: BrowserInstallConfig[];
-	anthropicApiKey: string;
 	aiModel: string;
 	profile: string;
 	enableAI: boolean;
@@ -78,7 +77,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	// Empty until the user clicks "Detect Browsers & Profiles". Nothing is
 	// collected until the user has reviewed and enabled specific profiles.
 	browserConfigs: [],
-	anthropicApiKey: "",
 	aiModel: "claude-haiku-4-5",
 	profile: "",
 	enableAI: false,
@@ -343,6 +341,57 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			}
 		}
 
+		// ── Git history ──────────────────────────────
+		new Setting(containerEl)
+			.setName("Git commit history")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.git.access + " " +
+				PRIVACY_DESCRIPTIONS.git.destination
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableGit)
+					.onChange(async (value) => {
+						this.plugin.settings.enableGit = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableGit) {
+			new Setting(containerEl)
+				.setName("Git parent directory")
+				.setDesc(
+					"Parent directory containing your git repositories. " +
+					"The plugin scans one level deep for .git directories. " +
+					"Uses ~ for home directory (e.g. ~/git or ~/projects)."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("~/git")
+						.setValue(this.plugin.settings.gitParentDir)
+						.onChange(async (value) => {
+							this.plugin.settings.gitParentDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			if (this.plugin.settings.collectionMode === "limited") {
+				new Setting(containerEl)
+					.setName("Max git commits")
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 200, 10)
+							.setValue(this.plugin.settings.maxGitCommits)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxGitCommits = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
+		}
+
 		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
 		const privacyHeading = new Setting(containerEl).setName("Privacy & filtering").setHeading();
 		this.prependIcon(privacyHeading.nameEl, "shield");
@@ -352,6 +401,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
 		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
 		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
+		if (this.plugin.settings.enableGit) enabledSources.push("git commit history");
 
 		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });
 		if (enabledSources.length > 0) {
@@ -428,8 +478,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Excluded domains")
 				.setDesc(
-					"Visits to these domains will be excluded entirely from collection. " +
-					"Comma-separated patterns (e.g. mybank.com, healthportal.com, vpn.)."
+					"Always-exclude list using simple pattern matching. A pattern like " +
+					"'mybank' matches any domain containing that text (mybank.com, " +
+					"us.mybank.com, etc). For exact domain matching or path-based " +
+					"filtering, use Custom Sensitive Domains in the Sensitivity filter " +
+					"section instead."
 				)
 				.addText((text) =>
 					text
@@ -583,8 +636,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Custom sensitive domains")
 				.setDesc(
-					"Additional domains to filter, comma-separated. " +
-					"Supports path prefixes (e.g. reddit.com/r/subreddit)."
+					"Additional domains to filter using exact matching. " +
+					"Subdomains are matched automatically (adding example.com also " +
+					"matches sub.example.com). Supports path prefixes " +
+					"(e.g. reddit.com/r/subreddit). These domains follow the " +
+					"filter action setting above (exclude or redact)."
 				)
 				.addTextArea((text) => {
 					text.inputEl.rows = 3;
@@ -783,66 +839,32 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 			} else {
 				// ── Anthropic settings ───────────────
-				if (this.plugin.hasSecretStorage) {
-					// Obsidian >=1.11.4: use SecretStorage (not synced, not in data.json)
-					const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
+				const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
 
-					new Setting(containerEl)
-						.setName("Anthropic API key")
-						.setDesc(
-							"Your Anthropic API key. Stored securely in Obsidian's secret " +
-							"storage — not in data.json, not synced with your vault. " +
-							"Alternative: set the ANTHROPIC_API_KEY environment variable instead."
-						)
-						.addText((text) => {
-							text.inputEl.type = "password";
-							text.setPlaceholder("sk-ant-...")
-								.setValue(currentKey)
-								.onChange((value) => {
-									this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
-								});
-						});
+				new Setting(containerEl)
+					.setName("Anthropic API key")
+					.setDesc(
+						"Your Anthropic API key. Stored securely in Obsidian's secret " +
+						"storage — not in data.json, not synced with your vault. " +
+						"Alternative: set the ANTHROPIC_API_KEY environment variable instead."
+					)
+					.addText((text) => {
+						text.inputEl.type = "password";
+						text.setPlaceholder("sk-ant-...")
+							.setValue(currentKey)
+							.onChange((value) => {
+								this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
+							});
+					});
 
-					const apiKeyNote = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-info",
-					});
-					apiKeyNote.createEl("p", {
-						text:
-							"This key is stored in Obsidian's secure secret storage, separate " +
-							"from your vault files. It will not be synced or committed to git.",
-					});
-				} else {
-					// Obsidian <1.11.4: fall back to data.json storage
-					new Setting(containerEl)
-						.setName("Anthropic API key")
-						.setDesc(
-							"Your Anthropic API key. Stored in this plugin's data.json file " +
-							"within your vault. If your vault is synced, this key may be " +
-							"uploaded to your sync provider. Alternative: set the " +
-							"ANTHROPIC_API_KEY environment variable instead and leave this blank. " +
-							"Upgrade to Obsidian 1.11.4+ for secure secret storage."
-						)
-						.addText((text) => {
-							text.inputEl.type = "password";
-							text.setPlaceholder("sk-ant-...")
-								.setValue(this.plugin.settings.anthropicApiKey)
-								.onChange(async (value) => {
-									this.plugin.settings.anthropicApiKey = value;
-									await this.plugin.saveSettings();
-								});
-						});
-
-					const apiKeyNote = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-warn",
-					});
-					apiKeyNote.createEl("p", {
-						text:
-							"Security note: API keys in data.json are readable by any Obsidian " +
-							"plugin and may be synced with your vault. Upgrade to Obsidian " +
-							"1.11.4+ for secure secret storage, or use the ANTHROPIC_API_KEY " +
-							"environment variable.",
-					});
-				}
+				const apiKeyNote = containerEl.createDiv({
+					cls: "dd-settings-callout dd-settings-callout-info",
+				});
+				apiKeyNote.createEl("p", {
+					text:
+						"This key is stored in Obsidian's secure secret storage, separate " +
+						"from your vault files. It will not be synced or committed to git.",
+				});
 
 				new Setting(containerEl)
 					.setName("AI model")
@@ -1111,6 +1133,16 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					});
 				}
 			}
+		} else {
+			const depCallout = containerEl.createDiv({
+				cls: "dd-settings-callout",
+			});
+			depCallout.createEl("p", {
+				text:
+					"Pattern extraction and knowledge delta analysis require " +
+					"event classification to be enabled. Enable classification " +
+					"above to unlock these features.",
+			});
 		}
 
 		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

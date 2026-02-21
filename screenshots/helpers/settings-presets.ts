@@ -27,7 +27,6 @@ export const BASE: DailyDigestSettings = {
 	maxShellCommands: 50,
 	maxClaudeSessions: 30,
 	browserConfigs: [],
-	anthropicApiKey: "",
 	aiModel: "claude-haiku-4-5",
 	profile: "",
 	enableAI: false,

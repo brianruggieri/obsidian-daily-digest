@@ -6,8 +6,9 @@ import { DailyDigestSettings } from "./settings";
 /**
  * Bump this to re-trigger the onboarding modal for all users.
  * v1 → v2: updated for cross-platform browser profile detection.
+ * v2 → v3: added explicit disclosure of Git data source collection and usage.
  */
-export const CURRENT_PRIVACY_VERSION = 2;
+export const CURRENT_PRIVACY_VERSION = 3;
 
 export const PRIVACY_DESCRIPTIONS = {
 	browser: {
@@ -52,6 +53,16 @@ export const PRIVACY_DESCRIPTIONS = {
 			"Stored in your vault as part of the daily note. Prompts may " +
 			"contain code snippets, project context, or sensitive instructions.",
 	},
+	git: {
+		label: "Git commit history",
+		access:
+			"Reads git log output from repositories under a parent directory you specify. " +
+			"Only your own commits (matched by local git user.email) are collected.",
+		files: "Git repository .git directories (read-only, via git log)",
+		destination:
+			"Commit messages, file change counts, and repo names are included in your daily note. " +
+			"When using Anthropic API, this data is sent for summarization.",
+	},
 	ai: {
 		label: "AI Summarization",
 		access:
@@ -95,6 +106,7 @@ export class OnboardingModal extends Modal {
 		enableBrowser: boolean;
 		enableShell: boolean;
 		enableClaude: boolean;
+		enableGit: boolean;
 		enableAI: boolean;
 	};
 
@@ -110,6 +122,7 @@ export class OnboardingModal extends Modal {
 			enableBrowser: settings.enableBrowser,
 			enableShell: settings.enableShell,
 			enableClaude: settings.enableClaude,
+			enableGit: settings.enableGit,
 			enableAI: settings.enableAI,
 		};
 	}
@@ -182,6 +195,17 @@ export class OnboardingModal extends Modal {
 					})
 			);
 
+		new Setting(contentEl)
+			.setName(PRIVACY_DESCRIPTIONS.git.label)
+			.setDesc(PRIVACY_DESCRIPTIONS.git.access)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.localToggles.enableGit)
+					.onChange((v) => {
+						this.localToggles.enableGit = v;
+					})
+			);
+
 		// ── AI Summarization ────────────────────────
 		contentEl.createEl("h3", { text: "AI Summarization" });
 
@@ -230,6 +254,7 @@ export class OnboardingModal extends Modal {
 					this.settings.enableBrowser = this.localToggles.enableBrowser;
 					this.settings.enableShell = this.localToggles.enableShell;
 					this.settings.enableClaude = this.localToggles.enableClaude;
+					this.settings.enableGit = this.localToggles.enableGit;
 					this.settings.enableAI = this.localToggles.enableAI;
 					this.settings.hasCompletedOnboarding = true;
 					this.settings.privacyConsentVersion = CURRENT_PRIVACY_VERSION;
