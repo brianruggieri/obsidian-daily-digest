@@ -480,8 +480,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Excluded domains")
 				.setDesc(
-					"Visits to these domains will be excluded entirely from collection. " +
-					"Comma-separated patterns (e.g. mybank.com, healthportal.com, vpn.)."
+					"Always-exclude list using simple pattern matching. A pattern like " +
+					"'mybank' matches any domain containing that text (mybank.com, " +
+					"us.mybank.com, etc). For exact domain matching or path-based " +
+					"filtering, use Custom Sensitive Domains in the sensitivity " +
+					"filter above instead."
 				)
 				.addText((text) =>
 					text
@@ -635,8 +638,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Custom sensitive domains")
 				.setDesc(
-					"Additional domains to filter, comma-separated. " +
-					"Supports path prefixes (e.g. reddit.com/r/subreddit)."
+					"Additional domains to filter using exact matching. " +
+					"Subdomains are matched automatically (adding example.com also " +
+					"matches sub.example.com). Supports path prefixes " +
+					"(e.g. reddit.com/r/subreddit). These domains follow the " +
+					"filter action setting above (exclude or redact)."
 				)
 				.addTextArea((text) => {
 					text.inputEl.rows = 3;
