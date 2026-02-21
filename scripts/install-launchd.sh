@@ -42,7 +42,7 @@ cat > "$PLIST" <<EOF
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>source ${NVM_DIR}/nvm.sh &amp;&amp; nvm use &amp;&amp; cd ${REPO_DIR} &amp;&amp; npm run matrix</string>
+    <string>source ${NVM_DIR}/nvm.sh &amp;&amp; cd ${REPO_DIR} &amp;&amp; nvm use &amp;&amp; npm run matrix</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>
