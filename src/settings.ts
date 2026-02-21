@@ -343,6 +343,57 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			}
 		}
 
+		// ── Git history ──────────────────────────────
+		new Setting(containerEl)
+			.setName("Git commit history")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.git.access + " " +
+				PRIVACY_DESCRIPTIONS.git.destination
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableGit)
+					.onChange(async (value) => {
+						this.plugin.settings.enableGit = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableGit) {
+			new Setting(containerEl)
+				.setName("Git parent directory")
+				.setDesc(
+					"Parent directory containing your git repositories. " +
+					"The plugin scans one level deep for .git directories. " +
+					"Uses ~ for home directory (e.g. ~/git or ~/projects)."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("~/git")
+						.setValue(this.plugin.settings.gitParentDir)
+						.onChange(async (value) => {
+							this.plugin.settings.gitParentDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			if (this.plugin.settings.collectionMode === "limited") {
+				new Setting(containerEl)
+					.setName("Max git commits")
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 200, 10)
+							.setValue(this.plugin.settings.maxGitCommits)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxGitCommits = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
+		}
+
 		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
 		const privacyHeading = new Setting(containerEl).setName("Privacy & filtering").setHeading();
 		this.prependIcon(privacyHeading.nameEl, "shield");
@@ -352,6 +403,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
 		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
 		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
+		if (this.plugin.settings.enableGit) enabledSources.push("git commit history");
 
 		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });
 		if (enabledSources.length > 0) {
