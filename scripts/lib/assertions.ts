@@ -47,11 +47,11 @@ export function runQualityAssertions(
 ): AssertionResult {
 	const failures: string[] = [];
 
-	const fsMatch = md.match(/focus_score:\s*([\d.]+)/);
+	const fsMatch = md.match(/focus_score:\s*(\d+)%/);
 	if (fsMatch) {
-		const score = parseFloat(fsMatch[1]);
-		if (isNaN(score) || score < 0 || score > 1) {
-			failures.push(`focus_score out of range [0,1]: ${fsMatch[1]}`);
+		const score = parseInt(fsMatch[1], 10);
+		if (isNaN(score) || score < 0 || score > 100) {
+			failures.push(`focus_score out of range [0,100]: ${fsMatch[1]}%`);
 		}
 	}
 
