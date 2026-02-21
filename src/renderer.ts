@@ -4,6 +4,7 @@ import {
 	BrowserVisit,
 	CategorizedVisits,
 	ClaudeSession,
+	GitCommit,
 	SearchQuery,
 	ShellCommand,
 	slugifyQuestion,
@@ -34,6 +35,7 @@ export function renderMarkdown(
 	searches: SearchQuery[],
 	shell: ShellCommand[],
 	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
 	categorized: CategorizedVisits,
 	aiSummary: AISummary | null,
 	aiProviderUsed: AIProvider | "none" = "none",
@@ -73,6 +75,9 @@ export function renderMarkdown(
 		// Add focus score and activity types to frontmatter
 		lines.push(`focus_score: ${knowledge.focusSummary.match(/\d+%/)?.[0] || "N/A"}`);
 	}
+	if (gitCommits.length > 0) {
+		lines.push(`git-commits: ${gitCommits.length}`);
+	}
 	lines.push("---");
 	lines.push("");
 
@@ -103,6 +108,7 @@ export function renderMarkdown(
 	lines.push(
 		`*${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
 			`${shell.length} commands \u00B7 ${claudeSessions.length} AI prompts \u00B7 ` +
+			`${gitCommits.length} commits \u00B7 ` +
 			`${Object.keys(categorized).length} categories*`
 	);
 	lines.push("");
@@ -289,6 +295,33 @@ export function renderMarkdown(
 		}
 		lines.push("```");
 		lines.push("");
+	}
+
+	// ── Git Activity ────────────────────────────────
+	if (gitCommits.length) {
+		lines.push("## \u{1F4E6} Git Activity");
+		lines.push("");
+
+		// Group by repo
+		const byRepo: Record<string, GitCommit[]> = {};
+		for (const c of gitCommits) {
+			const repo = c.repo || "unknown";
+			if (!byRepo[repo]) byRepo[repo] = [];
+			byRepo[repo].push(c);
+		}
+
+		for (const [repo, repoCommits] of Object.entries(byRepo)) {
+			lines.push(`### ${repo} (${repoCommits.length} commits)`);
+			lines.push("");
+			for (const c of repoCommits) {
+				const ts = formatTime(c.time);
+				const stats = c.filesChanged > 0
+					? ` (+${c.insertions}/-${c.deletions})`
+					: "";
+				lines.push(`- \`${c.hash}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
+			}
+			lines.push("");
+		}
 	}
 
 	// ── Reflection ───────────────────────────────
