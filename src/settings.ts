@@ -481,8 +481,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					"Always-exclude list using simple pattern matching. A pattern like " +
 					"'mybank' matches any domain containing that text (mybank.com, " +
 					"us.mybank.com, etc). For exact domain matching or path-based " +
-					"filtering, use Custom Sensitive Domains in the sensitivity " +
-					"filter above instead."
+					"filtering, use Custom Sensitive Domains in the Sensitivity filter " +
+					"section instead."
 				)
 				.addText((text) =>
 					text
