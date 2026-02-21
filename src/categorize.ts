@@ -70,7 +70,39 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 	personal: [
 		"health.", "myfitnesspal.com", "strava.com", "garmin.com",
 		"whoop.com", "oura.com", "calm.com", "headspace.com",
-		"duolingo.com", "khanacademy.org",
+	],
+	education: [
+		"coursera.org", "edx.org", "udemy.com", "skillshare.com",
+		"linkedin.com/learning", "pluralsight.com", "udacity.com",
+		"khanacademy.org", "duolingo.com", "brilliant.org",
+		"mit.edu", "stanford.edu", "harvard.edu", "ocw.mit.edu",
+		"canvas.", "blackboard.", "moodle.", "instructure.com",
+		"chegg.com", "quizlet.com",
+		"leetcode.com", "hackerrank.com", "codecademy.com",
+		"freecodecamp.org", "theodinproject.com",
+	],
+	gaming: [
+		"store.steampowered.com", "epicgames.com",
+		"gog.com", "itch.io", "humblebundle.com",
+		"xbox.com", "playstation.com", "nintendo.com",
+		"battlenet.com", "ea.com", "ubisoft.com",
+		"igdb.com", "ign.com", "gamespot.com",
+		"pcgamer.com", "kotaku.com", "polygon.com",
+		"speedrun.com", "howlongtobeat.com",
+	],
+	writing: [
+		"grammarly.com", "hemingwayapp.com", "prowritingaid.com",
+		"overleaf.com",
+		"ghost.org", "nanowrimo.org",
+		"ulysses.app",
+	],
+	pkm: [
+		"obsidian.md", "forum.obsidian.md", "help.obsidian.md",
+		"logseq.com", "roamresearch.com",
+		"capacities.io", "tana.inc",
+		"mem.ai", "reflect.app",
+		"readwise.io", "raindrop.io", "instapaper.com",
+		"hypothesis.is", "zettelkasten.de",
 	],
 };
 
@@ -85,6 +117,10 @@ export const CATEGORY_LABELS: Record<string, [string, string]> = {
 	finance: ["\u{1F4B0}", "Finance"],
 	ai_tools: ["\u{1F916}", "AI Tools"],
 	personal: ["\u{1F3C3}", "Personal"],
+	education: ["\u{1F393}", "Education"],
+	gaming: ["\u{1F3AE}", "Gaming"],
+	writing: ["\u270F\uFE0F", "Writing"],
+	pkm: ["\u{1F9E0}", "PKM & Notes"],
 	other: ["\u{1F310}", "Other"],
 };
 
