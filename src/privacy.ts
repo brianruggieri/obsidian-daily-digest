@@ -6,6 +6,7 @@ import { DailyDigestSettings } from "./settings";
 /**
  * Bump this to re-trigger the onboarding modal for all users.
  * v1 → v2: updated for cross-platform browser profile detection.
+ * v2 → v3: added explicit disclosure of Git data source collection and usage.
  */
 export const CURRENT_PRIVACY_VERSION = 3;
 
