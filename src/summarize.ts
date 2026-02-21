@@ -110,6 +110,9 @@ ${compressed.claudeText}
 ## Shell commands (secrets redacted):
 ${compressed.shellText}
 
+## Git commits:
+${compressed.gitText}
+
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
   "headline": "one punchy sentence summarizing the whole day (max 15 words)",
