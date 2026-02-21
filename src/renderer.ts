@@ -11,8 +11,12 @@ import {
 } from "./types";
 import { AIProvider } from "./settings";
 import { KnowledgeSections } from "./knowledge";
-import { PromptLog, formatDetailsBlock } from "../scripts/lib/prompt-logger";
+import type { PromptLog } from "../scripts/lib/prompt-logger";
 
+function formatDetailsBlock(title: string, content: string): string {
+	if (!content || !content.trim()) return "";
+	return `\n\n---\n**${title}**\n\n${content}\n`;
+}
 function formatTime(d: Date | null): string {
 	if (!d) return "";
 	return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
