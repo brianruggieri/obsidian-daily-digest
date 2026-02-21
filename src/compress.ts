@@ -4,6 +4,7 @@ import { scrubSecrets } from "./sanitize";
 import {
 	CategorizedVisits,
 	ClaudeSession,
+	GitCommit,
 	SearchQuery,
 	ShellCommand,
 } from "./types";
@@ -19,6 +20,8 @@ export interface CompressedActivity {
 	shellText: string;
 	/** Pre-formatted text for the Claude section of the prompt. */
 	claudeText: string;
+	/** Pre-formatted text for the git section of the prompt. */
+	gitText: string;
 	/** Total events across all sources before compression. */
 	totalEvents: number;
 	/** Estimated token count of all compressed text combined. */
@@ -294,6 +297,74 @@ function compressClaude(
 	return text;
 }
 
+// ── Git compression ────────────────────────────────────
+
+function compressGit(
+	commits: GitCommit[],
+	budget: number
+): string {
+	if (commits.length === 0) return "  (none)";
+
+	// Group by repo
+	const byRepo: Record<string, GitCommit[]> = {};
+	for (const c of commits) {
+		const repo = c.repo || "unknown";
+		if (!byRepo[repo]) byRepo[repo] = [];
+		byRepo[repo].push(c);
+	}
+	const tr = timeRangeStr(commits);
+
+	// Try full commit lines grouped by repo
+	const lines: string[] = [];
+	for (const [repo, repoCommits] of Object.entries(byRepo)) {
+		const totalIns = repoCommits.reduce((s, c) => s + c.insertions, 0);
+		const totalDel = repoCommits.reduce((s, c) => s + c.deletions, 0);
+		const commitLines = repoCommits
+			.slice(0, 15)
+			.map((c) => `${c.hash} ${c.message.slice(0, 80)} (+${c.insertions}/-${c.deletions})`);
+		const more = repoCommits.length - 15;
+		lines.push(
+			`  [${repo}] (${repoCommits.length} commits, +${totalIns}/-${totalDel})` +
+			(more > 0 ? ` (+${more} more)` : "") +
+			`\n    ${commitLines.join(" | ")}`
+		);
+	}
+	let text =
+		`  ${commits.length} total commits` +
+		(tr ? ` | ${tr}` : "") +
+		`\n${lines.join("\n")}`;
+
+	if (estimateTokens(text) > budget) {
+		const condensedLines: string[] = [];
+		for (const [repo, repoCommits] of Object.entries(byRepo)) {
+			const totalIns = repoCommits.reduce((s, c) => s + c.insertions, 0);
+			const totalDel = repoCommits.reduce((s, c) => s + c.deletions, 0);
+			const msgs = repoCommits
+				.slice(0, 5)
+				.map((c) => c.message.slice(0, 60));
+			condensedLines.push(
+				`  [${repo}] (${repoCommits.length} commits, +${totalIns}/-${totalDel}): ${msgs.join(" | ")}` +
+				(repoCommits.length > 5 ? ` (+${repoCommits.length - 5} more)` : "")
+			);
+		}
+		text =
+			`  ${commits.length} total commits` +
+			(tr ? ` | ${tr}` : "") +
+			`\n${condensedLines.join("\n")}`;
+	}
+
+	if (estimateTokens(text) > budget) {
+		const repoLines = Object.entries(byRepo)
+			.map(([repo, c]) => `${repo} (${c.length})`)
+			.join(", ");
+		text =
+			`  ${commits.length} commits across: ${repoLines}` +
+			(tr ? ` | ${tr}` : "");
+	}
+
+	return text;
+}
+
 // ── Main entry point ───────────────────────────────────
 
 /**
@@ -310,13 +381,14 @@ export function compressActivity(
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
 	budget: number
 ): CompressedActivity {
 	const browserCount = Object.values(categorized).reduce(
 		(sum, v) => sum + v.length, 0
 	);
 	const totalEvents =
-		browserCount + searches.length + shellCmds.length + claudeSessions.length;
+		browserCount + searches.length + shellCmds.length + claudeSessions.length + gitCommits.length;
 
 	if (totalEvents === 0) {
 		return {
@@ -324,6 +396,7 @@ export function compressActivity(
 			searchText: "  (none)",
 			shellText: "  (none)",
 			claudeText: "  (none)",
+			gitText: "  (none)",
 			totalEvents: 0,
 			tokenEstimate: 0,
 		};
@@ -335,6 +408,7 @@ export function compressActivity(
 		searches.length > 0 ? "search" : null,
 		shellCmds.length > 0 ? "shell" : null,
 		claudeSessions.length > 0 ? "claude" : null,
+		gitCommits.length > 0 ? "git" : null,
 	].filter(Boolean).length;
 
 	const minShare = Math.floor(budget * 0.1);
@@ -352,23 +426,29 @@ export function compressActivity(
 	const claudeShare = claudeSessions.length > 0
 		? minShare + Math.round(flexBudget * claudeSessions.length / totalEvents)
 		: 0;
+	const gitShare = gitCommits.length > 0
+		? minShare + Math.round(flexBudget * gitCommits.length / totalEvents)
+		: 0;
 
 	const browserText = compressBrowser(categorized, browserShare);
 	const searchText = compressSearches(searches, searchShare);
 	const shellText = compressShell(shellCmds, shellShare);
 	const claudeText = compressClaude(claudeSessions, claudeShare);
+	const gitText = compressGit(gitCommits, gitShare);
 
 	const tokenEstimate =
 		estimateTokens(browserText) +
 		estimateTokens(searchText) +
 		estimateTokens(shellText) +
-		estimateTokens(claudeText);
+		estimateTokens(claudeText) +
+		estimateTokens(gitText);
 
 	return {
 		browserText,
 		searchText,
 		shellText,
 		claudeText,
+		gitText,
 		totalEvents,
 		tokenEstimate,
 	};
