@@ -195,7 +195,8 @@ async function runPreset(
 			sanitized.searches,
 			sanitized.shellCommands,
 			sanitized.claudeSessions,
-			settings.profile
+			settings.profile,
+			sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -222,7 +223,8 @@ async function runPreset(
 			sanitized.searches,
 			sanitized.shellCommands,
 			sanitized.claudeSessions,
-			settings.profile
+			settings.profile,
+			sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -242,7 +244,9 @@ async function runPreset(
 			settings.profile,
 			undefined,
 			classification,
-			patterns
+			patterns,
+			undefined,
+			sanitized.gitCommits
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}
