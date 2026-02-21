@@ -24,7 +24,7 @@ export interface ClaudeSession {
 }
 
 export interface GitCommit {
-	hash: string;          // Short hash (7 chars)
+	hash: string;          // Full hash (40 chars)
 	message: string;       // First line of commit message
 	time: Date | null;     // Author date
 	repo: string;          // Repo directory name (not full path)

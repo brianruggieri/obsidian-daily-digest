@@ -588,7 +588,7 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 					`--since=${sinceISO}`,
 					`--author=${email}`,
 					"--all",
-					"--pretty=format:%h|%s|%aI",
+					"--pretty=format:%H|%s|%aI",
 					"--shortstat",
 				],
 				{
