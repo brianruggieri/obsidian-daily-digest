@@ -1169,6 +1169,16 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					});
 				}
 			}
+		} else {
+			const depCallout = containerEl.createDiv({
+				cls: "dd-settings-callout",
+			});
+			depCallout.createEl("p", {
+				text:
+					"Pattern extraction and knowledge delta analysis require " +
+					"event classification to be enabled. Enable classification " +
+					"above to unlock these features.",
+			});
 		}
 
 		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
