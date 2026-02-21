@@ -5,6 +5,8 @@
  * interaction, and @wdio/visual-service for screenshot capture.
  */
 
+import { CURRENT_PRIVACY_VERSION } from "../../src/privacy";
+
 const RENDER_SETTLE_MS = 500;
 
 /**
@@ -16,13 +18,15 @@ const RENDER_SETTLE_MS = 500;
  * closing any open modal.
  */
 export async function dismissOnboarding(): Promise<void> {
-	await browser.executeObsidian(async ({ app, plugins }) => {
+	// Note: executeObsidian serializes the callback — pass the version as an
+	// argument rather than capturing it from the outer scope.
+	await browser.executeObsidian(async ({ app, plugins }, version) => {
 		const plugin = plugins.dailyDigest;
 		if (!plugin) throw new Error("daily-digest plugin not found");
 
 		// Mark onboarding as completed so the modal won't reappear
 		plugin.settings.hasCompletedOnboarding = true;
-		plugin.settings.privacyConsentVersion = 2; // CURRENT_PRIVACY_VERSION
+		plugin.settings.privacyConsentVersion = version;
 		await plugin.saveSettings();
 
 		// Close any open modal (the onboarding modal that fired on load)
@@ -33,7 +37,7 @@ export async function dismissOnboarding(): Promise<void> {
 			const closeBtn = modal.querySelector(".modal-close-button") as HTMLElement | null;
 			if (closeBtn) closeBtn.click();
 		}
-	});
+	}, CURRENT_PRIVACY_VERSION);
 	await browser.pause(300);
 }
 
