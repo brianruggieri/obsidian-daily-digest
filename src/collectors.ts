@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, copyFileSync, unlinkSync, readdirSync, statSync } from "fs";
+import { execFileSync } from "child_process";
 import { homedir, tmpdir, platform } from "os";
 // Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
@@ -12,6 +13,7 @@ import {
 	SearchQuery,
 	ShellCommand,
 	ClaudeSession,
+	GitCommit,
 	SEARCH_ENGINES,
 	EXCLUDE_DOMAINS,
 } from "./types";
@@ -258,9 +260,21 @@ export async function collectBrowserHistory(
 	clean.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 	searches.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 
+	// In "complete" mode, collect everything (with safety ceilings to guard
+	// against pathological cases like auto-refresh tabs). In "limited" mode,
+	// apply the user's per-source caps.
+	const VISIT_CEILING = 2000;
+	const SEARCH_CEILING = 500;
+	const visitLimit = settings.collectionMode === "complete"
+		? VISIT_CEILING
+		: settings.maxBrowserVisits;
+	const searchLimit = settings.collectionMode === "complete"
+		? SEARCH_CEILING
+		: settings.maxSearches;
+
 	return {
-		visits: clean.slice(0, settings.maxBrowserVisits),
-		searches: searches.slice(0, settings.maxSearches),
+		visits: clean.slice(0, visitLimit),
+		searches: searches.slice(0, searchLimit),
 	};
 }
 
@@ -338,7 +352,12 @@ export function readShellHistory(settings: DailyDigestSettings, since: Date): Sh
 		.sort((a, b) => (b.time!.getTime()) - (a.time!.getTime()));
 	const plain = clean.filter((e) => e.time === null);
 
-	return [...timestamped, ...plain].slice(0, settings.maxShellCommands);
+	const SHELL_CEILING = 500;
+	const shellLimit = settings.collectionMode === "complete"
+		? SHELL_CEILING
+		: settings.maxShellCommands;
+
+	return [...timestamped, ...plain].slice(0, shellLimit);
 }
 
 // ── Claude Code Sessions ─────────────────────────
@@ -440,5 +459,164 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 	}
 
 	entries.sort((a, b) => b.time.getTime() - a.time.getTime());
-	return entries.slice(0, settings.maxClaudeSessions);
+
+	const CLAUDE_CEILING = 300;
+	const claudeLimit = settings.collectionMode === "complete"
+		? CLAUDE_CEILING
+		: settings.maxClaudeSessions;
+
+	return entries.slice(0, claudeLimit);
+}
+
+// ── Git History ──────────────────────────────────────────
+
+/**
+ * Parse raw `git log --pretty=format:"%h|%s|%aI" --shortstat` output
+ * into GitCommit objects. Exported for testing.
+ */
+export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
+	const commits: GitCommit[] = [];
+	const lines = raw.split("\n");
+	let i = 0;
+
+	while (i < lines.length) {
+		const line = lines[i].trim();
+		if (!line) { i++; continue; }
+
+		// Expect format: hash|subject|authorDateISO
+		const parts = line.split("|");
+		if (parts.length < 3) { i++; continue; }
+
+		const hash = parts[0];
+		const rawMessage = parts.slice(1, -1).join("|"); // Handle | in messages
+		const dateStr = parts[parts.length - 1];
+
+		let time: Date | null = null;
+		try {
+			const parsed = new Date(dateStr);
+			if (!isNaN(parsed.getTime())) time = parsed;
+		} catch {
+			// skip
+		}
+
+		let filesChanged = 0;
+		let insertions = 0;
+		let deletions = 0;
+
+		// Next line might be a shortstat line
+		if (i + 1 < lines.length) {
+			const statLine = lines[i + 1].trim();
+			const filesMatch = statLine.match(/(\d+) files? changed/);
+			const insMatch = statLine.match(/(\d+) insertions?\(\+\)/);
+			const delMatch = statLine.match(/(\d+) deletions?\(-\)/);
+
+			if (filesMatch || insMatch || delMatch) {
+				filesChanged = filesMatch ? parseInt(filesMatch[1]) : 0;
+				insertions = insMatch ? parseInt(insMatch[1]) : 0;
+				deletions = delMatch ? parseInt(delMatch[1]) : 0;
+				i++; // consume the stat line
+			}
+		}
+
+		commits.push({
+			hash,
+			message: scrubSecrets(rawMessage),
+			time,
+			repo: repoName,
+			filesChanged,
+			insertions,
+			deletions,
+		});
+
+		i++;
+	}
+
+	return commits;
+}
+
+/**
+ * Collect git commits from all repos under settings.gitParentDir.
+ *
+ * Discovery: walks one level deep looking for .git subdirectories.
+ * Per-repo: gets local user.email, runs git log filtered to that author.
+ * Deduplicates by hash, sorts by time descending, applies limits.
+ */
+export function readGitHistory(settings: DailyDigestSettings, since: Date): GitCommit[] {
+	if (!settings.enableGit) return [];
+	if (!settings.gitParentDir) return [];
+
+	const parentDir = expandHome(settings.gitParentDir);
+	if (!existsSync(parentDir)) return [];
+
+	const sinceISO = since.toISOString();
+	const allCommits: GitCommit[] = [];
+	const seenHashes = new Set<string>();
+
+	let entries: string[];
+	try {
+		entries = readdirSync(parentDir);
+	} catch {
+		return [];
+	}
+
+	for (const entry of entries) {
+		const repoPath = join(parentDir, entry);
+		const gitDir = join(repoPath, ".git");
+
+		try {
+			if (!statSync(repoPath).isDirectory()) continue;
+			if (!existsSync(gitDir)) continue;
+		} catch {
+			continue;
+		}
+
+		try {
+			// Get local user email for this repo
+			const email = execFileSync("git", ["config", "user.email"], {
+				cwd: repoPath,
+				encoding: "utf-8",
+				timeout: 5000,
+			}).trim();
+
+			if (!email) continue;
+
+			// Get commits since the target date for this author
+			const gitLog = execFileSync(
+				"git",
+				[
+					"log",
+					`--since=${sinceISO}`,
+					`--author=${email}`,
+					"--all",
+					"--pretty=format:%H|%s|%aI",
+					"--shortstat",
+				],
+				{
+					cwd: repoPath,
+					encoding: "utf-8",
+					timeout: 10000,
+				}
+			);
+
+			const commits = parseGitLogOutput(gitLog, entry);
+			for (const c of commits) {
+				if (!seenHashes.has(c.hash)) {
+					seenHashes.add(c.hash);
+					allCommits.push(c);
+				}
+			}
+		} catch {
+			// Skip repos where git commands fail — never crash the pipeline
+			continue;
+		}
+	}
+
+	allCommits.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
+
+	const GIT_CEILING = 500;
+	const gitLimit = settings.collectionMode === "complete"
+		? GIT_CEILING
+		: settings.maxGitCommits;
+
+	return allCommits.slice(0, gitLimit);
 }

@@ -94,9 +94,12 @@ export function chunkActivityData(
 	for (const [cat, visits] of Object.entries(categorized)) {
 		if (visits.length === 0) continue;
 		const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
-		const domains = topDomains(visits);
+		// Dynamic limits: scale with visit count, min 8 domains / 8 titles
+		const domainLimit = Math.min(Math.max(8, Math.ceil(visits.length / 10)), 20);
+		const titleLimit = Math.min(Math.max(8, Math.ceil(visits.length / 5)), 30);
+		const domains = topDomains(visits, domainLimit);
 		const titles = visits
-			.slice(0, 8)
+			.slice(0, titleLimit)
 			.map((v) => v.title?.slice(0, 60))
 			.filter((t): t is string => !!t);
 		const tr = timeRange(visits);

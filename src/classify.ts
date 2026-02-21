@@ -8,6 +8,7 @@ import {
 	SearchQuery,
 	ShellCommand,
 	ClaudeSession,
+	GitCommit,
 	CategorizedVisits,
 } from "./types";
 import { callLocal } from "./ai-client";
@@ -18,7 +19,7 @@ import * as log from "./log";
 
 interface RawEvent {
 	timestamp: string;
-	source: "browser" | "search" | "shell" | "claude";
+	source: "browser" | "search" | "shell" | "claude" | "git";
 	text: string;
 	category?: string;
 	metadata?: Record<string, string>;
@@ -81,6 +82,15 @@ function normalizeClaudeSessions(sessions: ClaudeSession[]): RawEvent[] {
 	}));
 }
 
+function normalizeGitCommits(commits: GitCommit[]): RawEvent[] {
+	return commits.map((c) => ({
+		timestamp: c.time ? c.time.toISOString() : "",
+		source: "git" as const,
+		text: `${c.repo}: ${c.message} (+${c.insertions}/-${c.deletions})`,
+		metadata: { repo: c.repo },
+	}));
+}
+
 // ── Rule-Based Fallback Classification ──────────────────
 
 const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
@@ -94,6 +104,10 @@ const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
 	finance: "admin",
 	ai_tools: "implementation",
 	personal: "browsing",
+	education: "learning",
+	gaming: "browsing",
+	writing: "writing",
+	pkm: "writing",
 	other: "unknown",
 };
 
@@ -126,6 +140,7 @@ function inferIntent(text: string, source: string): IntentType {
 	}
 	if (source === "shell") return "implement";
 	if (source === "claude") return "implement";
+	if (source === "git") return "implement";
 	return "explore";
 }
 
@@ -175,6 +190,8 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 			}
 		}
 	} else if (event.source === "claude") {
+		activityType = "implementation";
+	} else if (event.source === "git") {
 		activityType = "implementation";
 	}
 
@@ -313,6 +330,7 @@ export async function classifyEvents(
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
 	categorized: CategorizedVisits,
 	config: ClassificationConfig
 ): Promise<ClassificationResult> {
@@ -324,6 +342,7 @@ export async function classifyEvents(
 		...normalizeSearchQueries(searches),
 		...normalizeShellCommands(shellCmds),
 		...normalizeClaudeSessions(claudeSessions),
+		...normalizeGitCommits(gitCommits),
 	];
 
 	if (rawEvents.length === 0) {
@@ -409,6 +428,7 @@ export function classifyEventsRuleOnly(
 	searches: SearchQuery[],
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
 	categorized: CategorizedVisits
 ): ClassificationResult {
 	const startTime = Date.now();
@@ -418,6 +438,7 @@ export function classifyEventsRuleOnly(
 		...normalizeSearchQueries(searches),
 		...normalizeShellCommands(shellCmds),
 		...normalizeClaudeSessions(claudeSessions),
+		...normalizeGitCommits(gitCommits),
 	];
 
 	const structuredEvents = rawEvents.map((e) => ruleBasedClassify(e));

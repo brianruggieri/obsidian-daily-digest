@@ -64,7 +64,7 @@ const SLUG1 = `answer_${slugifyQuestion(Q1)}`;
 const SLUG2 = `answer_${slugifyQuestion(Q2)}`;
 
 function render(ai: AISummary | null = aiSummary): string {
-	return renderMarkdown(DATE, visits, searches, shell, claude, categorized, ai);
+	return renderMarkdown(DATE, visits, searches, shell, claude, [], categorized, ai);
 }
 
 // ── Mock Vault ───────────────────────────────────────────
@@ -115,7 +115,7 @@ describe("full round-trip: generate -> edit -> regenerate", () => {
 			headline: "Auth day continued",
 			tldr: "Continued work on OAuth implementation.",
 		};
-		const regenerated = renderMarkdown(DATE, visits, searches, shell, claude, categorized, newSummary);
+		const regenerated = renderMarkdown(DATE, visits, searches, shell, claude, [], categorized, newSummary);
 
 		// Step 4: Merge
 		const extraction = extractUserContent(edited);
@@ -411,7 +411,7 @@ describe("edge cases and stress tests", () => {
 
 	it("handles note with no AI summary (no reflection section)", () => {
 		const noAiNote = renderMarkdown(
-			DATE, visits, searches, shell, claude, categorized, null,
+			DATE, visits, searches, shell, claude, [], categorized, null,
 		);
 		const edited = noAiNote.replace("> _Add your reflections here_", "Notes without AI");
 		const extraction = extractUserContent(edited);
@@ -423,7 +423,7 @@ describe("edge cases and stress tests", () => {
 	it("does not lose data when new note has fewer sections than old", () => {
 		// Old note had AI summary, new note doesn't
 		const oldWithAI = render(aiSummary).replace("> _Add your reflections here_", "My reflections");
-		const newWithoutAI = renderMarkdown(DATE, visits, searches, shell, claude, categorized, null);
+		const newWithoutAI = renderMarkdown(DATE, visits, searches, shell, claude, [], categorized, null);
 
 		const extraction = extractUserContent(oldWithAI);
 		const merged = mergeContent(newWithoutAI, extraction);

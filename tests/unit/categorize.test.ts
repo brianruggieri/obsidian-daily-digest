@@ -52,6 +52,46 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("claude.ai")).toBe("ai_tools");
 	});
 
+	it("categorizes Coursera as education", () => {
+		expect(categorizeDomain("coursera.org")).toBe("education");
+	});
+
+	it("categorizes Khan Academy as education (moved from personal)", () => {
+		expect(categorizeDomain("khanacademy.org")).toBe("education");
+	});
+
+	it("categorizes LeetCode as education", () => {
+		expect(categorizeDomain("leetcode.com")).toBe("education");
+	});
+
+	it("categorizes Steam as gaming", () => {
+		expect(categorizeDomain("store.steampowered.com")).toBe("gaming");
+	});
+
+	it("categorizes itch.io as gaming", () => {
+		expect(categorizeDomain("itch.io")).toBe("gaming");
+	});
+
+	it("categorizes Grammarly as writing", () => {
+		expect(categorizeDomain("grammarly.com")).toBe("writing");
+	});
+
+	it("categorizes Overleaf as writing", () => {
+		expect(categorizeDomain("overleaf.com")).toBe("writing");
+	});
+
+	it("categorizes Obsidian forum as pkm", () => {
+		expect(categorizeDomain("forum.obsidian.md")).toBe("pkm");
+	});
+
+	it("categorizes Logseq as pkm", () => {
+		expect(categorizeDomain("logseq.com")).toBe("pkm");
+	});
+
+	it("categorizes Readwise as pkm", () => {
+		expect(categorizeDomain("readwise.io")).toBe("pkm");
+	});
+
 	it("categorizes unknown domains as other", () => {
 		expect(categorizeDomain("random-obscure-site.xyz")).toBe("other");
 	});
@@ -116,7 +156,7 @@ describe("categorizeVisits", () => {
 
 describe("CATEGORY_LABELS", () => {
 	it("has labels for all standard categories", () => {
-		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "personal", "other"];
+		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "personal", "education", "gaming", "writing", "pkm", "other"];
 		for (const cat of expected) {
 			expect(CATEGORY_LABELS[cat]).toBeDefined();
 			expect(CATEGORY_LABELS[cat]).toHaveLength(2);

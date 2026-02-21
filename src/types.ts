@@ -23,6 +23,16 @@ export interface ClaudeSession {
 	project: string;
 }
 
+export interface GitCommit {
+	hash: string;          // Full hash (40 chars)
+	message: string;       // First line of commit message
+	time: Date | null;     // Author date
+	repo: string;          // Repo directory name (not full path)
+	filesChanged: number;  // From --shortstat
+	insertions: number;    // Lines added
+	deletions: number;     // Lines removed
+}
+
 export type CategorizedVisits = Record<string, BrowserVisit[]>;
 
 export interface ReflectionPrompt {
@@ -193,7 +203,7 @@ export type IntentType =
 
 export interface StructuredEvent {
 	timestamp: string;
-	source: "browser" | "search" | "shell" | "claude";
+	source: "browser" | "search" | "shell" | "claude" | "git";
 	activityType: ActivityType;
 	topics: string[];
 	entities: string[];
@@ -306,7 +316,7 @@ export interface PatternConfig {
 export interface ActivityChunk {
 	id: string;
 	date: string;
-	type: "browser" | "search" | "shell" | "claude";
+	type: "browser" | "search" | "shell" | "claude" | "git";
 	category?: string;
 	text: string;
 	metadata: {

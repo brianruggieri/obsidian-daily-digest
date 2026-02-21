@@ -11,10 +11,14 @@ export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
+export type CollectionMode = "complete" | "limited";
+
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
 	lookbackHours: number;
+	collectionMode: CollectionMode;
+	promptBudget: number;
 	maxBrowserVisits: number;
 	maxSearches: number;
 	maxShellCommands: number;
@@ -50,6 +54,9 @@ export interface DailyDigestSettings {
 	sensitivityCategories: SensitivityCategory[];
 	sensitivityCustomDomains: string;
 	sensitivityAction: "exclude" | "redact";
+	enableGit: boolean;
+	gitParentDir: string;
+	maxGitCommits: number;
 	enablePatterns: boolean;
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
@@ -62,6 +69,8 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	dailyFolder: "daily",
 	filenameTemplate: "YYYY-MM-DD",
 	lookbackHours: 24,
+	collectionMode: "complete",
+	promptBudget: 3000,
 	maxBrowserVisits: 80,
 	maxSearches: 40,
 	maxShellCommands: 50,
@@ -95,6 +104,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityCategories: [] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 	sensitivityAction: "exclude" as "exclude" | "redact",
+	enableGit: false,
+	gitParentDir: "",
+	maxGitCommits: 50,
 	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
@@ -166,6 +178,46 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
 		this.prependIcon(dataHeading.nameEl, "database");
 
+		// ── Collection mode ──────────────────────────
+		new Setting(containerEl)
+			.setName("Collection mode")
+			.setDesc(
+				"Complete: collects all activity within the lookback window, " +
+				"then compresses to fit the prompt budget. " +
+				"Limited: caps each source at a fixed item count (legacy)."
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("complete", "Complete day")
+					.addOption("limited", "Limited (legacy)")
+					.setValue(this.plugin.settings.collectionMode)
+					.onChange(async (value) => {
+						this.plugin.settings.collectionMode = value as CollectionMode;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.collectionMode === "complete") {
+			new Setting(containerEl)
+				.setName("Prompt detail budget")
+				.setDesc(
+					"Target token budget for the data section of AI prompts. " +
+					"Higher values include more detail but use more context. " +
+					"Activity is compressed proportionally to fit."
+				)
+				.addSlider((slider) =>
+					slider
+						.setLimits(1000, 8000, 500)
+						.setValue(this.plugin.settings.promptBudget)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.promptBudget = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
 		// ── Browser history ───────────────────────────
 		new Setting(containerEl)
 			.setName("Browser history")
@@ -183,31 +235,33 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.enableBrowser) {
 			this.renderBrowserProfileSection(containerEl);
 
-			new Setting(containerEl)
-				.setName("Max browser visits")
-				.addSlider((slider) =>
-					slider
-						.setLimits(10, 200, 10)
-						.setValue(this.plugin.settings.maxBrowserVisits)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.maxBrowserVisits = value;
-							await this.plugin.saveSettings();
-						})
-				);
+			if (this.plugin.settings.collectionMode === "limited") {
+				new Setting(containerEl)
+					.setName("Max browser visits")
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 200, 10)
+							.setValue(this.plugin.settings.maxBrowserVisits)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxBrowserVisits = value;
+								await this.plugin.saveSettings();
+							})
+					);
 
-			new Setting(containerEl)
-				.setName("Max searches")
-				.addSlider((slider) =>
-					slider
-						.setLimits(10, 100, 5)
-						.setValue(this.plugin.settings.maxSearches)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.maxSearches = value;
-							await this.plugin.saveSettings();
-						})
-				);
+				new Setting(containerEl)
+					.setName("Max searches")
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 100, 5)
+							.setValue(this.plugin.settings.maxSearches)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxSearches = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
 		}
 
 		// ── Shell history ─────────────────────────────
@@ -227,7 +281,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (this.plugin.settings.enableShell) {
+		if (this.plugin.settings.enableShell && this.plugin.settings.collectionMode === "limited") {
 			new Setting(containerEl)
 				.setName("Max shell commands")
 				.addSlider((slider) =>
@@ -273,18 +327,20 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						})
 				);
 
-			new Setting(containerEl)
-				.setName("Max Claude Code sessions")
-				.addSlider((slider) =>
-					slider
-						.setLimits(5, 100, 5)
-						.setValue(this.plugin.settings.maxClaudeSessions)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.maxClaudeSessions = value;
-							await this.plugin.saveSettings();
-						})
-				);
+			if (this.plugin.settings.collectionMode === "limited") {
+				new Setting(containerEl)
+					.setName("Max Claude Code sessions")
+					.addSlider((slider) =>
+						slider
+							.setLimits(5, 100, 5)
+							.setValue(this.plugin.settings.maxClaudeSessions)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxClaudeSessions = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
 		}
 
 		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━

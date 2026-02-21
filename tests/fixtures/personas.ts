@@ -1,6 +1,10 @@
 /**
  * Workday personas — 6 realistic Obsidian user archetypes.
  * Each generates a full day of mock data with expected outcomes.
+ *
+ * These represent complete days (8–16 hours of digital activity) for the
+ * kinds of people who actually use Obsidian: developers, researchers,
+ * students, product managers, DevOps engineers, and freelancers.
  */
 
 import {
@@ -8,9 +12,10 @@ import {
 	SearchQuery,
 	ShellCommand,
 	ClaudeSession,
+	GitCommit,
 	ActivityType,
 } from "../../src/types";
-import { TimeConfig, defaultTimeConfig, generateTimeSeries } from "./time-utils";
+import { defaultTimeConfig, generateTimeSeries } from "./time-utils";
 import {
 	DOMAIN_SETS,
 	SEARCH_TEMPLATES,
@@ -18,6 +23,7 @@ import {
 	generateSearchQueries,
 	generateShellCommands,
 	generateClaudeSessions,
+	generateGitCommits,
 } from "./generators";
 
 export interface PersonaOutput {
@@ -27,317 +33,357 @@ export interface PersonaOutput {
 	searches: SearchQuery[];
 	shell: ShellCommand[];
 	claude: ClaudeSession[];
+	git: GitCommit[];
 	expectedThemes: string[];
 	expectedActivityTypes: ActivityType[];
 	expectedFocusRange: [number, number];
 	narrative: string;
 }
 
-// ── Persona 1: Full-Stack Developer ─────────────────────
+// ── Persona 1: Software Engineer — Deep Work Day ────────
 
-export function fullStackDeveloper(date?: Date): PersonaOutput {
+export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(70, config);
-	const searchTs = generateTimeSeries(10, config);
-	const shellTs = generateTimeSeries(18, config);
-	const claudeTs = generateTimeSeries(5, config);
+	const visitTs = generateTimeSeries(180, config);
+	const searchTs = generateTimeSeries(25, config);
+	const shellTs = generateTimeSeries(40, config);
+	const claudeTs = generateTimeSeries(12, config);
+	const gitTs = generateTimeSeries(8, config);
 
 	const domains = [
 		...DOMAIN_SETS.webdev,
-		...DOMAIN_SETS.communication.slice(0, 2),
+		...DOMAIN_SETS.communication,
 		...DOMAIN_SETS.news.slice(0, 2),
-		...DOMAIN_SETS.social.slice(0, 1),
+		...DOMAIN_SETS.social.slice(0, 2),
+		...DOMAIN_SETS.ai_tools,
+		...DOMAIN_SETS.work_tools.slice(0, 3),
+		...DOMAIN_SETS.media.slice(0, 1),
 	];
 
 	return {
-		name: "Full-Stack Developer",
-		description: "Debugging React auth bug → implementing OAuth → deploying to Vercel",
-		visits: generateBrowserVisits({ count: 70, domains, timestamps: visitTs }),
+		name: "Software Engineer — Deep Work Day",
+		description: "Morning standup → heads-down OAuth implementation → debugging token refresh race condition → PR review → deployment",
+		visits: generateBrowserVisits({ count: 180, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 10,
-			queries: SEARCH_TEMPLATES.webdev.slice(0, 10),
+			count: 25,
+			queries: SEARCH_TEMPLATES.webdev,
 			engines: ["google.com", "kagi.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 18, workflow: "webdev", timestamps: shellTs }),
+		shell: generateShellCommands({ count: 40, workflow: "webdev", timestamps: shellTs }),
 		claude: generateClaudeSessions({
-			count: 5,
+			count: 12,
 			promptCategory: "coding",
 			projectName: "webapp",
 			timestamps: claudeTs,
 		}),
-		expectedThemes: ["OAuth", "React", "authentication", "deployment", "debugging"],
+		git: generateGitCommits({
+			count: 8,
+			templateCategory: "webdev",
+			timestamps: gitTs,
+		}),
+		expectedThemes: ["OAuth", "React", "authentication", "API design", "deployment", "debugging"],
 		expectedActivityTypes: ["implementation", "debugging", "research"],
-		expectedFocusRange: [0.4, 0.85],
-		narrative: "A full-stack developer spent the day debugging a React authentication bug, implementing an OAuth PKCE flow, writing tests, and deploying to Vercel. They used Claude for coding help and browsed Hacker News during breaks.",
+		expectedFocusRange: [0.6, 0.9],
+		narrative: "A software engineer's focused 9-5 day: morning standup and email triage, then heads-down implementing an OAuth PKCE flow for the React app. Hit a nasty token refresh race condition mid-afternoon that required deep debugging with Claude's help. Wrapped up with PR review, deployment to staging, and HN browsing over lunch.",
 	};
 }
 
-// ── Persona 2: Research-Heavy Knowledge Worker ──────────
+// ── Persona 2: Academic Researcher — Paper Writing Day ──
 
-export function researchKnowledgeWorker(date?: Date): PersonaOutput {
+export function academicResearcher(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(55, config);
-	const searchTs = generateTimeSeries(12, config);
-	const shellTs = generateTimeSeries(8, config);
-	const claudeTs = generateTimeSeries(4, config);
+	const visitTs = generateTimeSeries(220, config);
+	const searchTs = generateTimeSeries(35, config);
+	const shellTs = generateTimeSeries(15, config);
+	const claudeTs = generateTimeSeries(8, config);
+	const gitTs = generateTimeSeries(5, config);
 
 	const domains = [
+		...DOMAIN_SETS.academic,
 		...DOMAIN_SETS.research,
-		...DOMAIN_SETS.webdev.slice(0, 2),
-		...DOMAIN_SETS.work_tools.slice(0, 3),
+		...DOMAIN_SETS.communication.slice(0, 2),
+		...DOMAIN_SETS.work_tools.slice(0, 2),
+		...DOMAIN_SETS.media.slice(0, 1),
+		...DOMAIN_SETS.news.slice(0, 1),
+		...DOMAIN_SETS.social.slice(0, 1),
 	];
 
 	return {
-		name: "Research Knowledge Worker",
-		description: "Exploring distributed systems → writing blog post → reviewing papers",
-		visits: generateBrowserVisits({ count: 55, domains, timestamps: visitTs }),
+		name: "Academic Researcher — Paper Writing Day",
+		description: "Literature review → citation chasing across arXiv/Scholar/Semantic Scholar → thesis writing in Overleaf → experiment scripts → evening slides prep",
+		visits: generateBrowserVisits({ count: 220, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 12,
-			queries: SEARCH_TEMPLATES.research,
-			engines: ["google.com", "kagi.com"],
+			count: 35,
+			queries: SEARCH_TEMPLATES.academic,
+			engines: ["google.com", "scholar.google.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 8, workflow: "writing", timestamps: shellTs }),
+		shell: generateShellCommands({ count: 15, workflow: "academic", timestamps: shellTs }),
 		claude: generateClaudeSessions({
-			count: 4,
-			promptCategory: "research",
-			projectName: "blog",
+			count: 8,
+			promptCategory: "academic",
+			projectName: "thesis",
 			timestamps: claudeTs,
 		}),
-		expectedThemes: ["distributed systems", "consensus", "technical writing", "research"],
+		git: generateGitCommits({
+			count: 5,
+			templateCategory: "academic",
+			timestamps: gitTs,
+		}),
+		expectedThemes: ["transformers", "NLP", "attention mechanisms", "literature review", "thesis writing"],
 		expectedActivityTypes: ["research", "writing", "learning"],
-		expectedFocusRange: [0.5, 0.95],
-		narrative: "A knowledge worker spent the day deep-diving into distributed systems research, reading arXiv papers about consensus algorithms, writing a blog post about Raft vs Paxos, and using Claude for research summaries.",
+		expectedFocusRange: [0.5, 0.85],
+		narrative: "A PhD student's day writing a literature review chapter. Deep dives into papers on arXiv and Semantic Scholar, citation chasing through Google Scholar, managing references in Zotero, writing in Overleaf. Used Claude to help summarize papers and structure the related work section. Wikipedia rabbit holes on attention mechanisms. Evening prep for conference slides.",
 	};
 }
 
-// ── Persona 3: Scattered Context-Switcher ───────────────
+// ── Persona 3: Product Manager — Meeting Marathon ───────
 
-export function scatteredContextSwitcher(date?: Date): PersonaOutput {
+export function productManagerMeetings(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(100, config);
+	const visitTs = generateTimeSeries(160, config);
 	const searchTs = generateTimeSeries(15, config);
-	const shellTs = generateTimeSeries(12, config);
+	const shellTs = generateTimeSeries(5, config);
 	const claudeTs = generateTimeSeries(6, config);
 
 	const domains = [
+		...DOMAIN_SETS.product,
 		...DOMAIN_SETS.communication,
-		...DOMAIN_SETS.webdev.slice(0, 3),
-		...DOMAIN_SETS.shopping,
-		...DOMAIN_SETS.finance,
-		...DOMAIN_SETS.news,
-		...DOMAIN_SETS.social,
-		...DOMAIN_SETS.media.slice(0, 2),
-		...DOMAIN_SETS.personal,
-	];
-
-	const mixedQueries = [
-		...SEARCH_TEMPLATES.webdev.slice(0, 3),
-		...SEARCH_TEMPLATES.general,
-		"weather this weekend",
-		"best restaurants downtown",
-		"netflix new releases june 2025",
-		"python asyncio tutorial",
-		"how to fix leaking faucet",
-		"mortgage rate calculator 2025",
-		"typescript monorepo structure",
-		"healthy meal prep recipes",
+		...DOMAIN_SETS.work_tools,
+		...DOMAIN_SETS.shopping.slice(0, 1),
+		...DOMAIN_SETS.social.slice(0, 2),
+		...DOMAIN_SETS.news.slice(0, 1),
+		...DOMAIN_SETS.media.slice(0, 1),
+		...DOMAIN_SETS.personal.slice(0, 1),
 	];
 
 	return {
-		name: "Scattered Context-Switcher",
-		description: "Jumping between 5+ unrelated tasks all day",
-		visits: generateBrowserVisits({ count: 100, domains, timestamps: visitTs }),
+		name: "Product Manager — Meeting Marathon",
+		description: "Back-to-back meetings 9am-3pm → Figma/Miro design reviews → competitor research → analytics deep dive → personal errands at lunch",
+		visits: generateBrowserVisits({ count: 160, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
 			count: 15,
-			queries: mixedQueries,
-			engines: ["google.com", "duckduckgo.com"],
-			timestamps: searchTs,
-		}),
-		shell: generateShellCommands({ count: 12, workflow: "webdev", timestamps: shellTs }),
-		claude: generateClaudeSessions({
-			count: 6,
-			promptCategory: "general",
-			projectName: "various",
-			timestamps: claudeTs,
-		}),
-		expectedThemes: ["email", "shopping", "coding", "news", "personal"],
-		expectedActivityTypes: ["browsing", "communication", "admin", "implementation"],
-		expectedFocusRange: [0.05, 0.4],
-		narrative: "A scattered workday jumping between email triage, Jira tickets, Slack, Amazon shopping, banking, news, YouTube, Reddit, coding in short bursts, and personal errands. No sustained focus on any single task.",
-	};
-}
-
-// ── Persona 4: DevOps/Infrastructure Day ────────────────
-
-export function devopsInfrastructureDay(date?: Date): PersonaOutput {
-	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(45, config);
-	const searchTs = generateTimeSeries(8, config);
-	const shellTs = generateTimeSeries(22, config);
-	const claudeTs = generateTimeSeries(4, config);
-
-	const domains = [
-		...DOMAIN_SETS.devops,
-		...DOMAIN_SETS.webdev.slice(0, 2),
-		...DOMAIN_SETS.communication.slice(0, 2),
-	];
-
-	return {
-		name: "DevOps Infrastructure Day",
-		description: "Kubernetes troubleshooting → monitoring setup → incident response",
-		visits: generateBrowserVisits({ count: 45, domains, timestamps: visitTs }),
-		searches: generateSearchQueries({
-			count: 8,
-			queries: SEARCH_TEMPLATES.devops,
+			queries: SEARCH_TEMPLATES.product,
 			engines: ["google.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 22, workflow: "devops", timestamps: shellTs }),
+		shell: generateShellCommands({ count: 5, workflow: "writing", timestamps: shellTs }),
 		claude: generateClaudeSessions({
-			count: 4,
-			promptCategory: "devops",
+			count: 6,
+			promptCategory: "product",
+			projectName: "search-redesign",
+			timestamps: claudeTs,
+		}),
+		git: [],
+		expectedThemes: ["product strategy", "design review", "user metrics", "meetings", "roadmap"],
+		expectedActivityTypes: ["browsing", "communication", "admin", "planning"],
+		expectedFocusRange: [0.1, 0.35],
+		narrative: "A product manager's meeting-heavy day. Morning packed with 1:1s, design reviews, and cross-team syncs. Constant context switching between Figma wireframes, Notion PRDs, Amplitude dashboards, and Slack threads. Quick Amazon shopping at lunch. Afternoon catching up on async work: writing user stories, analyzing funnel data, and prepping the roadmap for next sprint.",
+	};
+}
+
+// ── Persona 4: DevOps Engineer — Incident Day ───────────
+
+export function devopsIncidentDay(date?: Date): PersonaOutput {
+	const config = {
+		...defaultTimeConfig(date),
+		workStart: 6,  // Paged at 6am
+		workEnd: 18,   // Long day
+	};
+	const visitTs = generateTimeSeries(140, config);
+	const searchTs = generateTimeSeries(20, config);
+	const shellTs = generateTimeSeries(60, config);
+	const claudeTs = generateTimeSeries(10, config);
+	const gitTs = generateTimeSeries(6, config);
+
+	const domains = [
+		...DOMAIN_SETS.incident,
+		...DOMAIN_SETS.devops,
+		...DOMAIN_SETS.communication,
+		...DOMAIN_SETS.webdev.slice(0, 2),
+		...DOMAIN_SETS.work_tools.slice(0, 2),
+	];
+
+	return {
+		name: "DevOps Engineer — Incident Day",
+		description: "Paged at 6am → production API outage → Grafana/PagerDuty incident response → postmortem writing → remediation deployment",
+		visits: generateBrowserVisits({ count: 140, domains, timestamps: visitTs }),
+		searches: generateSearchQueries({
+			count: 20,
+			queries: SEARCH_TEMPLATES.incident,
+			engines: ["google.com"],
+			timestamps: searchTs,
+		}),
+		shell: generateShellCommands({ count: 60, workflow: "incident", timestamps: shellTs }),
+		claude: generateClaudeSessions({
+			count: 10,
+			promptCategory: "incident",
 			projectName: "infrastructure",
 			timestamps: claudeTs,
 		}),
-		expectedThemes: ["Kubernetes", "infrastructure", "monitoring", "DevOps"],
-		expectedActivityTypes: ["infrastructure", "debugging", "implementation"],
-		expectedFocusRange: [0.35, 0.75],
-		narrative: "A DevOps engineer spent the day troubleshooting Kubernetes pod crashes, setting up Grafana monitoring dashboards, writing Terraform modules, and responding to a production incident via Slack and PagerDuty.",
+		git: generateGitCommits({
+			count: 6,
+			templateCategory: "devops",
+			timestamps: gitTs,
+		}),
+		expectedThemes: ["incident response", "Kubernetes", "OOMKilled", "monitoring", "postmortem"],
+		expectedActivityTypes: ["infrastructure", "debugging", "communication"],
+		expectedFocusRange: [0.4, 0.7],
+		narrative: "A DevOps engineer paged at 6am for a production API outage. Morning consumed by incident response: Grafana dashboards, PagerDuty timelines, kubectl commands, CloudWatch logs. Root cause: OOMKilled pods from a memory leak. Afternoon writing the postmortem, deploying a hotfix with increased memory limits, and tuning alerting thresholds. Heavy shell usage throughout — 60 commands. Used Claude for error trace analysis and postmortem drafting.",
 	};
 }
 
-// ── Persona 5: Learning Day ─────────────────────────────
+// ── Persona 5: Student — Exam Prep Day ──────────────────
 
-export function learningDay(date?: Date): PersonaOutput {
-	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(60, config);
-	const searchTs = generateTimeSeries(10, config);
-	const shellTs = generateTimeSeries(15, config);
-	const claudeTs = generateTimeSeries(6, config);
-
-	const rustDomains: import("./generators").DomainSpec[] = [
-		{ domain: "doc.rust-lang.org", titlePatterns: ["The Rust Programming Language - Ownership", "std::collections - Rust", "Traits: Defining Shared Behavior"], category: "dev", weight: 5 },
-		{ domain: "crates.io", titlePatterns: ["serde - crates.io", "tokio - crates.io", "clap - crates.io"], category: "dev", weight: 3 },
-		{ domain: "rust-lang.org", titlePatterns: ["Rust Programming Language", "Install Rust - Rust"], category: "dev", weight: 2 },
-	];
+export function studentExamPrep(date?: Date): PersonaOutput {
+	const config = {
+		...defaultTimeConfig(date),
+		workStart: 8,   // Starts studying early
+		workEnd: 22,    // Studies late
+		lunchStart: 12,
+		lunchEnd: 13,
+	};
+	const visitTs = generateTimeSeries(250, config);
+	const searchTs = generateTimeSeries(40, config);
+	const shellTs = generateTimeSeries(10, config);
+	const claudeTs = generateTimeSeries(15, config);
+	const gitTs = generateTimeSeries(3, config);
 
 	const domains = [
-		...rustDomains,
-		...DOMAIN_SETS.media.slice(0, 2),
-		...DOMAIN_SETS.social.slice(0, 1),
-		...DOMAIN_SETS.news.slice(0, 1),
-	];
-
-	const rustSearches = [
-		"rust ownership borrowing explained",
-		"rust vs go performance comparison",
-		"rust async runtime tokio tutorial",
-		"rust error handling best practices",
-		"convert python to rust guide",
-		"rust cargo workspace monorepo",
-		"rust lifetime annotations explained",
-		"serde json serialization rust",
-		"rust trait object vs generic",
-		"rust actix-web rest api tutorial",
-	];
-
-	const rustClaude = [
-		"Explain ownership and borrowing in Rust. I'm coming from TypeScript — what's the mental model?",
-		"Convert this Python function to Rust: def fibonacci(n): ...",
-		"What's the difference between Box<dyn Trait> and impl Trait in Rust?",
-		"Help me implement a basic HTTP server in Rust using actix-web",
-		"Why does the Rust compiler reject this code? I'm getting a lifetime error.",
-		"Explain the difference between String and &str in Rust with examples",
+		...DOMAIN_SETS.student,
+		...DOMAIN_SETS.social.slice(0, 3),  // Reddit, Discord breaks
+		...DOMAIN_SETS.media.slice(0, 2),    // YouTube lectures, Spotify
+		...DOMAIN_SETS.news.slice(0, 1),     // HN procrastination
+		...DOMAIN_SETS.shopping.slice(0, 1), // Quick snack order
+		...DOMAIN_SETS.personal.slice(0, 1),
 	];
 
 	return {
-		name: "Learning Day",
-		description: "Exploring Rust → following tutorials → building first project",
-		visits: generateBrowserVisits({ count: 60, domains, timestamps: visitTs }),
+		name: "Student — Exam Prep Day",
+		description: "CS finals cramming → algorithms textbook/videos → LeetCode practice → study group on Discord → Reddit/YouTube breaks → Claude for explanations",
+		visits: generateBrowserVisits({ count: 250, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 10,
-			queries: rustSearches,
-			engines: ["google.com", "kagi.com"],
+			count: 40,
+			queries: SEARCH_TEMPLATES.student,
+			engines: ["google.com", "duckduckgo.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 15, workflow: "webdev", timestamps: shellTs }),
+		shell: generateShellCommands({ count: 10, workflow: "student", timestamps: shellTs }),
 		claude: generateClaudeSessions({
-			count: 6,
-			promptCategory: "coding",
-			projectName: "rust-learning",
+			count: 15,
+			promptCategory: "student",
+			projectName: "cs301-algorithms",
 			timestamps: claudeTs,
 		}),
-		expectedThemes: ["Rust", "learning", "systems programming", "ownership"],
-		expectedActivityTypes: ["learning", "research", "implementation"],
-		expectedFocusRange: [0.6, 0.98],
-		narrative: "An engineer spent the entire day learning Rust: reading the Rust Book, exploring crates.io, watching tutorials, searching for explanations of ownership/borrowing, and using Claude to understand Rust concepts.",
+		git: generateGitCommits({
+			count: 3,
+			templateCategory: "general",
+			timestamps: gitTs,
+		}),
+		expectedThemes: ["algorithms", "data structures", "exam prep", "dynamic programming", "graph algorithms"],
+		expectedActivityTypes: ["learning", "research", "browsing"],
+		expectedFocusRange: [0.3, 0.6],
+		narrative: "A CS student cramming for their algorithms final. Jumping between Khan Academy, GeeksforGeeks, YouTube lectures (MIT 6.006, Abdul Bari), and Quizlet flashcards. LeetCode practice for hands-on coding. Frequent Reddit and Discord breaks for study group coordination. Heavy Claude usage — 15 prompts asking for algorithm explanations, step-by-step walkthroughs, and help with homework problems. Highest visit count (250) reflecting the fragmented nature of exam prep.",
 	};
 }
 
-// ── Persona 6: Mixed Remote Work Day ────────────────────
+// ── Persona 6: Freelancer — Multi-Project Day ───────────
 
-export function mixedRemoteWorkDay(date?: Date): PersonaOutput {
-	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(65, config);
-	const searchTs = generateTimeSeries(6, config);
-	const shellTs = generateTimeSeries(10, config);
-	const claudeTs = generateTimeSeries(5, config);
+export function freelancerMultiProject(date?: Date): PersonaOutput {
+	const config = {
+		...defaultTimeConfig(date),
+		workStart: 8,
+		workEnd: 20,   // Long freelancer day
+	};
+	const visitTs = generateTimeSeries(200, config);
+	const searchTs = generateTimeSeries(20, config);
+	const shellTs = generateTimeSeries(35, config);
+	const gitTs = generateTimeSeries(4, config);
 
 	const domains = [
-		...DOMAIN_SETS.communication,
-		...DOMAIN_SETS.work_tools,
-		...DOMAIN_SETS.webdev.slice(0, 3),
-		...DOMAIN_SETS.media.slice(0, 1),
+		...DOMAIN_SETS.freelance,
+		...DOMAIN_SETS.webdev.slice(0, 4),
+		...DOMAIN_SETS.communication.slice(0, 3),
+		...DOMAIN_SETS.work_tools.slice(0, 2),
 		...DOMAIN_SETS.social.slice(0, 2),
 		...DOMAIN_SETS.news.slice(0, 1),
+		...DOMAIN_SETS.media.slice(0, 1),
+		...DOMAIN_SETS.shopping.slice(0, 1),
 	];
 
-	const workSearches = [
-		"how to write effective code review feedback",
-		"google docs design template",
-		"figma auto-layout best practices",
-		"confluence page templates engineering",
-		"obsidian daily notes workflow",
-		"remote work standup best practices",
-	];
+	// Claude sessions split across 3 project names
+	const claudeTs = generateTimeSeries(10, config);
+	const claudeA = generateClaudeSessions({
+		count: 4,
+		promptCategory: "freelance",
+		projectName: "client-a-dashboard",
+		timestamps: claudeTs.slice(0, 4),
+	});
+	const claudeB = generateClaudeSessions({
+		count: 3,
+		promptCategory: "freelance",
+		projectName: "client-b-wordpress",
+		timestamps: claudeTs.slice(4, 7),
+	});
+	const claudeC = generateClaudeSessions({
+		count: 3,
+		promptCategory: "freelance",
+		projectName: "personal-blog",
+		timestamps: claudeTs.slice(7, 10),
+	});
+
+	// Shell commands from 3 different workflows representing project switching
+	const shellA = generateShellCommands({ count: 12, workflow: "freelance_react", timestamps: generateTimeSeries(12, config) });
+	const shellB = generateShellCommands({ count: 8, workflow: "freelance_wordpress", timestamps: generateTimeSeries(8, config) });
+	const shellC = generateShellCommands({ count: 5, workflow: "freelance_invoicing", timestamps: generateTimeSeries(5, config) });
+	const shellMisc = generateShellCommands({ count: 10, workflow: "webdev", timestamps: generateTimeSeries(10, config) });
 
 	return {
-		name: "Mixed Remote Work Day",
-		description: "Standup → code review → meetings → doc writing → 1:1s",
-		visits: generateBrowserVisits({ count: 65, domains, timestamps: visitTs }),
+		name: "Freelancer — Multi-Project Day",
+		description: "Morning: Client A React dashboard → Afternoon: Client B WordPress theme → Evening: Client C invoicing + personal blog post",
+		visits: generateBrowserVisits({ count: 200, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 6,
-			queries: workSearches,
-			engines: ["google.com"],
-			timestamps: searchTs,
+			count: 20,
+			queries: SEARCH_TEMPLATES.freelance,
+			engines: ["google.com", "duckduckgo.com"],
+			timestamps: generateTimeSeries(20, config),
 		}),
-		shell: generateShellCommands({ count: 10, workflow: "webdev", timestamps: shellTs }),
-		claude: generateClaudeSessions({
-			count: 5,
-			promptCategory: "general",
-			projectName: "team-work",
-			timestamps: claudeTs,
+		shell: [...shellA, ...shellB, ...shellC, ...shellMisc].slice(0, 35),
+		claude: [...claudeA, ...claudeB, ...claudeC],
+		git: generateGitCommits({
+			count: 4,
+			templateCategory: "webdev",
+			timestamps: gitTs,
 		}),
-		expectedThemes: ["code review", "collaboration", "documentation", "meetings"],
-		expectedActivityTypes: ["communication", "admin", "implementation", "writing"],
-		expectedFocusRange: [0.2, 0.6],
-		narrative: "A remote engineer's typical mixed day: morning standup, code reviews on GitHub, meetings on Zoom, writing a design doc in Google Docs, Figma review, 1:1 with manager, and winding down with social media and music.",
+		expectedThemes: ["React", "WordPress", "client work", "invoicing", "multi-project"],
+		expectedActivityTypes: ["implementation", "admin", "communication", "writing"],
+		expectedFocusRange: [0.2, 0.5],
+		narrative: "A freelance developer's typical juggling act across 3 client projects plus a personal blog. Morning heads-down on Client A's React dashboard (SSR hydration fix). After lunch, switches to Client B's WordPress theme update. Evening wraps up with Client C invoicing on FreshBooks and drafting a blog post about React Server Components. Shell history shows 3 distinct project contexts. Claude sessions spread across all projects. Lots of Slack workspace switching.",
 	};
 }
 
 // ── All Personas ────────────────────────────────────────
 
 export const ALL_PERSONAS = [
-	fullStackDeveloper,
-	researchKnowledgeWorker,
-	scatteredContextSwitcher,
-	devopsInfrastructureDay,
-	learningDay,
-	mixedRemoteWorkDay,
+	softwareEngineerDeepWork,
+	academicResearcher,
+	productManagerMeetings,
+	devopsIncidentDay,
+	studentExamPrep,
+	freelancerMultiProject,
 ];
 
 export function generateAllPersonas(date?: Date): PersonaOutput[] {
 	return ALL_PERSONAS.map((fn) => fn(date));
 }
+
+// ── Backward-Compatible Aliases ─────────────────────────
+// Eval tests reference old persona names. These aliases keep them working.
+
+export const fullStackDeveloper = softwareEngineerDeepWork;
+export const researchKnowledgeWorker = academicResearcher;
+export const scatteredContextSwitcher = productManagerMeetings;
+export const devopsInfrastructureDay = devopsIncidentDay;
+export const learningDay = studentExamPrep;
+export const mixedRemoteWorkDay = freelancerMultiProject;
