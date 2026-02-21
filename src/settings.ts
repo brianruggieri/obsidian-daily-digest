@@ -28,6 +28,11 @@ export interface DailyDigestSettings {
 	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
 	 */
 	browserConfigs: BrowserInstallConfig[];
+	/**
+	 * @deprecated Migrated to Obsidian SecretStorage on first load (>=1.11.4).
+	 * Retained only for migration from older versions. Always "" after migration.
+	 * Read the key via DailyDigestPlugin.getAnthropicApiKey() instead.
+	 */
 	anthropicApiKey: string;
 	aiModel: string;
 	profile: string;
