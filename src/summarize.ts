@@ -9,7 +9,7 @@ import * as log from "./log";
 
 // ── Prompt builder & summarizer ─────────────────────────
 
-function buildPrompt(
+export function buildPrompt(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
