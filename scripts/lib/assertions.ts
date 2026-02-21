@@ -13,6 +13,18 @@ const PLACEHOLDER_PATTERNS: RegExp[] = [
 ];
 const MIN_FILE_SIZE = 300;
 
+function parseFrontmatterFields(fmContent: string): Record<string, string | null> {
+	const fields: Record<string, string | null> = {};
+	for (const line of fmContent.split("\n")) {
+		const match = line.match(/^([\w][\w_-]*):\s*(.*)/);
+		if (match) {
+			const value = match[2].trim();
+			fields[match[1]] = value.length > 0 ? value : null;
+		}
+	}
+	return fields;
+}
+
 export function runStructuralAssertions(md: string): AssertionResult {
 	const failures: string[] = [];
 
@@ -24,8 +36,9 @@ export function runStructuralAssertions(md: string): AssertionResult {
 	if (!fmMatch) {
 		failures.push("No frontmatter found");
 	} else {
+		const frontmatter = parseFrontmatterFields(fmMatch[1]);
 		for (const field of REQUIRED_FRONTMATTER) {
-			if (!fmMatch[1].includes(`${field}:`)) {
+			if (frontmatter[field] == null || frontmatter[field] === "") {
 				failures.push(`Frontmatter missing required field: ${field}`);
 			}
 		}
