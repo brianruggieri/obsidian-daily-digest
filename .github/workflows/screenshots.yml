@@ -1,14 +1,9 @@
 name: Screenshot Regression
 
 on:
-  pull_request:
-    paths:
-      - "src/settings.ts"
-      - "src/privacy.ts"
-      - "src/renderer.ts"
-      - "styles.css"
-      - "examples/*.md"
-      - "screenshots/**"
+  push:
+    branches:
+      - main
 
 jobs:
   screenshots:
