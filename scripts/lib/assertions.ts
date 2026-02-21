@@ -3,7 +3,7 @@ export interface AssertionResult {
 	failures: string[];
 }
 
-const REQUIRED_FRONTMATTER = ["date", "tags"];
+const REQUIRED_FRONTMATTER = ["date", "tags", "focus_score"];
 // Patterns that indicate template rendering artifacts (not content that happens to contain these words)
 const PLACEHOLDER_PATTERNS: RegExp[] = [
 	/\[object Object\]/,
