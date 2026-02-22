@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateKnowledgeSections, KnowledgeSections } from "../../src/knowledge";
+import { generateKnowledgeSections } from "../../src/knowledge";
 import { PatternAnalysis } from "../../src/types";
 
 function makePatterns(overrides: Partial<PatternAnalysis> = {}): PatternAnalysis {
