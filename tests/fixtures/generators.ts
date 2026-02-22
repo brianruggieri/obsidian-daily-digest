@@ -801,6 +801,47 @@ export function generateClaudeSessions(options: {
 	return sessions;
 }
 
+// Codex CLI prompt templates — reflect GPT-based coding assistant usage patterns
+const CODEX_PROMPT_TEMPLATES: Record<string, string[]> = {
+	coding: [
+		"commit vCard changes, and clean unneeded screenshots",
+		"gitignore .playwright-mcp folder and commit css change",
+		"refactor the auth module to use the new token format",
+		"add unit tests for the payment processor edge cases",
+		"review this PR diff and suggest improvements",
+		"fix the race condition in the session manager",
+		"update the API client to handle rate limit retries",
+		"extract the logging logic into a separate module",
+	],
+	general: [
+		"help me understand this codebase structure",
+		"what does this function do and how can I improve it",
+		"write a script to batch rename these files",
+		"review and clean up this configuration file",
+		"explain the tradeoffs in this architecture decision",
+	],
+};
+
+export function generateCodexSessions(options: {
+	count: number;
+	promptCategory?: string;
+	projectName: string;
+	timestamps: Date[];
+}): ClaudeSession[] {
+	const templates = CODEX_PROMPT_TEMPLATES[options.promptCategory ?? "coding"] ?? CODEX_PROMPT_TEMPLATES.coding;
+	const sessions: ClaudeSession[] = [];
+	for (let i = 0; i < options.count; i++) {
+		const prompt = templates[i % templates.length];
+		const time = i < options.timestamps.length ? options.timestamps[i] : options.timestamps[options.timestamps.length - 1];
+		sessions.push({
+			prompt,
+			time,
+			project: options.projectName,
+		});
+	}
+	return sessions;
+}
+
 export function generateGitCommits(options: {
 	count: number;
 	templateCategory: string;

@@ -53,6 +53,17 @@ export const PRIVACY_DESCRIPTIONS = {
 			"Stored in your vault as part of the daily note. Prompts may " +
 			"contain code snippets, project context, or sensitive instructions.",
 	},
+	codex: {
+		label: "Codex CLI Sessions",
+		access:
+			"Reads JSONL log files from the Codex CLI desktop app to extract your prompts " +
+			"(not model responses). Injected system context is filtered automatically. " +
+			"No API key required — reads local files only. Prompts are truncated to 200 characters.",
+		files: "~/.codex/sessions/**/*.jsonl",
+		destination:
+			"Stored in your vault as part of the daily note. Prompts may " +
+			"contain code snippets, project context, or file paths.",
+	},
 	git: {
 		label: "Git commit history",
 		access:
