@@ -16,7 +16,10 @@ export async function collectFixtureData(settings: DailyDigestSettings): Promise
 		visits: settings.enableBrowser ? (persona.visits ?? []) : [],
 		searches: settings.enableBrowser ? (persona.searches ?? []) : [],
 		shell: settings.enableShell ? (persona.shell ?? []) : [],
-		claudeSessions: settings.enableClaude ? (persona.claude ?? []) : [],
+		claudeSessions: [
+			...(settings.enableClaude ? (persona.claude ?? []) : []),
+			...(settings.enableCodex ? (persona.codex ?? []) : []),
+		],
 		gitCommits: settings.enableGit ? (persona.git ?? []) : [],
 	};
 }
@@ -34,13 +37,16 @@ export async function collectRealData(settings: DailyDigestSettings): Promise<Co
 		searches = result.searches;
 	}
 
-	const { readShellHistory, readClaudeSessions, readGitHistory } = await import("../../src/collectors");
+	const { readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } = await import("../../src/collectors");
 
 	return {
 		visits,
 		searches,
 		shell: settings.enableShell ? readShellHistory(settings, since) : [],
-		claudeSessions: settings.enableClaude ? readClaudeSessions(settings, since) : [],
+		claudeSessions: [
+			...(settings.enableClaude ? readClaudeSessions(settings, since) : []),
+			...(settings.enableCodex ? readCodexSessions(settings, since) : []),
+		],
 		gitCommits: settings.enableGit ? readGitHistory(settings, since) : [],
 	};
 }

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Daily Digest is an Obsidian desktop plugin that compiles browser history, search queries, shell commands, and Claude Code sessions into AI-summarized daily notes. Privacy-first architecture with a 4-tier escalation chain controlling what data reaches cloud APIs.
+Daily Digest is an Obsidian desktop plugin that compiles browser history, search queries, shell commands, Claude Code sessions, Codex CLI sessions, and git commits into AI-summarized daily notes. Privacy-first architecture with a 4-tier escalation chain controlling what data reaches cloud APIs.
 
 - **Plugin ID:** `daily-digest`
 - **Author:** Brian Ruggieri
@@ -79,7 +79,7 @@ npm run deploy:dev     # Quick deploy without full rebuild
 
 ## Architecture: 9-Stage Processing Pipeline
 
-1. **Collection** — Read from browser SQLite, shell history, Claude JSONL logs
+1. **Collection** — Read from browser SQLite, shell history, Claude JSONL logs, Codex CLI JSONL logs
 2. **Sanitization** — Scrub secrets (15+ regex patterns for API keys, tokens, JWTs, etc.)
 3. **Sensitivity Filtering** — Remove/redact visits to private domains (419 built-in + custom)
 4. **Categorization** — Rule-based domain grouping (10 categories)

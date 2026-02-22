@@ -38,6 +38,9 @@ export interface DailyDigestSettings {
 	enableShell: boolean;
 	enableClaude: boolean;
 	claudeSessionsDir: string;
+	enableCodex: boolean;
+	codexSessionsDir: string;
+	maxCodexSessions: number;
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
@@ -87,6 +90,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableShell: false,
 	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
+	enableCodex: false,
+	codexSessionsDir: "~/.codex/sessions",
+	maxCodexSessions: 30,
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
@@ -341,6 +347,53 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			}
 		}
 
+		// ── Codex CLI sessions ────────────────────────
+		new Setting(containerEl)
+			.setName("Codex CLI sessions")
+			.setDesc(
+				PRIVACY_DESCRIPTIONS.codex.access + " " +
+				PRIVACY_DESCRIPTIONS.codex.destination
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableCodex)
+					.onChange(async (value) => {
+						this.plugin.settings.enableCodex = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableCodex) {
+			new Setting(containerEl)
+				.setName("Codex sessions directory")
+				.setDesc("Path to Codex CLI session logs. No API key required — reads local files only.")
+				.addText((text) =>
+					text
+						.setPlaceholder("~/.codex/sessions")
+						.setValue(this.plugin.settings.codexSessionsDir)
+						.onChange(async (value) => {
+							this.plugin.settings.codexSessionsDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			if (this.plugin.settings.collectionMode === "limited") {
+				new Setting(containerEl)
+					.setName("Max Codex sessions")
+					.addSlider((slider) =>
+						slider
+							.setLimits(5, 100, 5)
+							.setValue(this.plugin.settings.maxCodexSessions)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.maxCodexSessions = value;
+								await this.plugin.saveSettings();
+							})
+					);
+			}
+		}
+
 		// ── Git history ──────────────────────────────
 		new Setting(containerEl)
 			.setName("Git commit history")
@@ -401,6 +454,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
 		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
 		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
+		if (this.plugin.settings.enableCodex) enabledSources.push("Codex CLI sessions");
 		if (this.plugin.settings.enableGit) enabledSources.push("git commit history");
 
 		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });

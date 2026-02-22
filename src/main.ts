@@ -1,6 +1,6 @@
 import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
-import { collectBrowserHistory, readShellHistory, readClaudeSessions, readGitHistory } from "./collectors";
+import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
 import { compressActivity, CompressedActivity } from "./compress";
 import { summarizeDay } from "./summarize";
@@ -267,8 +267,11 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
 			const rawShellCmds = readShellHistory(this.settings, since);
 
-			progressNotice.setMessage("Daily Digest: Reading Claude Code sessions\u2026");
-			const rawClaudeSessions = readClaudeSessions(this.settings, since);
+			progressNotice.setMessage("Daily Digest: Reading Claude Code and Codex sessions\u2026");
+			const rawClaudeSessions = [
+				...readClaudeSessions(this.settings, since),
+				...readCodexSessions(this.settings, since),
+			];
 
 			progressNotice.setMessage("Daily Digest: Reading git history\u2026");
 			const rawGitCommits = readGitHistory(this.settings, since);
