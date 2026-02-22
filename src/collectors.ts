@@ -398,14 +398,14 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 	const sessionsDir = expandHome(settings.claudeSessionsDir);
 	if (!existsSync(sessionsDir)) return [];
 
-	const cutoffTs = since.getTime() / 1000;
+	const cutoffMs = since.getTime();
 	const entries: ClaudeSession[] = [];
 	const jsonlFiles = findJsonlFiles(sessionsDir);
 
 	for (const filePath of jsonlFiles) {
 		try {
 			const fileStat = statSync(filePath);
-			if (fileStat.mtimeMs / 1000 < cutoffTs) continue;
+			if (fileStat.mtimeMs < cutoffMs) continue;
 
 			const content = readFileSync(filePath, "utf-8");
 			for (const line of content.split("\n")) {
@@ -421,7 +421,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 						} else if (typeof ts === "string") {
 							dt = new Date(ts.replace(/Z$/, ""));
 						}
-						if (dt && dt.getTime() / 1000 < cutoffTs) continue;
+						if (dt && dt.getTime() < cutoffMs) continue;
 					}
 
 					const msg = obj.message || {};
@@ -551,7 +551,8 @@ export function readCodexSessions(settings: DailyDigestSettings, since: Date): C
 						if (CODEX_INJECTED_PREFIXES.some((p) => trimmed.startsWith(p))) continue;
 
 						entries.push({
-							prompt: trimmed.length > 1000 ? trimmed.slice(0, 1000) + "\u2026" : trimmed,
+							// Truncate Codex prompts to 200 chars, consistent with Claude sessions
+						prompt: trimmed.length > 200 ? trimmed.slice(0, 200) + "\u2026" : trimmed,
 							time: dt || new Date(fileStat.mtimeMs),
 							project: projectName,
 						});

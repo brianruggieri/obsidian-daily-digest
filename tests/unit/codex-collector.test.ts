@@ -150,7 +150,7 @@ describe("readCodexSessions", () => {
 		expect(result[0].prompt).toBe("a real user prompt");
 	});
 
-	it("ignores prompts shorter than 6 characters", () => {
+	it("ignores prompts of 5 characters or fewer", () => {
 		const sessionFile = join(tmpDir, "session.jsonl");
 		writeFileSync(sessionFile, [
 			metaLine("/Users/test/proj"),
@@ -165,8 +165,8 @@ describe("readCodexSessions", () => {
 		expect(result).toHaveLength(1);
 	});
 
-	it("truncates prompts longer than 1000 characters", () => {
-		const longPrompt = "a".repeat(1200);
+	it("truncates prompts longer than 200 characters", () => {
+		const longPrompt = "a".repeat(300);
 		const sessionFile = join(tmpDir, "session.jsonl");
 		writeFileSync(sessionFile, [
 			metaLine("/Users/test/proj"),
@@ -176,7 +176,7 @@ describe("readCodexSessions", () => {
 		const settings = makeSettings({ codexSessionsDir: tmpDir });
 		const result = readCodexSessions(settings, new Date(0));
 
-		expect(result[0].prompt).toHaveLength(1001); // 1000 chars + ellipsis character
+		expect(result[0].prompt).toHaveLength(201); // 200 chars + ellipsis character
 		expect(result[0].prompt.endsWith("\u2026")).toBe(true);
 	});
 
