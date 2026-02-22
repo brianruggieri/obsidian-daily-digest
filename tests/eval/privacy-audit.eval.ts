@@ -14,8 +14,8 @@ import { categorizeVisits } from "../../src/categorize";
 import { classifyEventsRuleOnly } from "../../src/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
 import { sanitizeCollectedData } from "../../src/sanitize";
-import { fullStackDeveloper, scatteredContextSwitcher, devopsInfrastructureDay } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig, privacyTestScenario } from "../fixtures/scenarios";
+import { fullStackDeveloper, devopsInfrastructureDay } from "../fixtures/personas";
+import { defaultSanitizeConfig, defaultPatternConfig, createPrivacyTestScenario } from "../fixtures/scenarios";
 import {
 	skipIfNoAI,
 	evaluateAbsence,
@@ -173,9 +173,9 @@ Score 0.0 = both prompts have the same level of detail.`,
 
 	describe("sanitization effectiveness", () => {
 		it.skipIf(SKIP)("dirty data is properly sanitized before reaching prompts", async () => {
-			const dirty = privacyTestScenario();
+			const dirty = createPrivacyTestScenario();
 			const sanitized = sanitizeCollectedData(
-				dirty.visits, dirty.searches, dirty.shell, dirty.claude, [],
+				dirty.dirtyVisits, dirty.dirtySearches, dirty.dirtyShell, dirty.dirtyClaude, [],
 				defaultSanitizeConfig()
 			);
 

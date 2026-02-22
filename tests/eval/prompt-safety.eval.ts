@@ -15,7 +15,7 @@ import { categorizeVisits } from "../../src/categorize";
 import { classifyEventsRuleOnly } from "../../src/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
 import { sanitizeCollectedData } from "../../src/sanitize";
-import { ClassificationResult, StructuredEvent, PatternAnalysis, BrowserVisit, SearchQuery, ShellCommand, ClaudeSession } from "../../src/types";
+import { ClassificationResult, StructuredEvent, BrowserVisit, SearchQuery, ShellCommand, ClaudeSession } from "../../src/types";
 import { fullStackDeveloper } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 import {
@@ -23,7 +23,6 @@ import {
 	evaluateWithRubric,
 	evaluateAbsence,
 	evaluateMultiCriteria,
-	RubricCriterion,
 } from "./eval-helpers";
 
 const DATE = new Date("2025-06-15T00:00:00");

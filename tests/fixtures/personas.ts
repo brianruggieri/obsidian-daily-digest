@@ -297,8 +297,8 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 		workEnd: 20,   // Long freelancer day
 	};
 	const visitTs = generateTimeSeries(200, config);
-	const searchTs = generateTimeSeries(20, config);
-	const shellTs = generateTimeSeries(35, config);
+	const _searchTs = generateTimeSeries(20, config);
+	const _shellTs = generateTimeSeries(35, config);
 	const gitTs = generateTimeSeries(4, config);
 
 	const domains = [

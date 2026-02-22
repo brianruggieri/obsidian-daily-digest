@@ -27,7 +27,6 @@ import {
 	evaluateWithRubric,
 	evaluateMultiCriteria,
 	evaluateContainment,
-	RubricCriterion,
 } from "./eval-helpers";
 
 const DATE = new Date("2025-06-15T00:00:00");
@@ -236,7 +235,7 @@ describe("knowledge value evaluation", () => {
 		}, 45000);
 
 		it.skipIf(SKIP)("output contains expected elements for learning day", async () => {
-			const { markdown, persona } = generateKnowledgeForPersona(learningDay);
+			const { markdown, persona: _persona } = generateKnowledgeForPersona(learningDay);
 
 			const result = await evaluateContainment(
 				markdown.slice(0, 4000),
