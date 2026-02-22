@@ -23,6 +23,7 @@ import {
 	generateSearchQueries,
 	generateShellCommands,
 	generateClaudeSessions,
+	generateCodexSessions,
 	generateGitCommits,
 } from "./generators";
 
@@ -33,6 +34,7 @@ export interface PersonaOutput {
 	searches: SearchQuery[];
 	shell: ShellCommand[];
 	claude: ClaudeSession[];
+	codex: ClaudeSession[];
 	git: GitCommit[];
 	expectedThemes: string[];
 	expectedActivityTypes: ActivityType[];
@@ -48,6 +50,7 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 	const searchTs = generateTimeSeries(25, config);
 	const shellTs = generateTimeSeries(40, config);
 	const claudeTs = generateTimeSeries(12, config);
+	const codexTs = generateTimeSeries(4, config);
 	const gitTs = generateTimeSeries(8, config);
 
 	const domains = [
@@ -77,6 +80,12 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 			projectName: "webapp",
 			timestamps: claudeTs,
 		}),
+		codex: generateCodexSessions({
+			count: 4,
+			promptCategory: "coding",
+			projectName: "webapp",
+			timestamps: codexTs,
+		}),
 		git: generateGitCommits({
 			count: 8,
 			templateCategory: "webdev",
@@ -97,6 +106,7 @@ export function academicResearcher(date?: Date): PersonaOutput {
 	const searchTs = generateTimeSeries(35, config);
 	const shellTs = generateTimeSeries(15, config);
 	const claudeTs = generateTimeSeries(8, config);
+	const codexTs = generateTimeSeries(3, config);
 	const gitTs = generateTimeSeries(5, config);
 
 	const domains = [
@@ -126,6 +136,12 @@ export function academicResearcher(date?: Date): PersonaOutput {
 			projectName: "thesis",
 			timestamps: claudeTs,
 		}),
+		codex: generateCodexSessions({
+			count: 3,
+			promptCategory: "general",
+			projectName: "thesis",
+			timestamps: codexTs,
+		}),
 		git: generateGitCommits({
 			count: 5,
 			templateCategory: "academic",
@@ -146,6 +162,7 @@ export function productManagerMeetings(date?: Date): PersonaOutput {
 	const searchTs = generateTimeSeries(15, config);
 	const shellTs = generateTimeSeries(5, config);
 	const claudeTs = generateTimeSeries(6, config);
+	const codexTs = generateTimeSeries(2, config);
 
 	const domains = [
 		...DOMAIN_SETS.product,
@@ -175,6 +192,12 @@ export function productManagerMeetings(date?: Date): PersonaOutput {
 			projectName: "search-redesign",
 			timestamps: claudeTs,
 		}),
+		codex: generateCodexSessions({
+			count: 2,
+			promptCategory: "general",
+			projectName: "search-redesign",
+			timestamps: codexTs,
+		}),
 		git: [],
 		expectedThemes: ["product strategy", "design review", "user metrics", "meetings", "roadmap"],
 		expectedActivityTypes: ["browsing", "communication", "admin", "planning"],
@@ -195,6 +218,7 @@ export function devopsIncidentDay(date?: Date): PersonaOutput {
 	const searchTs = generateTimeSeries(20, config);
 	const shellTs = generateTimeSeries(60, config);
 	const claudeTs = generateTimeSeries(10, config);
+	const codexTs = generateTimeSeries(4, config);
 	const gitTs = generateTimeSeries(6, config);
 
 	const domains = [
@@ -222,6 +246,12 @@ export function devopsIncidentDay(date?: Date): PersonaOutput {
 			projectName: "infrastructure",
 			timestamps: claudeTs,
 		}),
+		codex: generateCodexSessions({
+			count: 4,
+			promptCategory: "coding",
+			projectName: "infrastructure",
+			timestamps: codexTs,
+		}),
 		git: generateGitCommits({
 			count: 6,
 			templateCategory: "devops",
@@ -248,6 +278,7 @@ export function studentExamPrep(date?: Date): PersonaOutput {
 	const searchTs = generateTimeSeries(40, config);
 	const shellTs = generateTimeSeries(10, config);
 	const claudeTs = generateTimeSeries(15, config);
+	const codexTs = generateTimeSeries(3, config);
 	const gitTs = generateTimeSeries(3, config);
 
 	const domains = [
@@ -275,6 +306,12 @@ export function studentExamPrep(date?: Date): PersonaOutput {
 			promptCategory: "student",
 			projectName: "cs301-algorithms",
 			timestamps: claudeTs,
+		}),
+		codex: generateCodexSessions({
+			count: 3,
+			promptCategory: "coding",
+			projectName: "cs301-algorithms",
+			timestamps: codexTs,
 		}),
 		git: generateGitCommits({
 			count: 3,
@@ -314,6 +351,7 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 
 	// Claude sessions split across 3 project names
 	const claudeTs = generateTimeSeries(10, config);
+	const codexTs = generateTimeSeries(3, config);
 	const claudeA = generateClaudeSessions({
 		count: 4,
 		promptCategory: "freelance",
@@ -351,6 +389,12 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 		}),
 		shell: [...shellA, ...shellB, ...shellC, ...shellMisc].slice(0, 35),
 		claude: [...claudeA, ...claudeB, ...claudeC],
+		codex: generateCodexSessions({
+			count: 3,
+			promptCategory: "coding",
+			projectName: "client-a-dashboard",
+			timestamps: codexTs,
+		}),
 		git: generateGitCommits({
 			count: 4,
 			templateCategory: "webdev",
