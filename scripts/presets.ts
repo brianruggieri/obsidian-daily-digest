@@ -35,6 +35,9 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	enableShell: true,
 	enableClaude: true,
 	claudeSessionsDir: "~/.claude/projects",
+	enableCodex: true,
+	codexSessionsDir: "~/.codex/sessions",
+	maxCodexSessions: 30,
 	enableGit: true,
 	gitParentDir: "~/git",
 
