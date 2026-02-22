@@ -58,7 +58,7 @@ export const PRIVACY_DESCRIPTIONS = {
 		access:
 			"Reads JSONL log files from the Codex CLI desktop app to extract your prompts " +
 			"(not model responses). Injected system context is filtered automatically. " +
-			"No API key required — reads local files only.",
+			"No API key required — reads local files only. Prompts are truncated to 200 characters.",
 		files: "~/.codex/sessions/**/*.jsonl",
 		destination:
 			"Stored in your vault as part of the daily note. Prompts may " +
