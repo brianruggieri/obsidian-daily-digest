@@ -14,7 +14,6 @@ import { categorizeVisits } from "../../src/categorize";
 import { classifyEventsRuleOnly } from "../../src/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
 import { sanitizeCollectedData } from "../../src/sanitize";
-import { ClassificationResult, PatternAnalysis } from "../../src/types";
 import { fullStackDeveloper, researchKnowledgeWorker, scatteredContextSwitcher } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 import {
@@ -76,7 +75,7 @@ describe("summary quality evaluation", () => {
 
 	describe("classified prompt structure", () => {
 		it.skipIf(SKIP)("full-stack developer prompt is well-structured for AI consumption", async () => {
-			const { prompt, classification } = buildPersonaClassifiedPrompt(fullStackDeveloper);
+			const { prompt, classification: _classification } = buildPersonaClassifiedPrompt(fullStackDeveloper);
 
 			const result = await evaluateWithRubric(
 				prompt,
@@ -115,7 +114,7 @@ Evaluate whether the prompt:
 		}, 30000);
 
 		it.skipIf(SKIP)("scattered context-switcher prompt reflects diversity", async () => {
-			const { prompt, classification } = buildPersonaClassifiedPrompt(scatteredContextSwitcher);
+			const { prompt, classification: _classification } = buildPersonaClassifiedPrompt(scatteredContextSwitcher);
 
 			const result = await evaluateWithRubric(
 				prompt,
@@ -137,7 +136,7 @@ Evaluate whether:
 
 	describe("deidentified prompt quality", () => {
 		it.skipIf(SKIP)("deidentified prompt provides rich pattern context", async () => {
-			const { prompt, patterns } = buildPersonaDeidentifiedPrompt(fullStackDeveloper);
+			const { prompt, patterns: _patterns } = buildPersonaDeidentifiedPrompt(fullStackDeveloper);
 
 			const criteria: RubricCriterion[] = [
 				{

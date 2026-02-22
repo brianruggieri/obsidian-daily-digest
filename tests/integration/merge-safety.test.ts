@@ -7,7 +7,7 @@
  * They also test the backup/fallback safety guarantees.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { renderMarkdown } from "../../src/renderer";
 import {
 	extractUserContent,

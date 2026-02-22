@@ -7,7 +7,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"lint": "eslint src/",
+		"lint": "eslint src/ tests/",
+		"typecheck:test": "tsc -noEmit -skipLibCheck -p tsconfig.test.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:unit": "vitest run tests/unit",
