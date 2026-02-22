@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
-import { ClassificationResult, StructuredEvent, PatternAnalysis } from "../../src/types";
+import { ClassificationResult, PatternAnalysis } from "../../src/types";
 
 /**
  * Tests that the correct prompt tier is selected based on available data.

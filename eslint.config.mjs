@@ -30,6 +30,12 @@ export default ts.config(
 		},
 	},
 	{
+		files: ["tests/**/*.ts"],
+		rules: {
+			"no-console": "off",
+		},
+	},
+	{
 		ignores: ["main.js", "node_modules/", "*.mjs"],
 	},
 );

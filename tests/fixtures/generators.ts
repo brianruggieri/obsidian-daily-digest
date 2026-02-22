@@ -10,7 +10,6 @@ import {
 	ClaudeSession,
 	GitCommit,
 } from "../../src/types";
-import { TimeConfig, generateTimeSeries } from "./time-utils";
 
 // ── Domain Specification ────────────────────────────────
 
