@@ -239,6 +239,7 @@ export type SensitivityCategory =
 	| "adult" | "gambling" | "dating" | "health"
 	| "finance" | "drugs" | "weapons" | "piracy"
 	| "vpn_proxy" | "job_search" | "social_personal"
+	| "tracker" | "auth"
 	| "custom";
 
 export interface SensitivityConfig {

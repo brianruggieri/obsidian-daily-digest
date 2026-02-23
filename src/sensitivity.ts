@@ -250,6 +250,101 @@ const SOCIAL_PERSONAL_DOMAINS: string[] = [
 	"yikyak.com",
 ];
 
+// ── Email Tracker Domains ──────────────────────────────
+//
+// Email click-tracker redirect hops: intermediary URLs that appear in browser
+// history when clicking a link inside a marketing email. They carry zero content
+// signal — they only identify which campaign/send/click-event referred the visit.
+//
+// Sources: Disconnect.me Tracker Protection List (EmailAggressive category),
+// https://github.com/disconnectme/disconnect-tracking-protection
+//
+// Matching note: sensitivity.ts uses suffix matching, so listing "ct.sendgrid.net"
+// also catches "u1234567.ct.sendgrid.net". Root ESP domains (mandrillapp.com,
+// rs6.net, etc.) are tracking-only — they have no browsable content of their own.
+const TRACKER_DOMAINS: string[] = [
+	// SendGrid (Twilio) — click redirects via ct.sendgrid.net/u{id} subdomains
+	"ct.sendgrid.net",
+	// Mailchimp (Intuit) — tracking + Mandrill transactional redirect domains
+	"list-manage.com",      // Mailchimp click/unsubscribe redirect host
+	"mandrillapp.com",      // Mandrill transactional email
+	"mailchi.mp",           // Mailchimp shortlink redirect service
+	// Constant Contact
+	"rs6.net",              // r20.rs6.net and variants
+	// HubSpot
+	"hubspotemail.net",
+	"hsms06.com",
+	"hs-email.click",
+	// Salesforce / ExactTarget / Pardot
+	"exacttarget.com",
+	"exct.net",
+	"pardot.com",
+	// ActiveCampaign
+	"acemlna.com",
+	"acemlnb.com",
+	"acemlnc.com",
+	"acemlnd.com",
+	"activehosted.com",
+	// Marketo (Adobe) — click-tracker subdomains only, not the full marketo.com docs site
+	"click.marketo.com",
+	"mktoweb.com",
+	// Campaign Monitor / Marigold
+	"createsend.com",
+	// Klaviyo — email tracking domain is separate from klaviyo.com
+	"klaviyomail.com",
+	// Braze — click-tracker subdomain only
+	"click.braze.com",
+	"link.braze.com",
+	// Iterable
+	"click.iterable.com",
+	"links.iterable.com",
+	// ConvertKit
+	"convertkit-mail.com",
+	"convertkit-mail2.com",
+	"convertkit-mail3.com",
+	// Postmark
+	"pstmrk.it",
+	// Sailthru
+	"link.e.sailthru.com",
+	// Misc / seen in real browser history
+	"messaginganalytics.athena.io",
+];
+
+// ── Auth Flow Domains ──────────────────────────────────
+//
+// OAuth / SSO identity-provider intermediary pages: login screens, consent dialogs,
+// and token-exchange endpoints that appear between clicking "Log in" and arriving
+// at the destination app. None of these pages contain browsing content.
+//
+// Note: accounts.google.com is already excluded via EXCLUDE_DOMAINS in types.ts.
+// Listed here as well so users can toggle the category independently.
+const AUTH_DOMAINS: string[] = [
+	// Google (also in EXCLUDE_DOMAINS; listed here for category visibility)
+	"accounts.google.com",
+	// Microsoft identity platform
+	"login.microsoftonline.com",
+	"login.live.com",
+	"login.windows.net",
+	"account.microsoft.com",
+	// Apple ID
+	"appleid.apple.com",
+	"idmsa.apple.com",
+	// Salesforce
+	"login.salesforce.com",
+	// GitHub OAuth flow path (path-prefix match catches /login/oauth/authorize etc.)
+	"github.com/login/oauth",
+	// Healthcare / athena
+	"myidentity.platform.athenahealth.com",
+	"identity.athenahealth.com",
+	// Okta — okta.com suffix match catches company.okta.com auth portals
+	// (okta.com root is also a product site, but auth portals are the primary use case)
+	"okta.com",
+	// Auth0 — auth0.com suffix match catches company.auth0.com tenant portals
+	"auth0.com",
+	// Google Workspace SAML
+	"sso.google.com",
+];
+
 // ── Category Registry ──────────────────────────────────
 
 interface CategoryInfo {
@@ -313,6 +408,16 @@ const CATEGORY_REGISTRY: Record<SensitivityCategory, CategoryInfo> = {
 		label: "Personal & Sensitive Social",
 		description: "Confessional forums, gossip, astrology, personal ads",
 		domains: SOCIAL_PERSONAL_DOMAINS,
+	},
+	tracker: {
+		label: "Email Trackers",
+		description: "Email marketing click-tracker redirects (SendGrid, Mailchimp, HubSpot, etc.) — intermediary hops with no browsable content",
+		domains: TRACKER_DOMAINS,
+	},
+	auth: {
+		label: "Auth / SSO Flows",
+		description: "OAuth consent screens and identity-provider login pages (Microsoft, Apple, Okta, Auth0, etc.) — authentication intermediaries",
+		domains: AUTH_DOMAINS,
 	},
 	custom: {
 		label: "Custom",
