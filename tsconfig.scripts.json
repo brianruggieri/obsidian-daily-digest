@@ -3,8 +3,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"obsidian": ["tests/mocks/obsidian.ts"],
-			"sql.js": ["tests/mocks/sql-js.ts"]
+			"obsidian": ["tests/mocks/obsidian.ts"]
 		},
 		"module": "ESNext",
 		"moduleResolution": "node",
