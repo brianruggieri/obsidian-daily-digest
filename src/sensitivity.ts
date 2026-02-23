@@ -308,6 +308,9 @@ const TRACKER_DOMAINS: string[] = [
 	"link.e.sailthru.com",
 	// Misc / seen in real browser history
 	"messaginganalytics.athena.io",
+	"click.mail.zillow.com",
+	"trk.culturekings.com",
+	"links.email.claude.com",
 ];
 
 // ── Auth Flow Domains ──────────────────────────────────

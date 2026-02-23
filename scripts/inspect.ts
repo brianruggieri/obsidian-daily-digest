@@ -173,10 +173,10 @@ async function main(): Promise<void> {
 		{ enabled: true, level: "standard", excludedDomains: [], redactPaths: false, scrubEmails: true }
 	);
 	const visitResult = filterSensitiveDomains(sanitized.visits, {
-		enabled: true, categories: ["adult", "gambling", "dating"], customDomains: [], action: "exclude",
+		enabled: true, categories: ["adult", "gambling", "dating", "tracker", "auth"], customDomains: [], action: "exclude",
 	});
 	const searchResult = filterSensitiveSearches(sanitized.searches, {
-		enabled: true, categories: ["adult", "gambling", "dating"], customDomains: [], action: "exclude",
+		enabled: true, categories: ["adult", "gambling", "dating", "tracker", "auth"], customDomains: [], action: "exclude",
 	});
 
 	if (stage === "sanitized") {
