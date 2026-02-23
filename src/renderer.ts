@@ -87,14 +87,23 @@ export function renderMarkdown(
 	lines.push(`# \u{1F4C5} ${longDate(date)}`);
 	lines.push("");
 
+	// ── Stats ────────────────────────────────────
+	lines.push(
+		`> [!info] ${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
+			`${shell.length} commands \u00B7 ${claudeSessions.length} AI prompts \u00B7 ` +
+			`${gitCommits.length} commits \u00B7 ` +
+			`${Object.keys(categorized).length} categories`
+	);
+	lines.push("");
+
 	// ── AI Headline & TL;DR ─────────────────────
 	if (aiSummary) {
 		if (aiSummary.headline) {
-			lines.push(`> **${aiSummary.headline}**`);
+			lines.push(`> [!tip] ${aiSummary.headline}`);
 			lines.push("");
 		}
 		if (aiSummary.tldr) {
-			lines.push(aiSummary.tldr);
+			lines.push(`> [!abstract] ${aiSummary.tldr}`);
 			lines.push("");
 		}
 		if (aiSummary.themes?.length) {
@@ -114,17 +123,6 @@ export function renderMarkdown(
 		}
 	}
 
-	// ── Stats ────────────────────────────────────
-	lines.push(
-		`*${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
-			`${shell.length} commands \u00B7 ${claudeSessions.length} AI prompts \u00B7 ` +
-			`${gitCommits.length} commits \u00B7 ` +
-			`${Object.keys(categorized).length} categories*`
-	);
-	lines.push("");
-	lines.push("---");
-	lines.push("");
-
 	// ── Notable ──────────────────────────────────
 	if (aiSummary?.notable?.length) {
 		lines.push("## \u2728 Notable");
@@ -132,6 +130,40 @@ export function renderMarkdown(
 		for (const item of aiSummary.notable) {
 			lines.push(`- ${item}`);
 		}
+		lines.push("");
+	}
+
+	// ── Category Summaries Table (C2) ───────────
+	const catSumsEarly = aiSummary?.category_summaries ?? {};
+	if (Object.keys(catSumsEarly).length > 0) {
+		lines.push("| Category | Activity |");
+		lines.push("|---|---|");
+		for (const [cat, summary] of Object.entries(catSumsEarly)) {
+			const [_emoji, label] = CATEGORY_LABELS[cat] ?? ["\u{1F310}", cat];
+			lines.push(`| ${label} | ${summary} |`);
+		}
+		lines.push("");
+	}
+
+	// ── Work Patterns (C2) ───────────────────────
+	if (aiSummary?.work_patterns?.length || aiSummary?.cross_source_connections?.length) {
+		lines.push("## \u26A1 Work Patterns");
+		lines.push("");
+		if (aiSummary.work_patterns?.length) {
+			for (const p of aiSummary.work_patterns) {
+				lines.push(`- ${p}`);
+			}
+			lines.push("");
+		}
+		if (aiSummary.cross_source_connections?.length) {
+			lines.push("### \u{1F517} Cross-Source Connections");
+			lines.push("");
+			for (const c of aiSummary.cross_source_connections) {
+				lines.push(`> [!note] ${c}`);
+				lines.push("");
+			}
+		}
+		lines.push("---");
 		lines.push("");
 	}
 
@@ -260,17 +292,11 @@ export function renderMarkdown(
 	if (Object.keys(categorized).length) {
 		lines.push("## \u{1F310} Browser Activity");
 		lines.push("");
-		const catSums = aiSummary?.category_summaries ?? {};
 
 		for (const [cat, catVisits] of Object.entries(categorized)) {
 			const [emoji, label] = CATEGORY_LABELS[cat] ?? ["\u{1F310}", cat];
 			lines.push(`### ${emoji} ${label} (${catVisits.length})`);
-
-			const summary = catSums[cat];
-			if (summary) {
-				lines.push(`> ${summary}`);
-				lines.push("");
-			}
+			lines.push("");
 
 			// Group by domain
 			const byDomain: Record<string, BrowserVisit[]> = {};
@@ -298,12 +324,16 @@ export function renderMarkdown(
 	if (shell.length) {
 		lines.push("## \u{1F4BB} Shell");
 		lines.push("");
+		lines.push(`<details><summary>${shell.length} commands</summary>`);
+		lines.push("");
 		lines.push("```bash");
 		for (const e of shell) {
 			const ts = formatTime(e.time) || "     ";
 			lines.push(`# ${ts}  ${e.cmd}`);
 		}
 		lines.push("```");
+		lines.push("");
+		lines.push("</details>");
 		lines.push("");
 	}
 
