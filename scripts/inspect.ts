@@ -34,6 +34,7 @@ import { parseArgs } from "util";
 
 import { collectFixtureData, collectRealData } from "./lib/collector-shim";
 import { BASE_SETTINGS } from "./presets";
+import { detectAllBrowsers } from "../src/browser-profiles";
 import { getMockSummary } from "./lib/mock-ai";
 import { sanitizeCollectedData } from "../src/sanitize";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../src/sensitivity";
@@ -124,6 +125,14 @@ async function main(): Promise<void> {
 
 	console.error(`[inspect] date=${dateStr} stage=${stage} format=${format} data=${dataMode} ai=${aiMode}`);
 
+	// Auto-detect all browsers and opt in to every profile (inspector = dev tool, not production)
+	const detectedBrowsers = await detectAllBrowsers();
+	const browserConfigs = detectedBrowsers.map((b) => ({
+		...b,
+		enabled: true,
+		selectedProfiles: b.profiles.filter((p) => p.hasHistory).map((p) => p.profileDir),
+	}));
+
 	const settings = {
 		...BASE_SETTINGS,
 		enableBrowser: true,
@@ -131,11 +140,15 @@ async function main(): Promise<void> {
 		enableClaude: true,
 		enableCodex: true,
 		enableGit: true,
+		browserConfigs,
 	};
 
 	// ── Stage: raw ───────────────────────────────────────
+	// For real data, collect the target date window: midnight → 23:59:59.999
+	const since = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+	const until = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 	const raw = dataMode === "real"
-		? await collectRealData(settings)
+		? await collectRealData(settings, since, until)
 		: await collectFixtureData(settings);
 
 	if (stage === "raw") {
