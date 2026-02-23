@@ -18,6 +18,7 @@ const context = await esbuild.context({
 	bundle: true,
 	loader: {
 		".wasm": "binary",
+		".txt": "text",
 	},
 	external: [
 		"obsidian",

@@ -53,6 +53,7 @@ export interface DailyDigestSettings {
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
 	trackRecurrence: boolean;
+	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 }
@@ -97,6 +98,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
+	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 };
@@ -795,6 +797,19 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 			}
+
+			new Setting(containerEl)
+				.setName("Prompt templates directory")
+				.setDesc("Path to a directory containing standard.txt, rag.txt, etc. Leave empty to use built-in prompts.")
+				.addText((text) =>
+					text
+						.setPlaceholder("e.g. ~/prompts/daily-digest")
+						.setValue(this.plugin.settings.promptsDir)
+						.onChange(async (value) => {
+							this.plugin.settings.promptsDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
 
 			// ── Advanced AI processing ───────────────
 			const advAiHeading = new Setting(containerEl)

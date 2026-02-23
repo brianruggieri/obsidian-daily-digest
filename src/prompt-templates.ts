@@ -1,15 +1,19 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import standardTxt from "../prompts/standard.txt";
+import compressedTxt from "../prompts/compressed.txt";
+import ragTxt from "../prompts/rag.txt";
+import classifiedTxt from "../prompts/classified.txt";
+import deidentifiedTxt from "../prompts/deidentified.txt";
 
 export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified";
 
-// Built-in placeholder defaults — will be populated with actual content in Task A3
 export const BUILT_IN_PROMPTS: Record<PromptName, string> = {
-	standard: "__BUILT_IN_STANDARD__",
-	compressed: "__BUILT_IN_COMPRESSED__",
-	rag: "__BUILT_IN_RAG__",
-	classified: "__BUILT_IN_CLASSIFIED__",
-	deidentified: "__BUILT_IN_DEIDENTIFIED__",
+	standard: standardTxt,
+	compressed: compressedTxt,
+	rag: ragTxt,
+	classified: classifiedTxt,
+	deidentified: deidentifiedTxt,
 };
 
 /**
