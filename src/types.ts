@@ -63,6 +63,10 @@ export interface AISummary {
 	focus_narrative?: string;       // AI narrative about focus/fragmentation patterns
 	/** Structured prompts with stable IDs for inline-field rendering */
 	prompts?: ReflectionPrompt[];
+	/** Observed behavioral patterns, e.g. 'deep 2h focus block on auth', '4 context switches' */
+	work_patterns?: string[];
+	/** Cross-source narrative connections, e.g. 'Searched OAuth, then committed auth middleware' */
+	cross_source_connections?: string[];
 }
 
 // ── Browser Profile Types ────────────────────────────────
