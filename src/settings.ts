@@ -56,6 +56,7 @@ export interface DailyDigestSettings {
 	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
+	debugMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -101,6 +102,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
+	debugMode: false,
 };
 
 // Browser display names are imported from browser-profiles.ts (BROWSER_DISPLAY_NAMES)
@@ -580,6 +582,16 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					new Notice("Onboarding will be shown again when Obsidian restarts.");
 				})
 			);
+
+		new Setting(containerEl)
+			.setName("Debug mode")
+			.setDesc("Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.debugMode)
+				.onChange(async (value) => {
+					this.plugin.settings.debugMode = value;
+					await this.plugin.saveSettings();
+				}));
 
 		// ━━ 4. AI Summarization ━━━━━━━━━━━━━━━━━━━━━━
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
