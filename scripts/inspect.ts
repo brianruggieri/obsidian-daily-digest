@@ -153,16 +153,11 @@ async function main(): Promise<void> {
 
 	if (stage === "raw") {
 		output({
-			visits: raw.visits.length,
-			searches: raw.searches.length,
-			shell: raw.shell.length,
-			claudeSessions: raw.claudeSessions.length,
-			gitCommits: raw.gitCommits.length,
-			sampleVisit: raw.visits[0] ?? null,
-			sampleSearch: raw.searches[0] ?? null,
-			sampleShell: raw.shell[0] ?? null,
-			sampleClaude: raw.claudeSessions[0] ?? null,
-			sampleGit: raw.gitCommits[0] ?? null,
+			visits: raw.visits,
+			searches: raw.searches,
+			shell: raw.shell,
+			claudeSessions: raw.claudeSessions,
+			gitCommits: raw.gitCommits,
 		}, format, outFile);
 		return;
 	}
@@ -181,11 +176,11 @@ async function main(): Promise<void> {
 
 	if (stage === "sanitized") {
 		output({
-			visits: visitResult.kept.length,
-			searches: searchResult.kept.length,
-			shell: sanitized.shellCommands.length,
-			claudeSessions: sanitized.claudeSessions.length,
-			gitCommits: sanitized.gitCommits.length,
+			visits: visitResult.kept,
+			searches: searchResult.kept,
+			shell: sanitized.shellCommands,
+			claudeSessions: sanitized.claudeSessions,
+			gitCommits: sanitized.gitCommits,
 			filtered: visitResult.filtered + searchResult.filtered,
 		}, format, outFile);
 		return;
@@ -195,9 +190,7 @@ async function main(): Promise<void> {
 	const categorized = categorizeVisits(visitResult.kept);
 
 	if (stage === "categorized") {
-		const cats: Record<string, number> = {};
-		for (const [cat, vs] of Object.entries(categorized)) cats[cat] = vs.length;
-		output({ total: visitResult.kept.length, categories: cats }, format, outFile);
+		output(categorized, format, outFile);
 		return;
 	}
 
@@ -208,13 +201,7 @@ async function main(): Promise<void> {
 	);
 
 	if (stage === "classified") {
-		output({
-			totalProcessed: classification.totalProcessed,
-			llmClassified: classification.llmClassified,
-			ruleClassified: classification.ruleClassified,
-			eventCount: classification.events.length,
-			sampleEvents: classification.events.slice(0, 5),
-		}, format, outFile);
+		output(classification, format, outFile);
 		return;
 	}
 
@@ -227,13 +214,7 @@ async function main(): Promise<void> {
 	);
 
 	if (stage === "patterns") {
-		output({
-			focusScore: patterns.focusScore,
-			clusterCount: patterns.temporalClusters.length,
-			topActivityTypes: patterns.topActivityTypes.slice(0, 5),
-			topicCooccurrences: patterns.topicCooccurrences.slice(0, 5),
-			entityRelations: patterns.entityRelations.slice(0, 5),
-		}, format, outFile);
+		output(patterns, format, outFile);
 		return;
 	}
 
@@ -241,14 +222,7 @@ async function main(): Promise<void> {
 	const knowledge = generateKnowledgeSections(patterns);
 
 	if (stage === "knowledge") {
-		output({
-			focusSummary: knowledge.focusSummary,
-			focusScore: knowledge.focusScore,
-			temporalInsights: knowledge.temporalInsights,
-			topicMap: knowledge.topicMap.slice(0, 10),
-			entityGraph: knowledge.entityGraph.slice(0, 5),
-			recurrenceNotes: knowledge.recurrenceNotes,
-		}, format, outFile);
+		output(knowledge, format, outFile);
 		return;
 	}
 
