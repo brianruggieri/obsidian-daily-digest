@@ -13,6 +13,14 @@ describe("MockAI", () => {
     expect(typeof summary!.category_summaries).toBe("object");
   });
 
+  it("returns non-empty work_patterns and cross_source_connections", () => {
+    const summary = getMockSummary("cloud-haiku-tier1");
+    expect(Array.isArray(summary!.work_patterns)).toBe(true);
+    expect(summary!.work_patterns!.length).toBeGreaterThan(0);
+    expect(Array.isArray(summary!.cross_source_connections)).toBe(true);
+    expect(summary!.cross_source_connections!.length).toBeGreaterThan(0);
+  });
+
   it("embeds the preset id in the headline so outputs are distinguishable", () => {
     const summary = getMockSummary("cloud-sonnet-tier3");
     expect(summary!.headline).toContain("cloud-sonnet-tier3");
