@@ -2,9 +2,13 @@
  * deploy.mjs — Copy built plugin files to a local Obsidian vault for testing.
  *
  * Usage:
- *   npm run deploy                          # uses OBSIDIAN_VAULT env var or auto-detects
+ *   npm run deploy                          # uses OBSIDIAN_VAULT from .env or auto-detects
  *   npm run deploy -- /path/to/vault        # explicit vault path
  *   OBSIDIAN_VAULT=/path/to/vault npm run deploy
+ *
+ * Recommended: set OBSIDIAN_VAULT in .env to point at the dedicated test vault
+ * (~/obsidian-vaults/daily-digest-test) so builds never land in a personal vault.
+ * Copy .env.example → .env to get started.
  *
  * The script copies main.js, manifest.json, and styles.css (if present)
  * into <vault>/.obsidian/plugins/daily-digest/
@@ -13,6 +17,21 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "fs";
 import { join, resolve } from "path";
 import process from "process";
+
+// Load .env if present (no external deps — manual parse)
+const envPath = new URL(".env", import.meta.url).pathname;
+if (existsSync(envPath)) {
+	const lines = readFileSync(envPath, "utf8").split("\n");
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+		const eq = trimmed.indexOf("=");
+		if (eq === -1) continue;
+		const key = trimmed.slice(0, eq).trim();
+		const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+		if (!(key in process.env)) process.env[key] = val;
+	}
+}
 
 const PLUGIN_ID = JSON.parse(readFileSync("manifest.json", "utf8")).id;
 
@@ -48,9 +67,9 @@ function findVaultPath() {
 						console.log(`  ${i + 1}. ${v.path}`);
 					});
 					console.error(
-						"\nSpecify which vault to use:\n" +
-						"  npm run deploy -- /path/to/vault\n" +
-						"  OBSIDIAN_VAULT=/path/to/vault npm run deploy\n"
+						"\nSet OBSIDIAN_VAULT in .env (recommended) or specify inline:\n" +
+						"  echo 'OBSIDIAN_VAULT=/path/to/vault' >> .env\n" +
+						"  npm run deploy -- /path/to/vault\n"
 					);
 					process.exit(1);
 				}
