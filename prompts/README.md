@@ -10,10 +10,10 @@ Each template uses `{{variable}}` placeholders. Unknown variables are left as-is
 | Template | Key variables |
 |---|---|
 | standard.txt | dateStr, contextHint, browserActivity, searches, claudePrompts, shellCommands, gitCommits |
-| compressed.txt | + totalEvents |
+| compressed.txt | dateStr, contextHint, totalEvents, browserActivity, searches, claudePrompts, shellCommands, gitCommits |
 | rag.txt | dateStr, contextHint, chunkTexts |
 | classified.txt | dateStr, contextHint, totalProcessed, llmClassified, ruleClassified, allTopics, allEntities, activitySections |
-| deidentified.txt | dateStr, contextHint, activityDist, temporalShape, topTopics, entityClusters, topicConnections, recurrenceLines, focusScore, knowledgeDeltaLines |
+| deidentified.txt | dateStr, contextHint, activityDist, temporalShape, topTopics, entityClusters, topicConnections, recurrenceLines, focusScore, knowledgeDeltaLines, peakHours |
 
 ## Override location
 
