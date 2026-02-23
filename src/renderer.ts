@@ -121,6 +121,8 @@ export function renderMarkdown(
 				lines.push(formatDetailsBlock(entry));
 			}
 		}
+		lines.push("---");
+		lines.push("");
 	}
 
 	// ── Notable ──────────────────────────────────
