@@ -256,8 +256,12 @@ const SOCIAL_PERSONAL_DOMAINS: string[] = [
 // history when clicking a link inside a marketing email. They carry zero content
 // signal — they only identify which campaign/send/click-event referred the visit.
 //
-// Sources: Disconnect.me Tracker Protection List (EmailAggressive category),
-// https://github.com/disconnectme/disconnect-tracking-protection
+// Sources:
+//   - Disconnect.me Tracker Protection List (EmailAggressive category)
+//     https://github.com/disconnectme/disconnect-tracking-protection
+//   - NextDNS click-tracking-domains list
+//     https://github.com/nextdns/click-tracking-domains
+//   - ESP official documentation and community-confirmed redirect domains
 //
 // Matching note: sensitivity.ts uses suffix matching, so listing "ct.sendgrid.net"
 // also catches "u1234567.ct.sendgrid.net". Root ESP domains (mandrillapp.com,
@@ -285,14 +289,25 @@ const TRACKER_DOMAINS: string[] = [
 	"acemlnc.com",
 	"acemlnd.com",
 	"activehosted.com",
+	"trackcmp.net",         // ActiveCampaign site+email tracking
 	// Marketo (Adobe) — click-tracker subdomains only, not the full marketo.com docs site
 	"click.marketo.com",
 	"mktoweb.com",
 	// Campaign Monitor / Marigold
+	// Uses numbered root domains as click-redirect infrastructure (not subdomains)
 	"createsend.com",
-	// Klaviyo — email tracking domain is separate from klaviyo.com
+	"cmail1.com", "cmail2.com", "cmail3.com", "cmail4.com", "cmail5.com",
+	"cmail6.com", "cmail7.com", "cmail8.com", "cmail9.com", "cmail10.com",
+	"cmail11.com", "cmail12.com", "cmail13.com", "cmail14.com", "cmail15.com",
+	"cmail16.com", "cmail17.com", "cmail18.com", "cmail19.com", "cmail20.com",
+	"createsend1.com", "createsend2.com", "createsend3.com", "createsend4.com", "createsend5.com",
+	"createsend6.com", "createsend7.com", "createsend8.com", "createsend9.com", "createsend10.com",
+	"createsend11.com", "createsend12.com", "createsend13.com", "createsend14.com", "createsend15.com",
+	// Klaviyo — klaviyomail.com for general tracking; klclick* for click redirects
 	"klaviyomail.com",
-	// Braze — click-tracker subdomain only
+	"klclick.com",          // covers trk.klclick.com, ctrk.klclick.com, ct.klclick.com
+	"klclick1.com", "klclick2.com", "klclick3.com",
+	// Braze — click-tracker subdomains only
 	"click.braze.com",
 	"link.braze.com",
 	// Iterable
@@ -306,6 +321,50 @@ const TRACKER_DOMAINS: string[] = [
 	"pstmrk.it",
 	// Sailthru
 	"link.e.sailthru.com",
+	// Dotdigital (formerly Dotmailer) — r1/r2/r3 subdomains caught by suffix match
+	"dmtrk.net",
+	"dmtrk.com",
+	"ddlnk.net",
+	"ddlnk.com",
+	"trackedlink.net",
+	// SparkPost (Bird / MessageBird) — eu.spgo.io caught by suffix match
+	"spgo.io",
+	// Amazon SES — r.[region].awstrack.me caught by suffix match
+	"awstrack.me",
+	// Mailjet
+	"mjt.lu",
+	// MailerLite — click.mlsend.com + clicks.mlsend.com caught by suffix match
+	"mlsend.com",
+	// AWeber — dedicated click-tracking subdomain
+	"clicks.aweber.com",
+	// Brevo (Sendinblue)
+	"r.brevo.com",
+	// Intercom
+	"intercom-clicks.com",
+	// Customer.io — e.customeriomail.com + e-eu.customeriomail.com caught by suffix match
+	"customeriomail.com",
+	"track.customer.io",
+	// Drip — t.dripemail2.com caught by suffix match
+	"dripemail2.com",
+	// Emma (MyEmma) — t.e2ma.net caught by suffix match
+	"e2ma.net",
+	// Oracle Eloqua — customer subdomains caught by suffix match
+	"hs.eloqua.com",
+	// iContact — click.icptrack.com caught by suffix match
+	"icptrack.com",
+	// Omnisend (formerly Soundest)
+	"soundestlink.com",
+	// Outreach.io
+	"outrch.com",
+	// Yesware — specific subdomain only (yesware.com is their product site)
+	"t.yesware.com",
+	// Zoho Campaigns — regional variants
+	"maillist-manage.com",
+	"maillist-manage.com.au",
+	"maillist-manage.eu",
+	"maillist-manage.in",
+	// Infobip — specific tracking subdomain
+	"email-tracking.infobip.com",
 	// Misc / seen in real browser history
 	"messaginganalytics.athena.io",
 	"click.mail.zillow.com",
