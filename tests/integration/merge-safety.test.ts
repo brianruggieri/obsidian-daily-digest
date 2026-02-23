@@ -342,8 +342,8 @@ describe("fallback merge safety", () => {
 		const extraction: ExtractionResult = { content: null, raw: "old stuff" };
 		const merged = mergeContent(render(), extraction);
 
-		expect(merged).toContain("could not be automatically merged");
-		expect(merged).toContain("original content is preserved below in full");
+		expect(merged).toContain("had content written before Daily Digest first generated it");
+		expect(merged).toContain("will remain through future regenerations");
 	});
 });
 
