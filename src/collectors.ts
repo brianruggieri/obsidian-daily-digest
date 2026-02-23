@@ -242,7 +242,9 @@ export async function collectBrowserHistory(
 			for (const [eng, param] of Object.entries(SEARCH_ENGINES)) {
 				if (domain.includes(eng)) {
 					const q = url.searchParams.get(param);
-					if (q && q.trim() && !seenQueries.has(q.trim())) {
+					// Skip redirect/click-through URLs stored in the query param
+					// (e.g. Google stores LinkedIn email-click URLs in `q`)
+					if (q && q.trim() && !seenQueries.has(q.trim()) && !q.trim().startsWith("http")) {
 						seenQueries.add(q.trim());
 						searches.push({
 							query: decodeURIComponent(q.trim()),
