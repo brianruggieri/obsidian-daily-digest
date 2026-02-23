@@ -27,5 +27,12 @@ export function getMockSummary(presetId: string): AISummary | null {
 			`What would real AI output look like for preset ${presetId}?`,
 			"Run with AI_MODE=real to find out.",
 		],
+		work_patterns: [
+			"2-hour deep work block on TypeScript refactoring",
+			"Frequent context switches between documentation and coding",
+		],
+		cross_source_connections: [
+			"Searched for OAuth flows, then committed authentication middleware 30 minutes later",
+		],
 	};
 }
