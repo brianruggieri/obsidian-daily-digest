@@ -483,6 +483,28 @@ describe("createBackup", () => {
 		).rejects.toThrow("Disk full");
 	});
 
+	it("does not abort when backup folder already exists (race condition)", async () => {
+		// getAbstractFileByPath returns null (index lag) but createFolder throws
+		// "Folder already exists" — should not propagate
+		(mockVault.createFolder as ReturnType<typeof vi.fn>)
+			.mockRejectedValue(new Error("Folder already exists."));
+
+		await expect(
+			createBackup(mockVault, "daily/2025-06-15.md", "content")
+		).resolves.not.toThrow();
+		// The backup file should still be created
+		expect(mockVault.create).toHaveBeenCalled();
+	});
+
+	it("still throws when createFolder fails for reasons other than already-exists", async () => {
+		(mockVault.createFolder as ReturnType<typeof vi.fn>)
+			.mockRejectedValue(new Error("Permission denied"));
+
+		await expect(
+			createBackup(mockVault, "daily/2025-06-15.md", "content")
+		).rejects.toThrow("Permission denied");
+	});
+
 	it("generates unique backup paths for rapid successive calls", async () => {
 		await createBackup(mockVault, "daily/2025-06-15.md", "v1");
 		await new Promise(resolve => setTimeout(resolve, 5));
@@ -533,5 +555,100 @@ describe("edge cases", () => {
 		const extraction = extractUserContent(md);
 		// None of the generated sections should appear as custom sections
 		expect(extraction.content!.customSections.length).toBe(0);
+	});
+
+	// ── Manually-written notes (no daily-digest structure) ──────────────────
+
+	it("falls back to verbatim preservation when existing note has no daily-digest headings", () => {
+		const priorNote = "# Today\n\nWorking on feature X.\n\n- Item 1\n- Item 2";
+		const extraction = extractUserContent(priorNote);
+		const merged = mergeContent(freshNote(), extraction);
+
+		expect(merged).toContain("Previous Content (preserved)");
+		expect(merged).toContain("Working on feature X.");
+		expect(merged).toContain("- Item 1");
+	});
+
+	it("falls back for plain-text prior notes with no headings at all", () => {
+		const priorNote = "Notes for today: working on the OAuth bug.";
+		const extraction = extractUserContent(priorNote);
+		const merged = mergeContent(freshNote(), extraction);
+
+		expect(merged).toContain("Previous Content (preserved)");
+		expect(merged).toContain("working on the OAuth bug");
+	});
+
+	it("hasUserEdits returns true for non-empty non-digest note", () => {
+		const priorNote = "# My Heading\n\nSome content without ## generated sections.";
+		const extraction = extractUserContent(priorNote);
+		expect(hasUserEdits(extraction)).toBe(true);
+	});
+
+	it("still uses structured merge for a fresh daily-digest note with no user edits", () => {
+		const md = freshNote();
+		const extraction = extractUserContent(md);
+		// Has digest structure, but no user content → returns new note unchanged
+		expect(hasUserEdits(extraction)).toBe(false);
+		const merged = mergeContent(freshNote(), extraction);
+		expect(merged).not.toContain("Previous Content (preserved)");
+	});
+
+	// ── Previous Content (preserved) section persistence ────────────────────
+
+	it("Previous Content section uses informational wording, not error language", () => {
+		const priorNote = "My notes before the plugin ran.";
+		const extraction = extractUserContent(priorNote);
+		const merged = mergeContent(freshNote(), extraction);
+
+		expect(merged).toContain("had content written before Daily Digest first generated it");
+		expect(merged).not.toContain("could not be automatically merged");
+	});
+
+	it("Previous Content section survives a subsequent regeneration intact", () => {
+		// Simulate the state AFTER first generation on a manual note
+		const priorNote = "My hand-written notes for today.";
+		const firstGeneration = mergeContent(freshNote(), extractUserContent(priorNote));
+
+		// Now regenerate — the note already has digest structure
+		const secondGeneration = mergeContent(freshNote(), extractUserContent(firstGeneration));
+
+		expect(secondGeneration).toContain("Previous Content (preserved)");
+		expect(secondGeneration).toContain("My hand-written notes for today.");
+	});
+
+	it("Previous Content section does not duplicate on repeated regenerations", () => {
+		const priorNote = "Notes before first generation.";
+		const gen1 = mergeContent(freshNote(), extractUserContent(priorNote));
+		const gen2 = mergeContent(freshNote(), extractUserContent(gen1));
+		const gen3 = mergeContent(freshNote(), extractUserContent(gen2));
+
+		// Heading should appear exactly once
+		const count = (gen3.match(/## Previous Content \(preserved\)/g) || []).length;
+		expect(count).toBe(1);
+		expect(gen3).toContain("Notes before first generation.");
+	});
+
+	it("Previous Content section with internal ## headings is preserved as one block", () => {
+		// Old note contained ## headings — they must survive as one unit
+		const priorNote = [
+			"## My Project",
+			"",
+			"Working on auth.",
+			"",
+			"## Ideas",
+			"",
+			"- Item A",
+		].join("\n");
+
+		const gen1 = mergeContent(freshNote(), extractUserContent(priorNote));
+		const gen2 = mergeContent(freshNote(), extractUserContent(gen1));
+
+		// Both headings from the old note must still be present
+		expect(gen2).toContain("## My Project");
+		expect(gen2).toContain("## Ideas");
+		expect(gen2).toContain("- Item A");
+		// And only one "Previous Content" wrapper
+		const count = (gen2.match(/## Previous Content \(preserved\)/g) || []).length;
+		expect(count).toBe(1);
 	});
 });
