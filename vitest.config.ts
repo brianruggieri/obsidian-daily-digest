@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import { resolve } from "path";
+import { readFileSync } from "fs";
 
 export default defineConfig(({ mode }) => {
 	// Load .env file so ANTHROPIC_API_KEY and other eval vars are available.
@@ -27,5 +28,19 @@ export default defineConfig(({ mode }) => {
 				"sql.js": resolve(__dirname, "tests/mocks/sql-js.ts"),
 			},
 		},
+		plugins: [
+			{
+				// Vite plugin to handle .txt imports in the test environment.
+				// esbuild handles these in production via the "text" loader;
+				// here we read the file and export its content as a string.
+				name: "txt-loader",
+				transform(_code, id) {
+					if (id.endsWith(".txt")) {
+						const content = readFileSync(id, "utf-8");
+						return `export default ${JSON.stringify(content)};`;
+					}
+				},
+			},
+		],
 	};
 });

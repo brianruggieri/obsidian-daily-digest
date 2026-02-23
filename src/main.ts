@@ -426,7 +426,7 @@ export default class DailyDigestPlugin extends Plugin {
 							targetDate, categorized, searches, shellCmds,
 							claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
-							compressed
+							compressed, gitCommits, this.settings.promptsDir
 						);
 						aiNotice.hide();
 					} else {
@@ -443,7 +443,7 @@ export default class DailyDigestPlugin extends Plugin {
 						targetDate, categorized, searches, shellCmds,
 						claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
-						compressed
+						compressed, gitCommits, this.settings.promptsDir
 					);
 				}
 			}

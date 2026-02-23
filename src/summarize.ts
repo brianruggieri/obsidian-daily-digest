@@ -5,6 +5,7 @@ import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
 import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
+import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
 import * as log from "./log";
 
 // ── Prompt builder & summarizer ─────────────────────────
@@ -16,7 +17,8 @@ export function buildPrompt(
 	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	profile: string,
-	gitCommits: GitCommit[] = []
+	gitCommits: GitCommit[] = [],
+	promptsDir?: string
 ): string {
 	const catLines: string[] = [];
 	for (const [cat, visits] of Object.entries(categorized)) {
@@ -45,39 +47,16 @@ export function buildPrompt(
 		day: "numeric",
 	});
 
-	return `You are summarizing a person's digital activity for ${dateStr}.
-Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
-
-## Browser activity by category:
-${catLines.length ? catLines.join("\n") : "  (none)"}
-
-## Search queries:
-${searchList.length ? searchList.map((q) => `  - ${q}`).join("\n") : "  (none)"}
-
-## Claude Code / AI prompts:
-${claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)"}
-
-## Shell commands (secrets redacted):
-${shellList.length ? shellList.map((c) => `  - ${c}`).join("\n") : "  (none)"}
-
-## Git commits:
-${gitList.length ? gitList.join("\n") : "  (none)"}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
-  "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
-  },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
-}
-
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
-Only include category_summaries for categories that actually had activity.
-Do not include categories with zero visits.`;
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		browserActivity: catLines.length ? catLines.join("\n") : "  (none)",
+		searches: searchList.length ? searchList.map((q) => `  - ${q}`).join("\n") : "  (none)",
+		claudePrompts: claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)",
+		shellCommands: shellList.length ? shellList.map((c) => `  - ${c}`).join("\n") : "  (none)",
+		gitCommits: gitList.length ? gitList.join("\n") : "  (none)",
+	};
+	return fillTemplate(loadPromptTemplate("standard", promptsDir), vars);
 }
 
 // ── Compressed prompt builder (full-day mode) ───────────
@@ -88,7 +67,8 @@ Do not include categories with zero visits.`;
 function buildCompressedPrompt(
 	date: Date,
 	compressed: CompressedActivity,
-	profile: string
+	profile: string,
+	promptsDir?: string
 ): string {
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 	const dateStr = date.toLocaleDateString("en-US", {
@@ -98,41 +78,17 @@ function buildCompressedPrompt(
 		day: "numeric",
 	});
 
-	return `You are summarizing a person's digital activity for ${dateStr}.
-Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
-
-Total events collected: ${compressed.totalEvents}
-
-## Browser activity by category:
-${compressed.browserText}
-
-## Search queries:
-${compressed.searchText}
-
-## Claude Code / AI prompts:
-${compressed.claudeText}
-
-## Shell commands (secrets redacted):
-${compressed.shellText}
-
-## Git commits:
-${compressed.gitText}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
-  "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
-  },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
-}
-
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
-Only include category_summaries for categories that actually had activity.
-Do not include categories with zero visits.`;
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		totalEvents: String(compressed.totalEvents),
+		browserActivity: compressed.browserText,
+		searches: compressed.searchText,
+		claudePrompts: compressed.claudeText,
+		shellCommands: compressed.shellText,
+		gitCommits: compressed.gitText,
+	};
+	return fillTemplate(loadPromptTemplate("compressed", promptsDir), vars);
 }
 
 // ── RAG-aware prompt builder ────────────────────────────
@@ -140,7 +96,8 @@ Do not include categories with zero visits.`;
 function buildRAGPrompt(
 	date: Date,
 	retrievedChunks: EmbeddedChunk[],
-	profile: string
+	profile: string,
+	promptsDir?: string
 ): string {
 	const dateStr = date.toLocaleDateString("en-US", {
 		weekday: "long",
@@ -157,27 +114,12 @@ function buildRAGPrompt(
 		)
 		.join("\n\n");
 
-	return `You are summarizing a person's digital activity for ${dateStr}.
-Your job is to distill activity logs into useful, human-readable intelligence for a personal knowledge base.${contextHint}
-
-The following activity blocks were selected as the most relevant from today's data:
-
-${chunkTexts}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
-  "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
-  },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
-}
-
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
-Only include category_summaries for categories represented in the activity blocks above.`;
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		chunkTexts,
+	};
+	return fillTemplate(loadPromptTemplate("rag", promptsDir), vars);
 }
 
 // ── Classified prompt builder (Phase 2) ─────────────────
@@ -186,7 +128,8 @@ Only include category_summaries for categories represented in the activity block
 export function buildClassifiedPrompt(
 	date: Date,
 	classification: ClassificationResult,
-	profile: string
+	profile: string,
+	promptsDir?: string
 ): string {
 	const dateStr = date.toLocaleDateString("en-US", {
 		weekday: "long",
@@ -223,31 +166,17 @@ export function buildClassifiedPrompt(
 	const allTopics = [...new Set(classification.events.flatMap((ev: StructuredEvent) => ev.topics))];
 	const allEntities = [...new Set(classification.events.flatMap((ev: StructuredEvent) => ev.entities))];
 
-	return `You are summarizing a person's digital activity for ${dateStr}.
-Your job is to distill classified activity abstractions into useful, human-readable intelligence for a personal knowledge base.${contextHint}
-
-## Activity Overview
-Total events: ${classification.totalProcessed} (${classification.llmClassified} LLM-classified, ${classification.ruleClassified} rule-classified)
-All topics: ${allTopics.join(", ") || "none"}
-All entities: ${allEntities.join(", ") || "none"}
-
-## Activity by Type
-${sections.length ? sections.join("\n\n") : "(no classified events)"}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
-  "category_summaries": {
-    "<activity_type>": "1-sentence plain-English summary of what they did in this activity type"
-  },
-  "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"]
-}
-
-Be specific and concrete. Refer to the topics and entities mentioned.
-Only include category_summaries for activity types that had events.`;
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		totalProcessed: String(classification.totalProcessed),
+		llmClassified: String(classification.llmClassified),
+		ruleClassified: String(classification.ruleClassified),
+		allTopics: allTopics.join(", ") || "none",
+		allEntities: allEntities.join(", ") || "none",
+		activitySections: sections.join("\n\n") || "(no classified events)",
+	};
+	return fillTemplate(loadPromptTemplate("classified", promptsDir), vars);
 }
 
 // ── De-identified prompt builder (Phase 4) ──────────────
@@ -264,7 +193,8 @@ Only include category_summaries for activity types that had events.`;
 export function buildDeidentifiedPrompt(
 	date: Date,
 	patterns: PatternAnalysis,
-	profile: string
+	profile: string,
+	promptsDir?: string
 ): string {
 	const dateStr = date.toLocaleDateString("en-US", {
 		weekday: "long",
@@ -277,7 +207,7 @@ export function buildDeidentifiedPrompt(
 	// ── Activity distribution (counts only, no per-event data) ──
 	const activityDist = patterns.topActivityTypes
 		.map((a) => `  ${a.type}: ${a.count} events (${a.pct}%)`)
-		.join("\n");
+		.join("\n") || "  (no activity data)";
 
 	// ── Temporal shape (cluster labels only) ──
 	const temporalShape = patterns.temporalClusters.length > 0
@@ -340,7 +270,7 @@ export function buildDeidentifiedPrompt(
 
 	// ── Knowledge delta (counts and labels) ──
 	const delta = patterns.knowledgeDelta;
-	const deltaLines = [
+	const knowledgeDeltaLines = [
 		delta.newTopics.length > 0 ? `  New topics: ${delta.newTopics.join(", ")}` : null,
 		delta.recurringTopics.length > 0 ? `  Recurring: ${delta.recurringTopics.join(", ")}` : null,
 		delta.novelEntities.length > 0 ? `  New entities: ${delta.novelEntities.join(", ")}` : null,
@@ -348,7 +278,7 @@ export function buildDeidentifiedPrompt(
 	].filter(Boolean).join("\n") || "  No knowledge delta data.";
 
 	// ── Peak hours ──
-	const peakStr = patterns.peakHours.length > 0
+	const peakHours = patterns.peakHours.length > 0
 		? patterns.peakHours.slice(0, 3).map((p) => {
 			const h = p.hour;
 			const label = h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
@@ -356,56 +286,29 @@ export function buildDeidentifiedPrompt(
 		}).join(", ")
 		: "unknown";
 
-	return `You are a cognitive pattern analyst reviewing a person's aggregated digital activity for ${dateStr}.
-You are receiving ONLY statistical patterns and aggregated distributions — no raw data, URLs, search queries, commands, or individual event details. Your role is to provide meta-insights about cognitive patterns, focus, and learning behaviors.${contextHint}
+	// ── Focus label ──
+	const focusLabel = patterns.focusScore >= 0.7
+		? "highly focused"
+		: patterns.focusScore >= 0.5
+			? "moderately focused"
+			: patterns.focusScore >= 0.3
+				? "varied"
+				: "widely scattered";
 
-## Day Shape
-Focus score: ${Math.round(patterns.focusScore * 100)}% (${patterns.focusScore >= 0.7 ? "highly focused" : patterns.focusScore >= 0.5 ? "moderately focused" : patterns.focusScore >= 0.3 ? "varied" : "widely scattered"})
-Peak activity hours: ${peakStr}
-
-## Activity Distribution
-${activityDist || "  (no activity data)"}
-
-## Temporal Clusters
-${temporalShape}
-
-## Topic Distribution (aggregated)
-${topTopics}
-
-## Topic Connections
-${topicConnections}
-
-## Entity Clusters
-${entityClusters}
-
-## Recurrence Patterns
-${recurrenceStr}
-
-## Knowledge Delta
-${deltaLines}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence summarizing the day's cognitive character (max 15 words)",
-  "tldr": "2-3 sentence paragraph describing what this person's day looked like at a high level — their focus areas, work rhythm, and any shifts in attention",
-  "themes": ["3-5 theme labels inferred from topic and entity distributions"],
-  "category_summaries": {
-    "<activity_type>": "1-sentence interpretation of what the person was doing in this activity type (infer from topic distribution, not raw data)"
-  },
-  "notable": ["2-4 notable patterns: unusual topic combinations, context-switching moments, research spirals, or decision points"],
-  "questions": ["1-2 reflective questions based on the patterns — things the person might not have noticed about their own behavior"],
-  "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, topic depth vs breadth, attention fragmentation patterns, learning style indicators"],
-  "quirky_signals": ["1-3 unusual or interesting signals: topics revisited but never formalized, contradictions between focus areas, rabbit holes, or unexpectedly connected interests"],
-  "focus_narrative": "A 1-2 sentence narrative about the day's focus pattern — was it a deep-dive day, a context-switching day, a research day, an execution day? What does the temporal shape suggest?"
-}
-
-Be insightful and specific. You're a cognitive coach analyzing work patterns, not a task tracker. Look for:
-- Research spirals (same topic approached from multiple angles over time)
-- Implementation momentum (sustained focus on building)
-- Context-switching costs (fragmented clusters suggest attention debt)
-- Unformalized knowledge (topics explored repeatedly but never documented)
-- Cross-pollination (unexpected connections between different topic clusters)
-Only include category_summaries for activity types represented in the distribution.`;
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		focusScore: `${Math.round(patterns.focusScore * 100)}% (${focusLabel})`,
+		peakHours,
+		activityDist,
+		temporalShape,
+		topTopics,
+		topicConnections,
+		entityClusters,
+		recurrenceLines: recurrenceStr,
+		knowledgeDeltaLines,
+	};
+	return fillTemplate(loadPromptTemplate("deidentified", promptsDir), vars);
 }
 
 // ── Main summarization entry point ──────────────────────
@@ -422,7 +325,8 @@ export async function summarizeDay(
 	classification?: ClassificationResult,
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
-	gitCommits: GitCommit[] = []
+	gitCommits: GitCommit[] = [],
+	promptsDir?: string
 ): Promise<AISummary> {
 	let prompt: string;
 	let maxTokens = 1000;
@@ -433,8 +337,8 @@ export async function summarizeDay(
 	// fixed-cap prompt builder.
 	const standardPrompt = () =>
 		compressed
-			? buildCompressedPrompt(date, compressed, profile)
-			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits);
+			? buildCompressedPrompt(date, compressed, profile, promptsDir)
+			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits, promptsDir);
 
 	// Privacy escalation chain for Anthropic:
 	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
@@ -444,7 +348,7 @@ export async function summarizeDay(
 
 	if (patterns && config.provider === "anthropic") {
 		// Phase 4: Maximum privacy — aggregated patterns only
-		prompt = buildDeidentifiedPrompt(date, patterns, profile);
+		prompt = buildDeidentifiedPrompt(date, patterns, profile, promptsDir);
 		maxTokens = 1500; // Larger response for meta-insights
 		log.debug(
 			`Daily Digest: Using de-identified prompt for Anthropic ` +
@@ -454,7 +358,7 @@ export async function summarizeDay(
 		);
 	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
 		// Phase 2: Per-event abstractions — no raw data
-		prompt = buildClassifiedPrompt(date, classification, profile);
+		prompt = buildClassifiedPrompt(date, classification, profile, promptsDir);
 		log.debug(
 			`Daily Digest: Using classified prompt for Anthropic ` +
 			`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
@@ -475,7 +379,7 @@ export async function summarizeDay(
 					ragConfig.embeddingModel,
 					ragConfig.topK
 				);
-				prompt = buildRAGPrompt(date, retrieved, profile);
+				prompt = buildRAGPrompt(date, retrieved, profile, promptsDir);
 				log.debug(
 					`Daily Digest RAG: Using RAG prompt (${retrieved.length} chunks, ` +
 					`~${estimateTokens(prompt)} tokens)`
