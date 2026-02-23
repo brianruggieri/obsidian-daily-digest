@@ -78,6 +78,30 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	}
 }
 
+// ── Browser URL Utilities ────────────────────────
+
+/**
+ * Unwrap a google.com/url?q= redirect to its real destination.
+ * Returns the destination URL string if extractable, null otherwise.
+ *
+ * Google (and Gmail) proxy outbound links through google.com/url so they can
+ * measure click-through rates. Chrome logs a visit to the intermediary AND
+ * (usually) a separate visit to the destination. This function recovers the
+ * destination so we can either deduplicate or preserve it with the real URL.
+ */
+export function unwrapGoogleRedirect(rawUrl: string): string | null {
+	try {
+		const url = new URL(rawUrl);
+		const domain = url.hostname.replace(/^www\./, "");
+		if (domain !== "google.com" || url.pathname !== "/url") return null;
+		const dest = url.searchParams.get("q") || url.searchParams.get("url");
+		if (dest && dest.startsWith("https://")) return dest;
+		return null;
+	} catch {
+		return null;
+	}
+}
+
 // ── Browser History ──────────────────────────────
 
 function chromeEpochToDate(ts: number): Date {
@@ -92,12 +116,17 @@ async function readChromiumHistory(historyPath: string, since: Date): Promise<Br
 	if (!existsSync(historyPath)) return [];
 
 	const sinceChrome = BigInt(Math.floor((since.getTime() / 1000 + 11644473600) * 1_000_000));
-	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
+	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count, visits.transition FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
 
 	const rows = await querySqlite(historyPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
+			// Filter iframe navigations (AUTO_SUBFRAME=3, MANUAL_SUBFRAME=4).
+			// These are page resources loaded in iframes, not pages the user visited.
+			const coreType = parseInt(row[4]) & 0xFF;
+			if (coreType === 3 || coreType === 4) continue;
+
 			results.push({
 				url: row[0],
 				title: row[1] || "",
@@ -235,6 +264,19 @@ export async function collectBrowserHistory(
 			// Skip excluded domains
 			if ([...EXCLUDE_DOMAINS].some((ex) => domain.includes(ex))) continue;
 			if (!["http:", "https:"].includes(url.protocol)) continue;
+
+			// Unwrap google.com/url?q= redirect intermediaries.
+			// Chrome logs a visit to the redirect URL AND (usually) a separate visit
+			// to the destination. Extract the destination so we either deduplicate
+			// (destination already seen) or preserve the signal with the real URL.
+			const dest = unwrapGoogleRedirect(v.url);
+			if (dest !== null) {
+				if (!seenUrls.has(dest)) {
+					seenUrls.add(dest);
+					clean.push({ ...v, url: dest });
+				}
+				continue;
+			}
 
 			clean.push(v);
 
