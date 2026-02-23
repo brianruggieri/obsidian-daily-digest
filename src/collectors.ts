@@ -4,8 +4,6 @@ import { homedir, tmpdir, platform } from "os";
 // Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
 import initSqlJs from "sql.js";
-// @ts-ignore — wasm loaded as binary by esbuild
-import sqlWasm from "sql.js/dist/sql-wasm.wasm";
 import { DailyDigestSettings } from "./settings";
 import { scrubSecrets } from "./sanitize";
 import { warn } from "./log";
@@ -43,6 +41,21 @@ function tmpPath(suffix: string): string {
 // Uses sql.js (SQLite compiled to WASM) — no native binaries, no CLI dependency,
 // works on macOS, Windows, and Linux. The wasm binary is bundled inline by esbuild.
 
+// esbuild inlines the .wasm via binary loader; tsx scripts fall back to readFileSync.
+let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
+async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
+	if (_wasmBinary) return _wasmBinary;
+	try {
+		// @ts-expect-error — esbuild binary loader resolves .wasm to a Uint8Array default export
+		const { default: wasm } = await import("sql.js/dist/sql-wasm.wasm");
+		_wasmBinary = wasm as Uint8Array;
+	} catch {
+		// tsx scripts: load from disk at runtime
+		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
+	}
+	return _wasmBinary;
+}
+
 async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	const tmp = tmpPath(".db");
 	try {
@@ -55,7 +68,7 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 			copyFileSync(dbPath + "-shm", tmp + "-shm");
 		}
 
-		const SQL = await initSqlJs({ wasmBinary: sqlWasm });
+		const SQL = await initSqlJs({ wasmBinary: await loadWasmBinary() });
 		const buf = readFileSync(tmp);
 		const db = new SQL.Database(buf);
 		try {
