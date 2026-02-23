@@ -68,7 +68,7 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 			copyFileSync(dbPath + "-shm", tmp + "-shm");
 		}
 
-		const SQL = await initSqlJs({ wasmBinary: await loadWasmBinary() });
+		const SQL = await initSqlJs({ wasmBinary: await loadWasmBinary() as ArrayBuffer });
 		const buf = readFileSync(tmp);
 		const db = new SQL.Database(buf);
 		try {
