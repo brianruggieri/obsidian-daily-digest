@@ -150,6 +150,28 @@ describe("sanitizeUrl", () => {
 		expect(result).toBe("https://example.com/path");
 	});
 
+	it("strips UTM tracking params", () => {
+		const url = "https://example.com/page?utm_source=email&utm_medium=newsletter&page=2";
+		const result = sanitizeUrl(url, "standard");
+		expect(result).not.toContain("utm_source");
+		expect(result).not.toContain("utm_medium");
+		expect(result).toContain("page=2");
+	});
+
+	it("strips LinkedIn tracking params entirely", () => {
+		const url = "https://www.linkedin.com/jobs/view/123/?trk=eml-digest&trackingId=abc&refId=xyz&midToken=tok&eid=e&otpToken=otp";
+		const result = sanitizeUrl(url, "standard");
+		expect(result).toBe("https://www.linkedin.com/jobs/view/123/");
+	});
+
+	it("strips ad click IDs (fbclid, gclid) but keeps semantic params", () => {
+		const url = "https://example.com/product?fbclid=IwAR0abc&gclid=Cj0abc&color=blue";
+		const result = sanitizeUrl(url, "standard");
+		expect(result).not.toContain("fbclid");
+		expect(result).not.toContain("gclid");
+		expect(result).toContain("color=blue");
+	});
+
 	it("returns clean URLs unchanged (standard)", () => {
 		const clean = "https://github.com/myorg/repo";
 		const result = sanitizeUrl(clean, "standard");
