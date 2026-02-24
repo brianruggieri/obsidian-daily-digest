@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
+import { Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
@@ -19,54 +19,6 @@ import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHisto
 import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
 import * as log from "./log";
-
-class DatePickerModal extends Modal {
-	onSubmit: (date: Date) => void;
-	selectedDate: string;
-
-	constructor(app: App, onSubmit: (date: Date) => void) {
-		super(app);
-		this.onSubmit = onSubmit;
-		const now = new Date();
-		this.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		this.setTitle("Generate daily note");
-
-		new Setting(contentEl)
-			.setName("Date")
-			.setDesc("Select which date to compile")
-			.addText((text) => {
-				text.inputEl.type = "date";
-				text.setValue(this.selectedDate).onChange((value) => {
-					this.selectedDate = value;
-				});
-			});
-
-		new Setting(contentEl).addButton((btn) =>
-			btn
-				.setButtonText("Generate")
-				.setCta()
-				.onClick(() => {
-					this.close();
-					const parts = this.selectedDate.split("-");
-					const date = new Date(
-						parseInt(parts[0]),
-						parseInt(parts[1]) - 1,
-						parseInt(parts[2])
-					);
-					this.onSubmit(date);
-				})
-		);
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
 
 export default class DailyDigestPlugin extends Plugin {
 	settings: DailyDigestSettings;
