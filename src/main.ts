@@ -3,7 +3,8 @@ import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID
 import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
 import { compressActivity } from "./compress";
-import { summarizeDay } from "./summarize";
+import { summarizeDay, buildPrompt } from "./summarize";
+import { PipelineDebugModal } from "./pipeline-debug";
 import { AICallConfig } from "./ai-client";
 import { renderMarkdown } from "./renderer";
 import {
@@ -52,6 +53,17 @@ export default class DailyDigestPlugin extends Plugin {
 
 		// Settings tab
 		this.addSettingTab(new DailyDigestSettingTab(this.app, this));
+
+		// Debug command — only registered when debug mode is enabled
+		if (this.settings.debugMode) {
+			this.addCommand({
+				id: "pipeline-inspect",
+				name: "Inspect pipeline stage (debug)",
+				callback: () => {
+					new PipelineDebugModal(this.app, this).open();
+				},
+			});
+		}
 
 		// Privacy onboarding check
 		if (shouldShowOnboarding(this.settings)) {
@@ -105,6 +117,62 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+	}
+
+	async runPipelineStage(dateStr: string, stage: string): Promise<unknown> {
+		const [y, m, d] = dateStr.split("-").map(Number);
+		const date = new Date(y, m - 1, d); // midnight local time
+		const since = date; // collection window: midnight on the requested date
+
+		const { visits: rawVisits, searches: rawSearches } = await collectBrowserHistory(this.settings, since);
+		const rawShell = readShellHistory(this.settings, since);
+		const rawClaude = [
+			...readClaudeSessions(this.settings, since),
+			...readCodexSessions(this.settings, since),
+		];
+		const rawGit = readGitHistory(this.settings, since);
+
+		if (stage === "raw") {
+			return {
+				visits: rawVisits.length,
+				searches: rawSearches.length,
+				shell: rawShell.length,
+				claude: rawClaude.length,
+				git: rawGit.length,
+			};
+		}
+
+		const sanitized = sanitizeCollectedData(
+			rawVisits, rawSearches, rawShell, rawClaude, rawGit,
+			{ enabled: true, level: "standard", excludedDomains: [], redactPaths: false, scrubEmails: true }
+		);
+		if (stage === "sanitized") {
+			return {
+				visits: sanitized.visits.length,
+				searches: sanitized.searches.length,
+				shell: sanitized.shellCommands.length,
+				claude: sanitized.claudeSessions.length,
+				git: sanitized.gitCommits.length,
+				excluded: sanitized.excludedVisitCount,
+			};
+		}
+
+		const categorized = categorizeVisits(sanitized.visits);
+		if (stage === "categorized") {
+			const cats: Record<string, number> = {};
+			for (const [cat, vs] of Object.entries(categorized)) cats[cat] = vs.length;
+			return cats;
+		}
+
+		if (stage === "prompt") {
+			return buildPrompt(
+				date, categorized, sanitized.searches, sanitized.shellCommands,
+				sanitized.claudeSessions, this.settings.profile, sanitized.gitCommits,
+				this.settings.promptsDir
+			);
+		}
+
+		return { error: `Stage '${stage}' not supported in debug modal` };
 	}
 
 	/**
@@ -426,7 +494,7 @@ export default class DailyDigestPlugin extends Plugin {
 							targetDate, categorized, searches, shellCmds,
 							claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
-							compressed
+							compressed, gitCommits, this.settings.promptsDir
 						);
 						aiNotice.hide();
 					} else {
@@ -443,7 +511,7 @@ export default class DailyDigestPlugin extends Plugin {
 						targetDate, categorized, searches, shellCmds,
 						claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
-						compressed
+						compressed, gitCommits, this.settings.promptsDir
 					);
 				}
 			}

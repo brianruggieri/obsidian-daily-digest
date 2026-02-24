@@ -4,8 +4,6 @@ import { homedir, tmpdir, platform } from "os";
 // Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
 import initSqlJs from "sql.js";
-// @ts-ignore — wasm loaded as binary by esbuild
-import sqlWasm from "sql.js/dist/sql-wasm.wasm";
 import { DailyDigestSettings } from "./settings";
 import { scrubSecrets } from "./sanitize";
 import { warn } from "./log";
@@ -43,6 +41,21 @@ function tmpPath(suffix: string): string {
 // Uses sql.js (SQLite compiled to WASM) — no native binaries, no CLI dependency,
 // works on macOS, Windows, and Linux. The wasm binary is bundled inline by esbuild.
 
+// esbuild inlines the .wasm via binary loader; tsx scripts fall back to readFileSync.
+let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
+async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
+	if (_wasmBinary) return _wasmBinary;
+	try {
+		// @ts-expect-error — esbuild binary loader resolves .wasm to a Uint8Array default export
+		const { default: wasm } = await import("sql.js/dist/sql-wasm.wasm");
+		_wasmBinary = wasm as Uint8Array;
+	} catch {
+		// tsx scripts: load from disk at runtime
+		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
+	}
+	return _wasmBinary;
+}
+
 async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	const tmp = tmpPath(".db");
 	try {
@@ -55,7 +68,7 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 			copyFileSync(dbPath + "-shm", tmp + "-shm");
 		}
 
-		const SQL = await initSqlJs({ wasmBinary: sqlWasm });
+		const SQL = await initSqlJs({ wasmBinary: await loadWasmBinary() as ArrayBuffer });
 		const buf = readFileSync(tmp);
 		const db = new SQL.Database(buf);
 		try {
@@ -78,6 +91,30 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	}
 }
 
+// ── Browser URL Utilities ────────────────────────
+
+/**
+ * Unwrap a google.com/url?q= redirect to its real destination.
+ * Returns the destination URL string if extractable, null otherwise.
+ *
+ * Google (and Gmail) proxy outbound links through google.com/url so they can
+ * measure click-through rates. Chrome logs a visit to the intermediary AND
+ * (usually) a separate visit to the destination. This function recovers the
+ * destination so we can either deduplicate or preserve it with the real URL.
+ */
+export function unwrapGoogleRedirect(rawUrl: string): string | null {
+	try {
+		const url = new URL(rawUrl);
+		const domain = url.hostname.replace(/^www\./, "");
+		if (domain !== "google.com" || url.pathname !== "/url") return null;
+		const dest = url.searchParams.get("q") || url.searchParams.get("url");
+		if (dest && dest.startsWith("https://")) return dest;
+		return null;
+	} catch {
+		return null;
+	}
+}
+
 // ── Browser History ──────────────────────────────
 
 function chromeEpochToDate(ts: number): Date {
@@ -92,12 +129,17 @@ async function readChromiumHistory(historyPath: string, since: Date): Promise<Br
 	if (!existsSync(historyPath)) return [];
 
 	const sinceChrome = BigInt(Math.floor((since.getTime() / 1000 + 11644473600) * 1_000_000));
-	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
+	const sql = `SELECT urls.url, urls.title, visits.visit_time, urls.visit_count, visits.transition FROM visits JOIN urls ON visits.url = urls.id WHERE visits.visit_time > ${sinceChrome} ORDER BY visits.visit_time DESC`;
 
 	const rows = await querySqlite(historyPath, sql);
 	const results: BrowserVisit[] = [];
 	for (const row of rows) {
 		try {
+			// Filter iframe navigations (AUTO_SUBFRAME=3, MANUAL_SUBFRAME=4).
+			// These are page resources loaded in iframes, not pages the user visited.
+			const coreType = parseInt(row[4]) & 0xFF;
+			if (coreType === 3 || coreType === 4) continue;
+
 			results.push({
 				url: row[0],
 				title: row[1] || "",
@@ -236,13 +278,28 @@ export async function collectBrowserHistory(
 			if ([...EXCLUDE_DOMAINS].some((ex) => domain.includes(ex))) continue;
 			if (!["http:", "https:"].includes(url.protocol)) continue;
 
+			// Unwrap google.com/url?q= redirect intermediaries.
+			// Chrome logs a visit to the redirect URL AND (usually) a separate visit
+			// to the destination. Extract the destination so we either deduplicate
+			// (destination already seen) or preserve the signal with the real URL.
+			const dest = unwrapGoogleRedirect(v.url);
+			if (dest !== null) {
+				if (!seenUrls.has(dest)) {
+					seenUrls.add(dest);
+					clean.push({ ...v, url: dest });
+				}
+				continue;
+			}
+
 			clean.push(v);
 
 			// Extract search queries
 			for (const [eng, param] of Object.entries(SEARCH_ENGINES)) {
 				if (domain.includes(eng)) {
 					const q = url.searchParams.get(param);
-					if (q && q.trim() && !seenQueries.has(q.trim())) {
+					// Skip redirect/click-through URLs stored in the query param
+					// (e.g. Google stores LinkedIn email-click URLs in `q`)
+					if (q && q.trim() && !seenQueries.has(q.trim()) && !q.trim().startsWith("http")) {
 						seenQueries.add(q.trim());
 						searches.push({
 							query: decodeURIComponent(q.trim()),

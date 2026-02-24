@@ -21,9 +21,12 @@
 		"deploy:dev": "node esbuild.config.mjs production && node deploy.mjs",
 		"screenshots:setup": "bash screenshots/setup.sh",
 		"screenshots": "npm run screenshots:setup && npx wdio run screenshots/wdio.conf.ts",
-		"matrix": "tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
-		"matrix:real": "AI_MODE=real DATA_MODE=real tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
-		"matrix:assert": "MATRIX_ASSERT=true tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts"
+		"matrix": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
+		"matrix:real": "AI_MODE=real DATA_MODE=real NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
+		"matrix:assert": "MATRIX_ASSERT=true NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts",
+		"inspect": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/inspect.ts",
+		"inspect:real": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/inspect.ts --data-mode real",
+		"inspector": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/inspector.ts"
 	},
 	"keywords": [],
 	"license": "MIT",

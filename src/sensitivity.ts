@@ -250,6 +250,163 @@ const SOCIAL_PERSONAL_DOMAINS: string[] = [
 	"yikyak.com",
 ];
 
+// ── Email Tracker Domains ──────────────────────────────
+//
+// Email click-tracker redirect hops: intermediary URLs that appear in browser
+// history when clicking a link inside a marketing email. They carry zero content
+// signal — they only identify which campaign/send/click-event referred the visit.
+//
+// Sources:
+//   - Disconnect.me Tracker Protection List (EmailAggressive category)
+//     https://github.com/disconnectme/disconnect-tracking-protection
+//   - NextDNS click-tracking-domains list
+//     https://github.com/nextdns/click-tracking-domains
+//   - ESP official documentation and community-confirmed redirect domains
+//
+// Matching note: sensitivity.ts uses suffix matching, so listing "ct.sendgrid.net"
+// also catches "u1234567.ct.sendgrid.net". Root ESP domains (mandrillapp.com,
+// rs6.net, etc.) are tracking-only — they have no browsable content of their own.
+const TRACKER_DOMAINS: string[] = [
+	// SendGrid (Twilio) — click redirects via ct.sendgrid.net/u{id} subdomains
+	"ct.sendgrid.net",
+	// Mailchimp (Intuit) — tracking + Mandrill transactional redirect domains
+	"list-manage.com",      // Mailchimp click/unsubscribe redirect host
+	"mandrillapp.com",      // Mandrill transactional email
+	"mailchi.mp",           // Mailchimp shortlink redirect service
+	// Constant Contact
+	"rs6.net",              // r20.rs6.net and variants
+	// HubSpot
+	"hubspotemail.net",
+	"hsms06.com",
+	"hs-email.click",
+	// Salesforce / ExactTarget / Pardot
+	"exacttarget.com",
+	"exct.net",
+	"pardot.com",
+	// ActiveCampaign
+	"acemlna.com",
+	"acemlnb.com",
+	"acemlnc.com",
+	"acemlnd.com",
+	"activehosted.com",
+	"trackcmp.net",         // ActiveCampaign site+email tracking
+	// Marketo (Adobe) — click-tracker subdomains only, not the full marketo.com docs site
+	"click.marketo.com",
+	"mktoweb.com",
+	// Campaign Monitor / Marigold
+	// Uses numbered root domains as click-redirect infrastructure (not subdomains)
+	"createsend.com",
+	"cmail1.com", "cmail2.com", "cmail3.com", "cmail4.com", "cmail5.com",
+	"cmail6.com", "cmail7.com", "cmail8.com", "cmail9.com", "cmail10.com",
+	"cmail11.com", "cmail12.com", "cmail13.com", "cmail14.com", "cmail15.com",
+	"cmail16.com", "cmail17.com", "cmail18.com", "cmail19.com", "cmail20.com",
+	"createsend1.com", "createsend2.com", "createsend3.com", "createsend4.com", "createsend5.com",
+	"createsend6.com", "createsend7.com", "createsend8.com", "createsend9.com", "createsend10.com",
+	"createsend11.com", "createsend12.com", "createsend13.com", "createsend14.com", "createsend15.com",
+	// Klaviyo — klaviyomail.com for general tracking; klclick* for click redirects
+	"klaviyomail.com",
+	"klclick.com",          // covers trk.klclick.com, ctrk.klclick.com, ct.klclick.com
+	"klclick1.com", "klclick2.com", "klclick3.com",
+	// Braze — click-tracker subdomains only
+	"click.braze.com",
+	"link.braze.com",
+	// Iterable
+	"click.iterable.com",
+	"links.iterable.com",
+	// ConvertKit
+	"convertkit-mail.com",
+	"convertkit-mail2.com",
+	"convertkit-mail3.com",
+	// Postmark
+	"pstmrk.it",
+	// Sailthru
+	"link.e.sailthru.com",
+	// Dotdigital (formerly Dotmailer) — r1/r2/r3 subdomains caught by suffix match
+	"dmtrk.net",
+	"dmtrk.com",
+	"ddlnk.net",
+	"ddlnk.com",
+	"trackedlink.net",
+	// SparkPost (Bird / MessageBird) — eu.spgo.io caught by suffix match
+	"spgo.io",
+	// Amazon SES — r.[region].awstrack.me caught by suffix match
+	"awstrack.me",
+	// Mailjet
+	"mjt.lu",
+	// MailerLite — click.mlsend.com + clicks.mlsend.com caught by suffix match
+	"mlsend.com",
+	// AWeber — dedicated click-tracking subdomain
+	"clicks.aweber.com",
+	// Brevo (Sendinblue)
+	"r.brevo.com",
+	// Intercom
+	"intercom-clicks.com",
+	// Customer.io — e.customeriomail.com + e-eu.customeriomail.com caught by suffix match
+	"customeriomail.com",
+	"track.customer.io",
+	// Drip — t.dripemail2.com caught by suffix match
+	"dripemail2.com",
+	// Emma (MyEmma) — t.e2ma.net caught by suffix match
+	"e2ma.net",
+	// Oracle Eloqua — customer subdomains caught by suffix match
+	"hs.eloqua.com",
+	// iContact — click.icptrack.com caught by suffix match
+	"icptrack.com",
+	// Omnisend (formerly Soundest)
+	"soundestlink.com",
+	// Outreach.io
+	"outrch.com",
+	// Yesware — specific subdomain only (yesware.com is their product site)
+	"t.yesware.com",
+	// Zoho Campaigns — regional variants
+	"maillist-manage.com",
+	"maillist-manage.com.au",
+	"maillist-manage.eu",
+	"maillist-manage.in",
+	// Infobip — specific tracking subdomain
+	"email-tracking.infobip.com",
+	// Misc / seen in real browser history
+	"messaginganalytics.athena.io",
+	"click.mail.zillow.com",
+	"trk.culturekings.com",
+	"links.email.claude.com",
+];
+
+// ── Auth Flow Domains ──────────────────────────────────
+//
+// OAuth / SSO identity-provider intermediary pages: login screens, consent dialogs,
+// and token-exchange endpoints that appear between clicking "Log in" and arriving
+// at the destination app. None of these pages contain browsing content.
+//
+// Note: accounts.google.com is already excluded via EXCLUDE_DOMAINS in types.ts.
+// Listed here as well so users can toggle the category independently.
+const AUTH_DOMAINS: string[] = [
+	// Google (also in EXCLUDE_DOMAINS; listed here for category visibility)
+	"accounts.google.com",
+	// Microsoft identity platform
+	"login.microsoftonline.com",
+	"login.live.com",
+	"login.windows.net",
+	"account.microsoft.com",
+	// Apple ID
+	"appleid.apple.com",
+	"idmsa.apple.com",
+	// Salesforce
+	"login.salesforce.com",
+	// GitHub OAuth flow path (path-prefix match catches /login/oauth/authorize etc.)
+	"github.com/login/oauth",
+	// Healthcare / athena
+	"myidentity.platform.athenahealth.com",
+	"identity.athenahealth.com",
+	// Okta — okta.com suffix match catches company.okta.com auth portals
+	// (okta.com root is also a product site, but auth portals are the primary use case)
+	"okta.com",
+	// Auth0 — auth0.com suffix match catches company.auth0.com tenant portals
+	"auth0.com",
+	// Google Workspace SAML
+	"sso.google.com",
+];
+
 // ── Category Registry ──────────────────────────────────
 
 interface CategoryInfo {
@@ -313,6 +470,16 @@ const CATEGORY_REGISTRY: Record<SensitivityCategory, CategoryInfo> = {
 		label: "Personal & Sensitive Social",
 		description: "Confessional forums, gossip, astrology, personal ads",
 		domains: SOCIAL_PERSONAL_DOMAINS,
+	},
+	tracker: {
+		label: "Email Trackers",
+		description: "Email marketing click-tracker redirects (SendGrid, Mailchimp, HubSpot, etc.) — intermediary hops with no browsable content",
+		domains: TRACKER_DOMAINS,
+	},
+	auth: {
+		label: "Auth / SSO Flows",
+		description: "OAuth consent screens and identity-provider login pages (Microsoft, Apple, Okta, Auth0, etc.) — authentication intermediaries",
+		domains: AUTH_DOMAINS,
 	},
 	custom: {
 		label: "Custom",

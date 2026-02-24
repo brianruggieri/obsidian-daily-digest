@@ -53,8 +53,10 @@ export interface DailyDigestSettings {
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
 	trackRecurrence: boolean;
+	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
+	debugMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -97,8 +99,10 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
+	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
+	debugMode: false,
 };
 
 // Browser display names are imported from browser-profiles.ts (BROWSER_DISPLAY_NAMES)
@@ -579,6 +583,16 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				})
 			);
 
+		new Setting(containerEl)
+			.setName("Debug mode")
+			.setDesc("Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.debugMode)
+				.onChange(async (value) => {
+					this.plugin.settings.debugMode = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// ━━ 4. AI Summarization ━━━━━━━━━━━━━━━━━━━━━━
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
 		this.prependIcon(aiHeading.nameEl, "sparkles");
@@ -795,6 +809,19 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 			}
+
+			new Setting(containerEl)
+				.setName("Prompt templates directory")
+				.setDesc("Path to a directory containing standard.txt, rag.txt, etc. Leave empty to use built-in prompts.")
+				.addText((text) =>
+					text
+						.setPlaceholder("e.g. ~/prompts/daily-digest")
+						.setValue(this.plugin.settings.promptsDir)
+						.onChange(async (value) => {
+							this.plugin.settings.promptsDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
 
 			// ── Advanced AI processing ───────────────
 			const advAiHeading = new Setting(containerEl)

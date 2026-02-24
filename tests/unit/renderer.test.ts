@@ -61,7 +61,7 @@ describe("renderMarkdown", () => {
 
 	it("includes AI headline and tldr", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleShell, sampleClaude, [], sampleCategorized, sampleAISummary);
-		expect(md).toContain("**Productive day focused on React auth**");
+		expect(md).toContain("> [!tip] Productive day focused on React auth");
 		expect(md).toContain("Spent the day debugging");
 	});
 
@@ -304,6 +304,79 @@ describe("prompt log injection", () => {
 			"none"
 			// no promptLog argument — must still work
 		);
-		expect(md).not.toContain("<details>");
+		// prompt log details block should not appear; shell is empty so no shell <details> either
+		expect(md).not.toContain("claude-haiku");
+	});
+});
+
+// ── C2: Callouts, Tables, Collapsible Sections ───────────
+
+const testDate = new Date(2026, 1, 23); // Feb 23 2026
+
+const mockAISummary: AISummary = {
+	headline: "Built a pipeline inspector",
+	tldr: "Spent the day building a CLI tool for debugging the pipeline.",
+	themes: ["development", "tooling"],
+	category_summaries: { development: "Heavy coding session" },
+	notable: ["Committed 5 times"],
+	questions: ["Is the inspector fast enough?"],
+	work_patterns: ["Deep focus block on TypeScript implementation"],
+	cross_source_connections: ["Searched for esbuild docs, then committed loader config"],
+};
+
+describe("C2 callout format", () => {
+	it("renders stats as [!info] callout", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, null, "none");
+		expect(md).toContain("> [!info]");
+	});
+
+	it("renders headline as [!tip] callout when AI summary provided", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, mockAISummary, "anthropic");
+		expect(md).toContain("> [!tip]");
+		expect(md).toContain("Built a pipeline inspector");
+	});
+
+	it("renders tldr as [!abstract] callout", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, mockAISummary, "anthropic");
+		expect(md).toContain("> [!abstract]");
+		expect(md).toContain("Spent the day");
+	});
+
+	it("renders category_summaries as markdown table", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, mockAISummary, "anthropic");
+		expect(md).toContain("| Category | Activity |");
+	});
+
+	it("renders work_patterns section when present", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, mockAISummary, "anthropic");
+		expect(md).toContain("Work Patterns");
+		expect(md).toContain("Deep focus block on TypeScript implementation");
+	});
+
+	it("renders cross_source_connections as [!note] callouts", () => {
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, mockAISummary, "anthropic");
+		expect(md).toContain("> [!note]");
+		expect(md).toContain("Searched for esbuild docs");
+	});
+
+	it("renders shell section as collapsible details block", () => {
+		const shellCmds = [{ time: new Date(2026, 1, 23, 10, 0), cmd: "npm run build", cwd: "/project", exitCode: 0 }];
+		const md = renderMarkdown(testDate, [], [], shellCmds, [], [], {}, null, "none");
+		expect(md).toContain("<details>");
+		expect(md).toContain("<summary>");
+		expect(md).toContain("npm run build");
+	});
+
+	it("omits Work Patterns section when work_patterns and cross_source_connections are absent", () => {
+		const summaryNoPatterns: AISummary = {
+			headline: "A quiet day",
+			tldr: "Not much happened.",
+			themes: ["misc"],
+			category_summaries: {},
+			notable: [],
+			questions: [],
+		};
+		const md = renderMarkdown(testDate, [], [], [], [], [], {}, summaryNoPatterns, "anthropic");
+		expect(md).not.toContain("Work Patterns");
 	});
 });

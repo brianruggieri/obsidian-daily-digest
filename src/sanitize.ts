@@ -108,6 +108,26 @@ const SENSITIVE_URL_PARAMS = new Set([
 	"authorization", "bearer", "credential",
 ]);
 
+// Tracking/analytics params that carry no semantic meaning about what the
+// user was doing — they only identify the ad campaign, email send, or click
+// event that referred the visit. Stripping them makes URLs canonical and
+// readable without losing any content signal.
+const TRACKING_PARAMS = new Set([
+	// UTM campaign tracking
+	"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+	// Ad click IDs
+	"fbclid", "gclid", "msclkid", "twclid", "dclid",
+	// LinkedIn email tracking
+	"trk", "trkemail", "trackingid", "refid", "lipi",
+	"midtoken", "midsig", "eid", "otptoken",
+	// Google redirect / Gmail
+	"ust", "usg",
+	// HubSpot
+	"_hsenc", "_hsmi",
+	// Mailchimp
+	"mc_eid", "mc_cid",
+]);
+
 export function sanitizeUrl(rawUrl: string, level: SanitizationLevel): string {
 	try {
 		const url = new URL(rawUrl);
@@ -116,6 +136,13 @@ export function sanitizeUrl(rawUrl: string, level: SanitizationLevel): string {
 		if (url.username || url.password) {
 			url.username = "";
 			url.password = "[REDACTED]";
+		}
+
+		// Strip tracking/analytics params (no semantic content)
+		for (const param of [...url.searchParams.keys()]) {
+			if (TRACKING_PARAMS.has(param.toLowerCase())) {
+				url.searchParams.delete(param);
+			}
 		}
 
 		// Strip sensitive query params
