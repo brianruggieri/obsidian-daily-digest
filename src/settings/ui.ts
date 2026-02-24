@@ -5,7 +5,7 @@ import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "..
 import { getCategoryInfo, getTotalBuiltinDomains } from "../filter/sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../collect/browser-profiles";
 import * as log from "../plugin/log";
-import { DailyDigestSettings, DEFAULT_SETTINGS, AIProvider, SECRET_ID } from "./types";
+import { AIProvider, SECRET_ID } from "./types";
 
 export class DailyDigestSettingTab extends PluginSettingTab {
 	plugin: DailyDigestPlugin;
