@@ -1170,7 +1170,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		const configs = this.plugin.settings.browserConfigs;
 
-		const detectRow = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName("Browser & profile detection")
 			.setDesc(
 				configs.length === 0
