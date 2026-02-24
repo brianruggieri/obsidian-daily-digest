@@ -2,7 +2,7 @@ import { Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
-import { compressActivity, CompressedActivity } from "./compress";
+import { compressActivity } from "./compress";
 import { summarizeDay, buildPrompt } from "./summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
 import { AICallConfig } from "./ai-client";
