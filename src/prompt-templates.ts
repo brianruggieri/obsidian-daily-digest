@@ -210,13 +210,13 @@ Date: {{dateStr}}
 {{topicConnections}}
 </topic_connections>
 
-<entity_clusters>
+<entity_cooccurrences>
 {{entityClusters}}
-</entity_clusters>
+</entity_cooccurrences>
 
-<recurrence_patterns>
+<recurrence_signals>
 {{recurrenceLines}}
-</recurrence_patterns>
+</recurrence_signals>
 
 <knowledge_delta>
 {{knowledgeDeltaLines}}
