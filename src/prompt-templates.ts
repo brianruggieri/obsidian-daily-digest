@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
-export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified";
+export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified" | "unified";
 
 /**
  * Built-in prompt defaults, inlined as string literals so they work in both
@@ -9,188 +9,289 @@ export type PromptName = "standard" | "compressed" | "rag" | "classified" | "dei
  * The prompts/ directory on disk takes precedence when promptsDir is set.
  */
 export const BUILT_IN_PROMPTS: Record<PromptName, string> = {
-	standard: `You are summarizing a person's digital activity for {{dateStr}}.
-Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
+	standard: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}
 
-## Browser activity by category:
+Date: {{dateStr}}
+
+<browser_activity>
 {{browserActivity}}
+</browser_activity>
 
-## Search queries:
+<search_queries>
 {{searches}}
+</search_queries>
 
-## Claude Code / AI prompts:
+<ai_sessions>
 {{claudePrompts}}
+</ai_sessions>
 
-## Shell commands (secrets redacted):
+<shell_commands>
 {{shellCommands}}
+</shell_commands>
 
-## Git commits:
+<git_commits>
 {{gitCommits}}
+</git_commits>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
+  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided. Tell the story: what changed from start to end?",
+  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning? What energy or cognitive style characterized the day?",
+  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
+  "topics": ["4-8 specific vault-linkable noun phrases — the actual concepts, tools, or methods worked with today. Format as note titles for use as [[wikilinks]] in Obsidian: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming across sessions."],
+  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs encountered today — e.g. 'GitHub Actions', 'Tailwind CSS', 'Anthropic API'"],
   "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
+    "<category_name>": "1-sentence plain-English summary of what they were doing in this category"
   },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"],
-  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
-  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+  "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
+  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
+  "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
+  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments, candidates for new atomic notes in the vault"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'frequent context switching between research and implementation'"],
+  "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
 }
 
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
+Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
+Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
-Do not include categories with zero visits.
+Write for a person reading their own notes 3 months from now — help them remember what they understood and where they were in their work.
 `,
 
-	compressed: `You are summarizing a person's digital activity for {{dateStr}}.
-Your job is to distill raw activity logs into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
+	compressed: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}
 
+Date: {{dateStr}}
 Total events collected: {{totalEvents}}
 
-## Browser activity by category:
+<browser_activity>
 {{browserActivity}}
+</browser_activity>
 
-## Search queries:
+<search_queries>
 {{searches}}
+</search_queries>
 
-## Claude Code / AI prompts:
+<ai_sessions>
 {{claudePrompts}}
+</ai_sessions>
 
-## Shell commands (secrets redacted):
+<shell_commands>
 {{shellCommands}}
+</shell_commands>
 
-## Git commits:
+<git_commits>
 {{gitCommits}}
+</git_commits>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
+  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided. Tell the story: what changed from start to end?",
+  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning? What energy or cognitive style characterized the day?",
+  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
+  "topics": ["4-8 specific vault-linkable noun phrases — the actual concepts, tools, or methods worked with today. Format as note titles for use as [[wikilinks]] in Obsidian: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming across sessions."],
+  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs encountered today — e.g. 'GitHub Actions', 'Tailwind CSS', 'Anthropic API'"],
   "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
+    "<category_name>": "1-sentence plain-English summary of what they were doing in this category"
   },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"],
-  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
-  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+  "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
+  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
+  "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
+  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments, candidates for new atomic notes in the vault"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'frequent context switching between research and implementation'"],
+  "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
 }
 
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
+Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
+Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
-Do not include categories with zero visits.
+Write for a person reading their own notes 3 months from now — help them remember what they understood and where they were in their work.
 `,
 
-	rag: `You are summarizing a person's digital activity for {{dateStr}}.
-Your job is to distill activity logs into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
+	rag: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's activity into meaningful, reflective intelligence. The following activity blocks were selected as the most relevant from today's data.{{contextHint}}
 
-The following activity blocks were selected as the most relevant from today's data:
+Date: {{dateStr}}
 
+<activity_blocks>
 {{chunkTexts}}
+</activity_blocks>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
+  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided",
+  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning?",
+  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
+  "topics": ["4-8 specific vault-linkable noun phrases — format as note titles for [[wikilinks]]: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming."],
+  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs encountered today"],
   "category_summaries": {
-    "<category_name>": "1-sentence plain-English summary of what they did in this category"
+    "<category_name>": "1-sentence plain-English summary of what they were doing in this category"
   },
-  "notable": ["2-4 specific notable things: interesting searches, unusual patterns, apparent decisions or pivots"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"],
-  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
-  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+  "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
+  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later"],
+  "remember": ["3-5 specific things worth noting for quick future recall: commands, configurations, key resource names, approaches that worked"],
+  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting"],
+  "note_seeds": ["2-4 topics that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth', 'context switching between research and implementation'"],
+  "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
 }
 
-Be specific and concrete. Prefer "researched OAuth 2.0 flows for a GitHub integration" over "did some dev work".
-Only include category_summaries for categories represented in the activity blocks above.
+Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
+Be specific and concrete. Only include category_summaries for categories represented in the activity blocks above.
+Write for a person reading their own notes 3 months from now.
 `,
 
-	classified: `You are summarizing a person's digital activity for {{dateStr}}.
-Your job is to distill classified activity abstractions into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
+	classified: `You are building a daily note entry for a personal knowledge base. You are receiving structured activity abstractions — classified events with topics, entities, and summaries. Your task is to synthesize these into meaningful, reflective intelligence that helps this person understand their day, track learning, and connect today's work to their broader knowledge graph.{{contextHint}}
 
-## Activity Overview
+Date: {{dateStr}}
+
+<activity_overview>
 Total events: {{totalProcessed}} ({{llmClassified}} LLM-classified, {{ruleClassified}} rule-classified)
 All topics: {{allTopics}}
 All entities: {{allEntities}}
+</activity_overview>
 
-## Activity by Type
+<activity_by_type>
 {{activitySections}}
+</activity_by_type>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
-  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
-  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
-  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
+  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided",
+  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning?",
+  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
+  "topics": ["4-8 specific vault-linkable noun phrases drawn from today's topics. Format as note titles for [[wikilinks]]: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming."],
+  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs from today's entity data"],
   "category_summaries": {
-    "<activity_type>": "1-sentence plain-English summary of what they did in this activity type"
+    "<activity_type>": "1-sentence plain-English summary of what they were doing in this activity type"
   },
-  "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections"],
-  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"],
-  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
-  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+  "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections worth noting"],
+  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills demonstrated, concepts grasped, transitions from research to application"],
+  "remember": ["3-5 specific things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. what gets built"],
+  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting"],
+  "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that appeared across multiple activity types or represent clear learning moments"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth implementation', 'context switching between debugging and research'"],
+  "cross_source_connections": ["1-2 meaningful connections across activity types, e.g. 'Researched OAuth patterns, then implemented the flow in the same session'"]
 }
 
-Be specific and concrete. Refer to the topics and entities mentioned.
+Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
+Be specific and concrete. Refer to the topics and entities in the activity data above.
+Write for a person reading their own notes 3 months from now — help them remember not just what happened, but what it meant and where they were in their work.
 Only include category_summaries for activity types that had events.
 `,
 
-	deidentified: `You are a cognitive pattern analyst reviewing a person's aggregated digital activity for {{dateStr}}.
-You are receiving ONLY statistical patterns and aggregated distributions — no raw data, URLs, search queries, commands, or individual event details. Your role is to provide meta-insights about cognitive patterns, focus, and learning behaviors.{{contextHint}}
+	deidentified: `You are building a daily note entry for a personal knowledge base using only aggregated statistical patterns. You are receiving ONLY distributions and meta-signals — no raw data, URLs, queries, commands, or per-event details. Your role is to synthesize cognitive patterns, focus quality, and learning behaviors into reflective intelligence this person can use to understand their own work rhythms over time and connect this day to their broader knowledge graph.{{contextHint}}
 
-## Day Shape
-Focus score: {{focusScore}}
-Peak activity hours: {{peakHours}}
+Date: {{dateStr}}
 
-## Activity Distribution
+<pattern_analysis>
+<focus_context>Focus score: {{focusScore}} | Peak activity hours: {{peakHours}}</focus_context>
+
+<activity_distribution>
 {{activityDist}}
+</activity_distribution>
 
-## Temporal Clusters
+<temporal_clusters>
 {{temporalShape}}
+</temporal_clusters>
 
-## Topic Distribution (aggregated)
+<topic_distribution>
 {{topTopics}}
+</topic_distribution>
 
-## Topic Connections
+<topic_connections>
 {{topicConnections}}
+</topic_connections>
 
-## Entity Clusters
+<entity_clusters>
 {{entityClusters}}
+</entity_clusters>
 
-## Recurrence Patterns
+<recurrence_patterns>
 {{recurrenceLines}}
+</recurrence_patterns>
 
-## Knowledge Delta
+<knowledge_delta>
 {{knowledgeDeltaLines}}
+</knowledge_delta>
+</pattern_analysis>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
-  "headline": "one punchy sentence summarizing the day's cognitive character (max 15 words)",
-  "tldr": "2-3 sentence paragraph describing what this person's day looked like at a high level — their focus areas, work rhythm, and any shifts in attention",
-  "themes": ["3-5 theme labels inferred from topic and entity distributions"],
+  "headline": "one punchy sentence capturing the day's cognitive character (max 15 words)",
+  "work_story": "2-3 sentences describing the arc of the day's work based on the patterns — what the temporal clusters and topic distributions suggest about what was being built or solved, and how the focus evolved",
+  "mindset": "1 sentence characterizing the cognitive mode — was this a research day, execution day, debugging day, or mixed mode? What does the focus score and temporal shape suggest?",
+  "tldr": "2-3 sentences for future recall: the day's character, the knowledge accumulated, and what the patterns suggest about where this person's work is heading",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — inferred from topic distributions"],
+  "topics": ["4-8 specific vault-linkable noun phrases — dominant concepts from today's topic distribution. Format as note titles for [[wikilinks]]: 'OAuth 2.0', 'React hooks'. Infer from the topic data; use consistent naming."],
+  "entities": ["3-6 named entities inferred from the entity cluster data: specific tools, frameworks, or services that co-occurred prominently"],
   "category_summaries": {
     "<activity_type>": "1-sentence interpretation of what the person was doing in this activity type (infer from topic distribution, not raw data)"
   },
   "notable": ["2-4 notable patterns: unusual topic combinations, context-switching moments, research spirals, or decision points"],
-  "questions": ["1-2 reflective questions based on the patterns — things the person might not have noticed about their own behavior"],
+  "learnings": ["2-4 things the person likely learned based on the patterns — transitions from research to application, topics that deepened, knowledge accumulation signals"],
+  "remember": ["3-5 things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. built"],
+  "questions": ["1-3 evergreen questions based on the patterns — durable questions worth revisiting: principles being tested, recurring topics not yet formalized"],
+  "note_seeds": ["2-4 topics from the distribution that most deserve their own permanent note — concepts that appeared across multiple clusters or represent clear knowledge accumulation"],
   "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, topic depth vs breadth, attention fragmentation patterns, learning style indicators"],
   "quirky_signals": ["1-3 unusual or interesting signals: topics revisited but never formalized, contradictions between focus areas, rabbit holes, or unexpectedly connected interests"],
-  "focus_narrative": "A 1-2 sentence narrative about the day's focus pattern — was it a deep-dive day, a context-switching day, a research day, an execution day? What does the temporal shape suggest?",
-  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
-  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+  "focus_narrative": "1-2 sentences on the day's cognitive character — was it a deep-dive day, a context-switching day, a research day, an execution day? What does the temporal shape suggest about how well this person directed their attention?",
+  "work_patterns": ["1-3 behavioral observations inferred from temporal clusters, e.g. 'sustained morning focus block', 'fragmented afternoon attention across 4 topics'"],
+  "cross_source_connections": ["1-2 patterns suggesting connections between activity types, e.g. 'Research topics align with the implementation cluster two hours later'"]
 }
 
-Be insightful and specific. You're a cognitive coach analyzing work patterns, not a task tracker. Look for:
+Be insightful and specific. You're analyzing work patterns for someone building their own knowledge base, not writing a task log. Look for:
 - Research spirals (same topic approached from multiple angles over time)
-- Implementation momentum (sustained focus on building)
-- Context-switching costs (fragmented clusters suggest attention debt)
-- Unformalized knowledge (topics explored repeatedly but never documented)
+- Implementation momentum (sustained, uninterrupted focus on building)
+- Context-switching costs (fragmented clusters signal attention debt)
+- Unformalized knowledge (topics explored repeatedly but never documented or resolved)
 - Cross-pollination (unexpected connections between different topic clusters)
+Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
+Write for a person reading their own notes 3 months from now — help them understand their own cognitive patterns, not just recall events.
 Only include category_summaries for activity types represented in the distribution.
+`,
+
+	unified: `You are building a daily note entry for a personal knowledge base. You have access to multiple levels of data about this person's day — use all of them to produce the richest possible synthesis. This note will be read during personal reflection and linked to ongoing projects and future notes in the vault.{{contextHint}}
+
+Date: {{dateStr}}
+
+{{allSections}}
+
+Return ONLY a JSON object with these exact keys — no markdown, no preamble:
+{
+  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
+  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided. Tell the story: what changed from start to end of the day?",
+  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning? What energy or cognitive style characterized the day?",
+  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
+  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
+  "topics": ["4-8 specific vault-linkable noun phrases — the actual concepts, tools, or methods worked with today. Format as note titles for [[wikilinks]]: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming across sessions."],
+  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs encountered today"],
+  "category_summaries": {
+    "<category_or_activity_type>": "1-sentence summary of what they were doing in this area"
+  },
+  "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
+  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
+  "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
+  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
+  "focus_narrative": "1-2 sentences on the day's cognitive character — deep-dive, execution, research, or scattered? What does the temporal shape suggest about how well this person directed their attention?",
+  "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, depth vs breadth, attention fragmentation, learning style signals"],
+  "quirky_signals": ["1-3 unusual signals: topics revisited but never formalized, unexpected cross-domain connections, rabbit holes, contradictions between stated focus and actual behavior"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'context switching between research and implementation'"],
+  "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth flows, then committed auth middleware two hours later'"]
+}
+
+Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
+Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
+Only include category_summaries for categories or activity types that had actual activity.
+Write for a person reading their own notes 3 months from now — help them remember not just what happened, but what it meant, what they understood, and where they were in their work.
 `,
 };
 
