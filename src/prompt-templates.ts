@@ -48,7 +48,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments, candidates for new atomic notes in the vault"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'frequent context switching between research and implementation'"],
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
@@ -100,7 +100,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments, candidates for new atomic notes in the vault"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'frequent context switching between research and implementation'"],
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
@@ -135,7 +135,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands, configurations, key resource names, approaches that worked"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
   "note_seeds": ["2-4 topics that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth', 'context switching between research and implementation'"],
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
@@ -175,7 +175,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections worth noting"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills demonstrated, concepts grasped, transitions from research to application"],
   "remember": ["3-5 specific things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. what gets built"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion."],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that appeared across multiple activity types or represent clear learning moments"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth implementation', 'context switching between debugging and research'"],
   "cross_source_connections": ["1-2 meaningful connections across activity types, e.g. 'Researched OAuth patterns, then implemented the flow in the same session'"]
@@ -238,7 +238,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 notable patterns: unusual topic combinations, context-switching moments, research spirals, or decision points"],
   "learnings": ["2-4 things the person likely learned based on the patterns — transitions from research to application, topics that deepened, knowledge accumulation signals"],
   "remember": ["3-5 things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. built"],
-  "questions": ["1-3 evergreen questions based on the patterns — durable questions worth revisiting: principles being tested, recurring topics not yet formalized"],
+  "questions": ["1-2 genuinely open questions based on what the patterns reveal — questions the person themselves might not think to ask. Do not presuppose conclusions. Focus on the 'why' behind recurring patterns or the unresolved shape of focus."],
   "note_seeds": ["2-4 topics from the distribution that most deserve their own permanent note — concepts that appeared across multiple clusters or represent clear knowledge accumulation"],
   "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, topic depth vs breadth, attention fragmentation patterns, learning style indicators"],
   "quirky_signals": ["1-3 unusual or interesting signals: topics revisited but never formalized, contradictions between focus areas, rabbit holes, or unexpectedly connected interests"],
@@ -279,7 +279,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
   "focus_narrative": "1-2 sentences on the day's cognitive character — deep-dive, execution, research, or scattered? What does the temporal shape suggest about how well this person directed their attention?",
   "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, depth vs breadth, attention fragmentation, learning style signals"],
