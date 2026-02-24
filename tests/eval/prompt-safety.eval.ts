@@ -13,7 +13,7 @@ import { describe, it, expect } from "vitest";
 import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
 import { categorizeVisits } from "../../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
+import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { ClassificationResult, StructuredEvent, BrowserVisit, SearchQuery, ClaudeSession } from "../../src/types";
 import { fullStackDeveloper } from "../fixtures/personas";

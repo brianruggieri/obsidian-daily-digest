@@ -9,7 +9,7 @@ import {
 	slugifyQuestion,
 } from "./types";
 import { AIProvider } from "./settings/types";
-import { KnowledgeSections } from "./knowledge";
+import { KnowledgeSections } from "./analyze/knowledge";
 import { formatDetailsBlock, type PromptLog } from "../scripts/lib/prompt-logger";
 
 function formatTime(d: Date | null): string {

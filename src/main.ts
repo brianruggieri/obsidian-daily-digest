@@ -20,8 +20,8 @@ import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, Cla
 import { sanitizeCollectedData } from "./filter/sanitize";
 import { classifyEvents } from "./filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "./filter/sensitivity";
-import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./patterns";
-import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
+import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./analyze/patterns";
+import { generateKnowledgeSections, KnowledgeSections } from "./analyze/knowledge";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
 import * as log from "./log";
 

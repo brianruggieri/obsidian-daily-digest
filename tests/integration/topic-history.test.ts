@@ -3,7 +3,7 @@ import {
 	buildEmptyTopicHistory,
 	updateTopicHistory,
 	computeRecurrenceSignals,
-} from "../../src/patterns";
+} from "../../src/analyze/patterns";
 
 /**
  * Multi-day simulation: tests recurrence signal tracking across

@@ -5,7 +5,7 @@ import {
 	updateTopicHistory,
 	buildEmptyTopicHistory,
 	computeKnowledgeDelta,
-} from "../../src/patterns";
+} from "../../src/analyze/patterns";
 import {
 	StructuredEvent,
 	ClassificationResult,
