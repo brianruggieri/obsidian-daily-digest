@@ -31,12 +31,12 @@ const TODAY = "2025-06-15";
 function buildPersonaClassifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	return {
@@ -50,12 +50,12 @@ function buildPersonaClassifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof
 function buildPersonaDeidentifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(

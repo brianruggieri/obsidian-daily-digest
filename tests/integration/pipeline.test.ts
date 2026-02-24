@@ -17,8 +17,7 @@ function runPipeline(persona: PersonaOutput) {
 	const sanitized = sanitizeCollectedData(
 		persona.visits,
 		persona.searches,
-		persona.shell,
-		persona.claude,
+		[...persona.claude, ...(persona.codex ?? [])],
 		persona.git ?? [],
 		sanitizeConfig
 	);
@@ -30,7 +29,6 @@ function runPipeline(persona: PersonaOutput) {
 	const classification = classifyEventsRuleOnly(
 		sanitized.visits,
 		sanitized.searches,
-		sanitized.shellCommands,
 		sanitized.claudeSessions,
 		sanitized.gitCommits,
 		categorized
@@ -53,7 +51,6 @@ function runPipeline(persona: PersonaOutput) {
 		DATE,
 		sanitized.visits,
 		sanitized.searches,
-		sanitized.shellCommands,
 		sanitized.claudeSessions,
 		sanitized.gitCommits,
 		categorized,
@@ -85,7 +82,7 @@ describe("full pipeline", () => {
 
 			it("classifies all events", () => {
 				const totalInput = persona.visits.length + persona.searches.length +
-					persona.shell.length + persona.claude.length + (persona.git?.length ?? 0);
+					persona.claude.length + (persona.codex?.length ?? 0) + (persona.git?.length ?? 0);
 				expect(result.classification.totalProcessed).toBe(totalInput);
 			});
 
@@ -131,8 +128,8 @@ describe("pipeline edge cases", () => {
 			description: "No data",
 			visits: [],
 			searches: [],
-			shell: [],
 			claude: [],
+			codex: [],
 			git: [],
 			expectedThemes: [],
 			expectedActivityTypes: [],
@@ -150,8 +147,8 @@ describe("pipeline edge cases", () => {
 			description: "One visit",
 			visits: [{ url: "https://github.com/repo", title: "Repo", time: DATE, domain: "github.com" }],
 			searches: [],
-			shell: [],
 			claude: [],
+			codex: [],
 			git: [],
 			expectedThemes: [],
 			expectedActivityTypes: ["implementation"],

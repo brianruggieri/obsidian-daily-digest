@@ -38,17 +38,7 @@ prompt summaries.
 **Framing:** Reading view, cropped to both sections. ~1200px wide.
 **Why:** Shows how the plugin captures your research trail and AI conversations.
 
-### 4. `shell-and-reflection.png` — Shell Commands & Reflection
-**File:** `2025-06-18.md`
-**What to capture:** The Shell section (bash code block) and the Reflection
-section with its open-ended questions.
-**Shows:** Timestamped commands in a code block, AI-generated reflection
-questions with answer placeholders.
-**Framing:** Reading view. ~1200px wide.
-**Why:** Shows the "full picture" — even terminal work is captured, and the
-plugin prompts you to think.
-
-### 5. `meeting-heavy-day.png` — Mixed / Meeting Day Overview
+### 4. `meeting-heavy-day.png` — Mixed / Meeting Day Overview
 **File:** `2025-06-19.md`
 **What to capture:** Title through Notable section — showing a different kind
 of day (meetings + code review + research).
@@ -58,7 +48,7 @@ themes, different activity distribution.
 **Why:** Demonstrates the plugin works for varied workflows, not just "heads
 down coding" days.
 
-### 6. `no-ai-mode.png` — Without AI Summary
+### 5. `no-ai-mode.png` — Without AI Summary
 **File:** `2025-06-20-no-ai.md`
 **What to capture:** Full title + stats line + beginning of Searches section.
 **Shows:** Clean output without AI — still useful as a structured activity log.
@@ -66,7 +56,7 @@ down coding" days.
 **Why:** Shows the plugin is useful even without an API key. Lowers the barrier
 to trying it.
 
-### 7. `settings-panel.png` — Plugin Settings
+### 6. `settings-panel.png` — Plugin Settings
 **What to capture:** The plugin settings panel in Obsidian (Settings > Daily
 Digest). Show all sections: General, Data Sources, Limits, AI.
 **Shows:** Configurable options — folder, browsers, limits, AI toggle, model
@@ -78,12 +68,12 @@ selection.
 
 ## Optional / Nice-to-Have Screenshots
 
-### 8. `dark-mode.png` — Dark Theme Variant
+### 7. `dark-mode.png` — Dark Theme Variant
 **File:** `2025-06-18.md`
 **What to capture:** Same as hero shot but in Obsidian dark mode.
 **Why:** Many Obsidian users prefer dark themes; shows it looks great either way.
 
-### 9. `frontmatter-tags.png` — Tag Cloud / Graph View
+### 8. `frontmatter-tags.png` — Tag Cloud / Graph View
 **What to capture:** Obsidian's graph view or tag pane showing the auto-generated
 tags (daily-digest, dev, oauth, react, authentication, etc.).
 **Shows:** How generated tags integrate with Obsidian's knowledge graph.
@@ -91,21 +81,21 @@ tags (daily-digest, dev, oauth, react, authentication, etc.).
 **Why:** Powerful for Obsidian power users — shows the notes connect to your
 existing vault.
 
-### 10. `calendar-view.png` — Monthly Calendar with Digests
+### 9. `calendar-view.png` — Monthly Calendar with Digests
 **What to capture:** Obsidian Calendar plugin showing a month with daily digest
 notes linked on each day.
 **Shows:** Daily digest integrates with the Calendar community plugin.
 **Framing:** Calendar sidebar + a daily note open. ~1200px wide.
 **Why:** Shows the daily ritual workflow.
 
-### 11. `command-palette.png` — Running the Plugin
+### 10. `command-palette.png` — Running the Plugin
 **What to capture:** Obsidian command palette with "Daily Digest: Generate
 today's digest" highlighted.
 **Shows:** How to trigger the plugin.
 **Framing:** Command palette overlay. ~600px wide.
 **Why:** Shows it's a one-click operation.
 
-### 12. `mobile-view.png` — Mobile Reading (if applicable)
+### 11. `mobile-view.png` — Mobile Reading (if applicable)
 **What to capture:** The daily digest rendered on Obsidian Mobile.
 **Shows:** Responsive, readable on mobile.
 **Framing:** Phone screenshot. ~375px wide.

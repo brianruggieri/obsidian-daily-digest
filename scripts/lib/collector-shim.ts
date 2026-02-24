@@ -1,11 +1,10 @@
 import { DailyDigestSettings } from "../../src/settings";
-import { BrowserVisit, SearchQuery, ShellCommand, ClaudeSession, GitCommit } from "../../src/types";
+import { BrowserVisit, SearchQuery, ClaudeSession, GitCommit } from "../../src/types";
 import { softwareEngineerDeepWork } from "../../tests/fixtures/personas";
 
 export interface CollectedData {
 	visits: BrowserVisit[];
 	searches: SearchQuery[];
-	shell: ShellCommand[];
 	claudeSessions: ClaudeSession[];
 	gitCommits: GitCommit[];
 }
@@ -15,7 +14,6 @@ export async function collectFixtureData(settings: DailyDigestSettings): Promise
 	return {
 		visits: settings.enableBrowser ? (persona.visits ?? []) : [],
 		searches: settings.enableBrowser ? (persona.searches ?? []) : [],
-		shell: settings.enableShell ? (persona.shell ?? []) : [],
 		claudeSessions: [
 			...(settings.enableClaude ? (persona.claude ?? []) : []),
 			...(settings.enableCodex ? (persona.codex ?? []) : []),
@@ -55,12 +53,11 @@ export async function collectRealData(settings: DailyDigestSettings, since?: Dat
 		searches = result.searches;
 	}
 
-	const { readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } = await import("../../src/collectors");
+	const { readClaudeSessions, readCodexSessions, readGitHistory } = await import("../../src/collectors");
 
 	let raw: CollectedData = {
 		visits,
 		searches,
-		shell: settings.enableShell ? readShellHistory(settings, since) : [],
 		claudeSessions: [
 			...(settings.enableClaude ? readClaudeSessions(settings, since) : []),
 			...(settings.enableCodex ? readCodexSessions(settings, since) : []),
@@ -72,7 +69,6 @@ export async function collectRealData(settings: DailyDigestSettings, since?: Dat
 		raw = {
 			visits: raw.visits.filter((v) => v.time === null || v.time <= until!),
 			searches: raw.searches.filter((s) => s.time === null || s.time <= until!),
-			shell: raw.shell.filter((s) => s.time === null || s.time <= until!),
 			claudeSessions: raw.claudeSessions.filter((s) => s.time <= until!),
 			gitCommits: raw.gitCommits.filter((c) => c.time === null || c.time <= until!),
 		};

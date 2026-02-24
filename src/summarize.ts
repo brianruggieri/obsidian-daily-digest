@@ -3,7 +3,7 @@ import { scrubSecrets } from "./sanitize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ShellCommand, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "./types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "./types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
 import * as log from "./log";
@@ -14,7 +14,6 @@ export function buildPrompt(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	profile: string,
 	gitCommits: GitCommit[] = [],
@@ -37,7 +36,6 @@ export function buildPrompt(
 
 	const searchList = searches.slice(0, 20).map((s) => s.query);
 	const claudeList = claudeSessions.slice(0, 10).map((e) => e.prompt.slice(0, 120));
-	const shellList = shellCmds.slice(0, 15).map((e) => scrubSecrets(e.cmd).slice(0, 80));
 	const gitList = gitCommits.slice(0, 20).map((c) => `  - [${c.repo}] ${c.message.slice(0, 80)}`);
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 
@@ -62,7 +60,6 @@ export function buildPrompt(
 		browserActivity: catLines.length ? catLines.join("\n") : "  (none)",
 		searches: searchList.length ? searchList.map((q) => `  - ${q}`).join("\n") : "  (none)",
 		claudePrompts: claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)",
-		shellCommands: shellList.length ? shellList.map((c) => `  - ${c}`).join("\n") : "  (none)",
 		gitCommits: gitList.length ? gitList.join("\n") : "  (none)",
 	};
 	return fillTemplate(loadPromptTemplate("standard", promptsDir), vars);
@@ -103,7 +100,6 @@ function buildCompressedPrompt(
 		browserActivity: compressed.browserText,
 		searches: compressed.searchText,
 		claudePrompts: compressed.claudeText,
-		shellCommands: compressed.shellText,
 		gitCommits: compressed.gitText,
 	};
 	return fillTemplate(loadPromptTemplate("compressed", promptsDir), vars);
@@ -359,7 +355,6 @@ export function buildUnifiedPrompt(
 	options: {
 		categorized?: CategorizedVisits;
 		searches?: SearchQuery[];
-		shellCmds?: ShellCommand[];
 		claudeSessions?: ClaudeSession[];
 		gitCommits?: GitCommit[];
 		compressed?: CompressedActivity;
@@ -368,7 +363,7 @@ export function buildUnifiedPrompt(
 	}
 ): string {
 	const {
-		categorized, searches, shellCmds, claudeSessions, gitCommits,
+		categorized, searches, claudeSessions, gitCommits,
 		compressed, classification, patterns,
 	} = options;
 
@@ -510,15 +505,11 @@ ${compressed.searchText}
 ${compressed.claudeText}
 </ai_sessions>
 
-<shell_commands>
-${compressed.shellText}
-</shell_commands>
-
 <git_commits>
 ${compressed.gitText}
 </git_commits>
 </raw_activity>`);
-	} else if (categorized || searches?.length || shellCmds?.length || claudeSessions?.length || gitCommits?.length) {
+	} else if (categorized || searches?.length || claudeSessions?.length || gitCommits?.length) {
 		const catLines: string[] = [];
 		if (categorized) {
 			for (const [cat, visits] of Object.entries(categorized)) {
@@ -531,7 +522,6 @@ ${compressed.gitText}
 		}
 		const searchList = (searches ?? []).slice(0, 20).map((s) => `  - ${s.query}`);
 		const claudeList = (claudeSessions ?? []).slice(0, 10).map((e) => `  - ${e.prompt.slice(0, 120)}`);
-		const shellList = (shellCmds ?? []).slice(0, 15).map((e) => `  - ${scrubSecrets(e.cmd).slice(0, 80)}`);
 		const gitList = (gitCommits ?? []).slice(0, 20).map((c) => `  - [${c.repo}] ${c.message.slice(0, 80)}`);
 		sections.push(`<raw_activity>
 <browser_activity>
@@ -545,10 +535,6 @@ ${searchList.length ? searchList.join("\n") : "  (none)"}
 <ai_sessions>
 ${claudeList.length ? claudeList.join("\n") : "  (none)"}
 </ai_sessions>
-
-<shell_commands>
-${shellList.length ? shellList.join("\n") : "  (none)"}
-</shell_commands>
 
 <git_commits>
 ${gitList.length ? gitList.join("\n") : "  (none)"}
@@ -602,7 +588,6 @@ export async function summarizeDay(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	config: AICallConfig,
 	profile: string,
@@ -623,7 +608,7 @@ export async function summarizeDay(
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
-			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
 
 	// Privacy escalation chain for Anthropic:
 	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
@@ -654,7 +639,6 @@ export async function summarizeDay(
 		prompt = buildUnifiedPrompt(date, profile, {
 			categorized,
 			searches,
-			shellCmds,
 			claudeSessions,
 			gitCommits,
 			compressed,
@@ -670,7 +654,7 @@ export async function summarizeDay(
 		);
 	} else if (ragConfig?.enabled) {
 		const chunks = chunkActivityData(
-			date, categorized, searches, shellCmds, claudeSessions
+			date, categorized, searches, claudeSessions
 		);
 		const totalTokens = chunks.reduce(
 			(sum, c) => sum + estimateTokens(c.text), 0

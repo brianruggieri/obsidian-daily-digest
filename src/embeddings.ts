@@ -185,13 +185,6 @@ export function autoGenerateQueries(chunks: ActivityChunk[]): string[] {
 				queries.push(`AI coding work on ${projects}`);
 			}
 		}
-
-		if (chunk.type === "shell") {
-			const patterns = chunk.text.match(/Patterns: (.+)/)?.[1] || "";
-			if (patterns) {
-				queries.push(`Terminal work: ${patterns}`);
-			}
-		}
 	}
 
 	// Deduplicate and cap at 5 queries

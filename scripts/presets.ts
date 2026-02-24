@@ -23,7 +23,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	// Data sources — toggles & paths
 	browserConfigs: [],
 	enableBrowser: true,
-	enableShell: true,
 	enableClaude: true,
 	claudeSessionsDir: "~/.claude/projects",
 	enableCodex: true,
@@ -72,7 +71,6 @@ export const PRESETS: Preset[] = [
 		id: "no-ai-minimal",
 		description: "Browser only, no AI, no patterns — minimum viable note",
 		settings: {
-			enableShell: false,
 			enableClaude: false,
 			enableGit: false,
 			enableAI: false,

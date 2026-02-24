@@ -6,7 +6,6 @@ import {
 	ClassificationConfig,
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	GitCommit,
 	CategorizedVisits,
@@ -19,7 +18,7 @@ import * as log from "./log";
 
 interface RawEvent {
 	timestamp: string;
-	source: "browser" | "search" | "shell" | "claude" | "git";
+	source: "browser" | "search" | "claude" | "git";
 	text: string;
 	category?: string;
 	metadata?: Record<string, string>;
@@ -65,14 +64,6 @@ function normalizeSearchQueries(searches: SearchQuery[]): RawEvent[] {
 	}));
 }
 
-function normalizeShellCommands(cmds: ShellCommand[]): RawEvent[] {
-	return cmds.map((c) => ({
-		timestamp: c.time ? c.time.toISOString() : "",
-		source: "shell" as const,
-		text: c.cmd.slice(0, 120),
-	}));
-}
-
 function normalizeClaudeSessions(sessions: ClaudeSession[]): RawEvent[] {
 	return sessions.map((s) => ({
 		timestamp: s.time ? s.time.toISOString() : "",
@@ -111,18 +102,6 @@ const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
 	other: "unknown",
 };
 
-const SHELL_ACTIVITY_PATTERNS: [RegExp, ActivityType][] = [
-	[/\b(?:git\s+(?:clone|pull|push|merge|rebase|checkout|branch))\b/i, "implementation"],
-	[/\b(?:git\s+(?:log|diff|status|show|blame))\b/i, "debugging"],
-	[/\b(?:npm\s+(?:install|i|add)|yarn\s+add|pip\s+install|brew\s+install|cargo\s+add)\b/i, "infrastructure"],
-	[/\b(?:npm\s+(?:run|test)|yarn\s+(?:test|build)|pytest|jest|cargo\s+test|make\s+test)\b/i, "debugging"],
-	[/\b(?:docker|kubectl|terraform|ansible|helm)\b/i, "infrastructure"],
-	[/\b(?:ssh|scp|rsync|curl|wget)\b/i, "infrastructure"],
-	[/\b(?:vim|nvim|nano|code|subl|emacs)\b/i, "implementation"],
-	[/\b(?:cd|ls|cat|grep|find|awk|sed|head|tail|wc)\b/i, "debugging"],
-	[/\b(?:mkdir|rm|mv|cp|chmod|chown)\b/i, "infrastructure"],
-];
-
 const SEARCH_INTENT_PATTERNS: [RegExp, IntentType][] = [
 	[/\bvs\b|\bcompare\b|\bdifference\b|\bversus\b|\balternative/i, "compare"],
 	[/\bhow\s+to\b|\bexample\b|\btutorial\b|\bguide\b/i, "implement"],
@@ -138,7 +117,6 @@ function inferIntent(text: string, source: string): IntentType {
 			if (pattern.test(text)) return intent;
 		}
 	}
-	if (source === "shell") return "implement";
 	if (source === "claude") return "implement";
 	if (source === "git") return "implement";
 	return "explore";
@@ -181,14 +159,6 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 		activityType = CATEGORY_TO_ACTIVITY[event.category || "other"] || "unknown";
 	} else if (event.source === "search") {
 		activityType = "research";
-	} else if (event.source === "shell") {
-		activityType = "implementation";
-		for (const [pattern, type] of SHELL_ACTIVITY_PATTERNS) {
-			if (pattern.test(event.text)) {
-				activityType = type;
-				break;
-			}
-		}
 	} else if (event.source === "claude") {
 		activityType = "implementation";
 	} else if (event.source === "git") {
@@ -328,7 +298,6 @@ function llmToStructuredEvent(
 export async function classifyEvents(
 	visits: BrowserVisit[],
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	gitCommits: GitCommit[],
 	categorized: CategorizedVisits,
@@ -340,7 +309,6 @@ export async function classifyEvents(
 	const rawEvents: RawEvent[] = [
 		...normalizeBrowserVisits(visits, categorized),
 		...normalizeSearchQueries(searches),
-		...normalizeShellCommands(shellCmds),
 		...normalizeClaudeSessions(claudeSessions),
 		...normalizeGitCommits(gitCommits),
 	];
@@ -426,7 +394,6 @@ export async function classifyEvents(
 export function classifyEventsRuleOnly(
 	visits: BrowserVisit[],
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	gitCommits: GitCommit[],
 	categorized: CategorizedVisits
@@ -436,7 +403,6 @@ export function classifyEventsRuleOnly(
 	const rawEvents: RawEvent[] = [
 		...normalizeBrowserVisits(visits, categorized),
 		...normalizeSearchQueries(searches),
-		...normalizeShellCommands(shellCmds),
 		...normalizeClaudeSessions(claudeSessions),
 		...normalizeGitCommits(gitCommits),
 	];

@@ -6,7 +6,6 @@ import {
 	ClaudeSession,
 	GitCommit,
 	SearchQuery,
-	ShellCommand,
 } from "./types";
 
 // ── Types ──────────────────────────────────────────────
@@ -16,8 +15,6 @@ export interface CompressedActivity {
 	browserText: string;
 	/** Pre-formatted text for the search section of the prompt. */
 	searchText: string;
-	/** Pre-formatted text for the shell section of the prompt. */
-	shellText: string;
 	/** Pre-formatted text for the Claude section of the prompt. */
 	claudeText: string;
 	/** Pre-formatted text for the git section of the prompt. */
@@ -178,58 +175,6 @@ function compressSearches(
 	return text;
 }
 
-// ── Shell compression ──────────────────────────────────
-
-function compressShell(
-	shellCmds: ShellCommand[],
-	budget: number
-): string {
-	if (shellCmds.length === 0) return "  (none)";
-
-	const patterns = topN(
-		shellCmds,
-		(c) => c.cmd.trim().split(/\s+/)[0] || "",
-		8
-	);
-	const patternStr = patterns
-		.map((p) => `${p.key} (${p.count})`)
-		.join(", ");
-	const tr = timeRangeStr(shellCmds);
-
-	// Try including individual commands
-	const cmdLimit = Math.min(shellCmds.length, 30);
-	const cmds = shellCmds
-		.slice(0, cmdLimit)
-		.map((c) => scrubSecrets(c.cmd).slice(0, 80));
-	let text =
-		`  ${shellCmds.length} commands | patterns: ${patternStr}` +
-		(tr ? ` | ${tr}` : "") +
-		`\n  ${cmds.join(" | ")}`;
-
-	if (estimateTokens(text) > budget) {
-		// Fewer commands
-		const reducedLimit = Math.max(5, Math.floor(budget / 4));
-		const reducedCmds = shellCmds
-			.slice(0, reducedLimit)
-			.map((c) => scrubSecrets(c.cmd).slice(0, 80));
-		const more = shellCmds.length - reducedLimit;
-		text =
-			`  ${shellCmds.length} commands | patterns: ${patternStr}` +
-			(tr ? ` | ${tr}` : "") +
-			`\n  ${reducedCmds.join(" | ")}` +
-			(more > 0 ? ` (+${more} more)` : "");
-	}
-
-	if (estimateTokens(text) > budget) {
-		// Patterns only
-		text =
-			`  ${shellCmds.length} commands | patterns: ${patternStr}` +
-			(tr ? ` | ${tr}` : "");
-	}
-
-	return text;
-}
-
 // ── Claude compression ─────────────────────────────────
 
 function compressClaude(
@@ -379,7 +324,6 @@ function compressGit(
 export function compressActivity(
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	gitCommits: GitCommit[],
 	budget: number
@@ -388,13 +332,12 @@ export function compressActivity(
 		(sum, v) => sum + v.length, 0
 	);
 	const totalEvents =
-		browserCount + searches.length + shellCmds.length + claudeSessions.length + gitCommits.length;
+		browserCount + searches.length + claudeSessions.length + gitCommits.length;
 
 	if (totalEvents === 0) {
 		return {
 			browserText: "  (none)",
 			searchText: "  (none)",
-			shellText: "  (none)",
 			claudeText: "  (none)",
 			gitText: "  (none)",
 			totalEvents: 0,
@@ -406,7 +349,6 @@ export function compressActivity(
 	const activeSources = [
 		browserCount > 0 ? "browser" : null,
 		searches.length > 0 ? "search" : null,
-		shellCmds.length > 0 ? "shell" : null,
 		claudeSessions.length > 0 ? "claude" : null,
 		gitCommits.length > 0 ? "git" : null,
 	].filter(Boolean).length;
@@ -423,9 +365,6 @@ export function compressActivity(
 	const searchShare = searches.length > 0
 		? minShare + Math.round(flexBudget * searches.length / totalEvents)
 		: 0;
-	const shellShare = shellCmds.length > 0
-		? minShare + Math.round(flexBudget * shellCmds.length / totalEvents)
-		: 0;
 	const claudeShare = claudeSessions.length > 0
 		? minShare + Math.round(flexBudget * claudeSessions.length / totalEvents)
 		: 0;
@@ -435,21 +374,18 @@ export function compressActivity(
 
 	const browserText = compressBrowser(categorized, browserShare);
 	const searchText = compressSearches(searches, searchShare);
-	const shellText = compressShell(shellCmds, shellShare);
 	const claudeText = compressClaude(claudeSessions, claudeShare);
 	const gitText = compressGit(gitCommits, gitShare);
 
 	const tokenEstimate =
 		estimateTokens(browserText) +
 		estimateTokens(searchText) +
-		estimateTokens(shellText) +
 		estimateTokens(claudeText) +
 		estimateTokens(gitText);
 
 	return {
 		browserText,
 		searchText,
-		shellText,
 		claudeText,
 		gitText,
 		totalEvents,

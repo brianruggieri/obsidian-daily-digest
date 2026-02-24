@@ -5,7 +5,6 @@ import {
 	CategorizedVisits,
 	ClaudeSession,
 	SearchQuery,
-	ShellCommand,
 } from "./types";
 
 // ── Token estimation ────────────────────────────────────
@@ -51,20 +50,6 @@ function topDomains(visits: BrowserVisit[], limit = 8): string[] {
 		.map(([domain, count]) => `${domain} (${count})`);
 }
 
-// ── Command pattern extraction ──────────────────────────
-
-function commandPatterns(cmds: ShellCommand[], limit = 6): string[] {
-	const counts: Record<string, number> = {};
-	for (const c of cmds) {
-		const base = c.cmd.trim().split(/\s+/)[0] || "";
-		if (base) counts[base] = (counts[base] || 0) + 1;
-	}
-	return Object.entries(counts)
-		.sort((a, b) => b[1] - a[1])
-		.slice(0, limit)
-		.map(([cmd, count]) => `${cmd} (${count})`);
-}
-
 // ── Chunk splitting ─────────────────────────────────────
 
 function splitTextChunks(
@@ -84,7 +69,6 @@ export function chunkActivityData(
 	date: Date,
 	categorized: CategorizedVisits,
 	searches: SearchQuery[],
-	shellCmds: ShellCommand[],
 	claudeSessions: ClaudeSession[]
 ): ActivityChunk[] {
 	const ds = dateStr(date);
@@ -159,35 +143,6 @@ export function chunkActivityData(
 				id: `${ds}:search${suffix}`,
 				date: ds,
 				type: "search",
-				text: lines.join("\n"),
-				metadata: {
-					itemCount: batches[i].length,
-					timeRange: tr,
-				},
-			});
-		}
-	}
-
-	// ── Shell chunks ────────────────────────────────
-	if (shellCmds.length > 0) {
-		const cmdTexts = shellCmds.map((c) => c.cmd.trim());
-		const batches = splitTextChunks(cmdTexts, 40);
-		const patterns = commandPatterns(shellCmds);
-		const tr = timeRange(shellCmds);
-
-		for (let i = 0; i < batches.length; i++) {
-			const suffix = batches.length > 1 ? `:${i + 1}` : "";
-			const lines: string[] = [
-				`Shell Commands (${batches[i].length} commands)`,
-				`Commands: ${batches[i].join(" | ")}`,
-				`Patterns: ${patterns.join(", ")}`,
-			];
-			if (tr) lines.push(`Time range: ${tr.start} – ${tr.end}`);
-
-			chunks.push({
-				id: `${ds}:shell${suffix}`,
-				date: ds,
-				type: "shell",
 				text: lines.join("\n"),
 				metadata: {
 					itemCount: batches[i].length,

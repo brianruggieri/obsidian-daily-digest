@@ -27,7 +27,6 @@ export interface DailyDigestSettings {
 	localEndpoint: string;
 	localModel: string;
 	enableBrowser: boolean;
-	enableShell: boolean;
 	enableClaude: boolean;
 	claudeSessionsDir: string;
 	enableCodex: boolean;
@@ -73,7 +72,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	localEndpoint: "http://localhost:11434",
 	localModel: "",
 	enableBrowser: false,
-	enableShell: false,
 	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
 	enableCodex: false,
@@ -190,21 +188,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			this.renderBrowserProfileSection(browserGroup);
 		}
 
-		// ── Shell ─────────────────────────────────────
-		const shellGroup = containerEl.createDiv({ cls: "dd-source-group" });
-		new Setting(shellGroup)
-			.setName("Shell history")
-			.setDesc(PRIVACY_DESCRIPTIONS.shell.access + " " + PRIVACY_DESCRIPTIONS.shell.destination)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableShell)
-					.onChange(async (value) => {
-						this.plugin.settings.enableShell = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
-
 		// ── Claude ────────────────────────────────────
 		const claudeGroup = containerEl.createDiv({ cls: "dd-source-group" });
 		new Setting(claudeGroup)
@@ -303,7 +286,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		// Status callouts (informational banners)
 		const enabledSources: string[] = [];
 		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
-		if (this.plugin.settings.enableShell) enabledSources.push("shell history files");
 		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
 		if (this.plugin.settings.enableCodex) enabledSources.push("Codex CLI sessions");
 		if (this.plugin.settings.enableGit) enabledSources.push("git commit history");
@@ -990,7 +972,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							"With Anthropic selected: classification is highly recommended. " +
 							"When enabled, the AI summary prompt contains only activity types, " +
 							"topics, and entity names — zero raw URLs, search queries, " +
-							"shell commands, or Claude Code prompts are sent to Anthropic.",
+							"or Claude Code prompts are sent to Anthropic.",
 					});
 				}
 

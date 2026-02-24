@@ -1,7 +1,6 @@
 import {
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	GitCommit,
 	SanitizationLevel,
@@ -289,16 +288,6 @@ function sanitizeSearchQuery(
 	};
 }
 
-function sanitizeShellCommand(
-	cmd: ShellCommand,
-	config: SanitizeConfig
-): ShellCommand {
-	return {
-		...cmd,
-		cmd: scrubText(cmd.cmd, config),
-	};
-}
-
 function sanitizeClaudeSession(
 	session: ClaudeSession,
 	config: SanitizeConfig
@@ -321,7 +310,6 @@ function sanitizeGitCommit(commit: GitCommit, _config: SanitizeConfig): GitCommi
 export interface SanitizedOutput {
 	visits: BrowserVisit[];
 	searches: SearchQuery[];
-	shellCommands: ShellCommand[];
 	claudeSessions: ClaudeSession[];
 	gitCommits: GitCommit[];
 	excludedVisitCount: number;
@@ -330,7 +318,6 @@ export interface SanitizedOutput {
 export function sanitizeCollectedData(
 	visits: BrowserVisit[],
 	searches: SearchQuery[],
-	shellCommands: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	gitCommits: GitCommit[],
 	config: SanitizeConfig
@@ -339,7 +326,6 @@ export function sanitizeCollectedData(
 		return {
 			visits,
 			searches,
-			shellCommands,
 			claudeSessions,
 			gitCommits,
 			excludedVisitCount: 0,
@@ -355,14 +341,12 @@ export function sanitizeCollectedData(
 	// 2. Sanitize each data type
 	const sanitizedVisits = kept.map((v) => sanitizeBrowserVisit(v, config));
 	const sanitizedSearches = searches.map((s) => sanitizeSearchQuery(s, config));
-	const sanitizedShell = shellCommands.map((c) => sanitizeShellCommand(c, config));
 	const sanitizedClaude = claudeSessions.map((s) => sanitizeClaudeSession(s, config));
 	const sanitizedGit = gitCommits.map((c) => sanitizeGitCommit(c, config));
 
 	return {
 		visits: sanitizedVisits,
 		searches: sanitizedSearches,
-		shellCommands: sanitizedShell,
 		claudeSessions: sanitizedClaude,
 		gitCommits: sanitizedGit,
 		excludedVisitCount: excludedCount,

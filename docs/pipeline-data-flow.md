@@ -8,14 +8,13 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ╔══════════════════════════════════════════════════════════════════╗
 ║  SOURCES                                                         ║
 ║  Browser SQLite ─┐                                               ║
-║  Shell history  ─┤  collectors.ts                                ║
-║  Claude JSONL   ─┤  collectBrowserHistory()                      ║
-║  Codex JSONL    ─┤  readShellHistory()                           ║
+║  Claude JSONL   ─┤  collectors.ts                                ║
+║  Codex JSONL    ─┤  collectBrowserHistory()                      ║
 ║  Git log        ─┘  readClaudeSessions() / readCodexSessions()   ║
 ╚══════════╤═══════════════════════════════════════════════════════╝
            │
            │  BrowserVisit[], SearchQuery[],
-           │  ShellCommand[], ClaudeSession[], GitCommit[]
+           │  ClaudeSession[], GitCommit[]
            ▼
 ╔══════════════════════════════════════════════════════════════════╗
 ║  STAGE 1 — raw                                                   ║
@@ -30,7 +29,7 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ║    redacts adult, gambling, health, etc.                         ║
 ╚══════════╤═══════════════════════════════════════════════════════╝
            │  BrowserVisit[], SearchQuery[],
-           │  ShellCommand[], ClaudeSession[], GitCommit[]
+           │  ClaudeSession[], GitCommit[]
            │  + filtered: number
            ▼
 ╔══════════════════════════════════════════════════════════════════╗
@@ -39,7 +38,7 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ║    (work, dev, social, news, shopping, …)                        ║
 ╚══════════╤═══════════════════════════════════════════════════════╝
            │  CategorizedVisits  (Record<string, BrowserVisit[]>)
-           │  + SearchQuery[], ShellCommand[], etc. pass through
+           │  + SearchQuery[], etc. pass through
            ▼
 ╔══════════════════════════════════════════════════════════════════╗
 ║  STAGE 4 — classified                          classify.ts       ║
@@ -104,7 +103,7 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ║  • [!tip] headline callout                                       ║
 ║  • [!abstract] TL;DR callout                                     ║
 ║  • Category summary table                                        ║
-║  • Browser / search / shell / Claude / git sections              ║
+║  • Browser / search / Claude / git sections                      ║
 ║  • Work patterns + cross-source connections                      ║
 ║  • Knowledge insights section                                    ║
 ╚══════════╤═══════════════════════════════════════════════════════╝

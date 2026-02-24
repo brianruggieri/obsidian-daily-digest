@@ -35,12 +35,12 @@ const TODAY = "2025-06-15";
 function generateKnowledgeForPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(
@@ -48,7 +48,7 @@ function generateKnowledgeForPersona(personaFn: (d?: Date) => ReturnType<typeof 
 	);
 	const knowledge = generateKnowledgeSections(patterns);
 	const markdown = renderMarkdown(
-		DATE, sanitized.visits, sanitized.searches, sanitized.shellCommands,
+		DATE, sanitized.visits, sanitized.searches,
 		sanitized.claudeSessions, sanitized.gitCommits, categorized, null, "none", knowledge
 	);
 
@@ -245,7 +245,7 @@ describe("knowledge value evaluation", () => {
 					"Knowledge Insights section",
 					"Focus summary describing the day's concentration level",
 					"Tags with activity type prefixes",
-					"Stats line with counts of visits, searches, commands",
+					"Stats line with counts of visits, searches, and AI prompts",
 				],
 				0.6
 			);
