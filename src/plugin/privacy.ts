@@ -1,5 +1,5 @@
 import { App, Modal, Setting, Notice } from "obsidian";
-import { DailyDigestSettings } from "./settings/types";
+import { DailyDigestSettings } from "../settings/types";
 
 // ── Constants ────────────────────────────────────────────
 

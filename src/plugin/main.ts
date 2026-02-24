@@ -1,28 +1,28 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { DailyDigestSettings, DEFAULT_SETTINGS, SECRET_ID } from "./settings/types";
-import { DailyDigestSettingTab } from "./settings/ui";
-import { collectBrowserHistory } from "./collect/browser";
-import { readClaudeSessions } from "./collect/claude";
-import { readCodexSessions } from "./collect/codex";
-import { readGitHistory } from "./collect/git";
-import { categorizeVisits } from "./filter/categorize";
-import { compressActivity } from "./summarize/compress";
-import { summarizeDay, buildPrompt } from "./summarize/summarize";
+import { DailyDigestSettings, DEFAULT_SETTINGS, SECRET_ID } from "../settings/types";
+import { DailyDigestSettingTab } from "../settings/ui";
+import { collectBrowserHistory } from "../collect/browser";
+import { readClaudeSessions } from "../collect/claude";
+import { readCodexSessions } from "../collect/codex";
+import { readGitHistory } from "../collect/git";
+import { categorizeVisits } from "../filter/categorize";
+import { compressActivity } from "../summarize/compress";
+import { summarizeDay, buildPrompt } from "../summarize/summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
-import { AICallConfig } from "./summarize/ai-client";
-import { renderMarkdown } from "./render/renderer";
+import { AICallConfig } from "../summarize/ai-client";
+import { renderMarkdown } from "../render/renderer";
 import {
 	OnboardingModal,
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "./types";
-import { sanitizeCollectedData } from "./filter/sanitize";
-import { classifyEvents } from "./filter/classify";
-import { filterSensitiveDomains, filterSensitiveSearches } from "./filter/sensitivity";
-import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./analyze/patterns";
-import { generateKnowledgeSections, KnowledgeSections } from "./analyze/knowledge";
-import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./render/merge";
+import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
+import { sanitizeCollectedData } from "../filter/sanitize";
+import { classifyEvents } from "../filter/classify";
+import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
+import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "../analyze/patterns";
+import { generateKnowledgeSections, KnowledgeSections } from "../analyze/knowledge";
+import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "../render/merge";
 import * as log from "./log";
 
 export default class DailyDigestPlugin extends Plugin {

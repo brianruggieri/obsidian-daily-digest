@@ -12,7 +12,7 @@ import {
 } from "../types";
 import { callLocal } from "../summarize/ai-client";
 import { categorizeDomain } from "./categorize";
-import * as log from "../log";
+import * as log from "../plugin/log";
 
 // ── Raw Event Normalization ─────────────────────────────
 

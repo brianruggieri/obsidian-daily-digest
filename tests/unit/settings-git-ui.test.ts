@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PRIVACY_DESCRIPTIONS } from "../../src/privacy";
+import { PRIVACY_DESCRIPTIONS } from "../../src/plugin/privacy";
 
 describe("Git privacy descriptions", () => {
 	it("should have a git entry in PRIVACY_DESCRIPTIONS", () => {
