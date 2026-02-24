@@ -1,11 +1,11 @@
-import { CATEGORY_LABELS } from "./filter/categorize";
+import { CATEGORY_LABELS } from "../filter/categorize";
 import { estimateTokens } from "./chunker";
 import {
 	CategorizedVisits,
 	ClaudeSession,
 	GitCommit,
 	SearchQuery,
-} from "./types";
+} from "../types";
 
 // ── Types ──────────────────────────────────────────────
 

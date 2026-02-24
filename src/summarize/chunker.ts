@@ -1,11 +1,11 @@
-import { CATEGORY_LABELS } from "./filter/categorize";
+import { CATEGORY_LABELS } from "../filter/categorize";
 import {
 	ActivityChunk,
 	BrowserVisit,
 	CategorizedVisits,
 	ClaudeSession,
 	SearchQuery,
-} from "./types";
+} from "../types";
 
 // ── Token estimation ────────────────────────────────────
 

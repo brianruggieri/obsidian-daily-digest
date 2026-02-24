@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize/summarize";
 import { categorizeVisits } from "../../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
