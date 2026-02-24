@@ -190,62 +190,59 @@
 	font-size: 0.8em;
 }
 
-/* ── Browser Profile Picker ─────────────── */
+/* ── Data Source Groups ─────────────────── */
 
 /*
- * Outer wrapper for the per-browser toggle list.
- * Visual separator keeps it distinct from the Detect button row above.
+ * Each data source (browser, shell, Claude, Codex, git) is wrapped in
+ * dd-source-group. A top border separates sources from each other.
+ * Within a group, setting-item borders are suppressed so items read
+ * as a unit rather than a list of independent rows.
  */
-.dd-browser-configs {
-	margin: 8px 0;
-	padding: 8px 0;
+.dd-source-group {
+	padding: 4px 0;
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-/* Each browser row (master toggle) sits flush with Settings item padding */
-.dd-browser-configs > .setting-item {
-	padding: 6px 0;
-	border-bottom: 1px solid var(--background-modifier-border-hover);
+/* Remove inter-item borders within a group */
+.dd-source-group .setting-item {
+	border-top: none;
+	padding-top: 6px;
+	padding-bottom: 6px;
 }
 
-.dd-browser-configs > .setting-item:last-child {
-	border-bottom: none;
+/* Master toggle (first item) keeps full Obsidian padding */
+.dd-source-group > .setting-item:first-child {
+	padding-top: 14px;
+	padding-bottom: 8px;
 }
+
+/* ── Compact Profile Rows ────────────────── */
 
 /*
- * Per-profile sub-toggles, indented beneath their parent browser.
- * Uses Obsidian CSS variables so it respects any user theme.
+ * Browser profile list uses ToggleComponent + createDiv instead of
+ * full Setting rows — avoids the heavy setting-item padding/indentation.
  */
-.dd-browser-profile-sub {
-	padding-left: 28px;
-	padding-bottom: 4px;
-	border-top: none;
+.dd-profile-list {
+	padding: 4px 0 10px 0;
 }
 
-.dd-browser-profile-sub .setting-item {
-	padding: 3px 0;
-	border-bottom: none;
+.dd-profile-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0 4px 8px;
+	font-size: 0.85em;
 }
 
-/* Profile names are slightly muted to visually subordinate them */
-.dd-browser-profile-sub .setting-item-name {
-	font-size: 0.9em;
+.dd-profile-name {
+	flex: 1;
 	color: var(--text-muted);
 }
 
-/* Folder path hint (shown when displayName ≠ profileDir) */
-.dd-browser-profile-sub .setting-item-description {
+.dd-profile-path {
 	font-size: 0.78em;
 	color: var(--text-faint);
-}
-
-/*
- * Status line under the Re-scan button.
- * Styled in muted text — it's informational, not instructional.
- */
-.dd-browser-status {
-	font-size: 0.85em;
-	color: var(--text-muted);
+	font-family: var(--font-monospace);
 }
 
 /* ── Local Model Setup Guide ────────────── */
