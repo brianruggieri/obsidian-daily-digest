@@ -112,7 +112,16 @@ git rm src/settings.ts
 git add src/settings/types.ts src/settings/ui.ts
 ```
 
-**Step 6: Verify build passes**
+**Step 6: Verify no stale settings imports remain**
+
+```bash
+grep -r 'from "\./settings"' src/ scripts/ tests/
+grep -r 'from ".*\/src\/settings"' scripts/ tests/
+```
+
+Both should return empty. Any hits are import paths still pointing at the deleted file.
+
+**Step 7: Verify build passes**
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use && npm run build
@@ -120,7 +129,7 @@ source ~/.nvm/nvm.sh && nvm use && npm run build
 
 Expected: build completes with no TypeScript errors.
 
-**Step 7: Run tests**
+**Step 8: Run tests**
 
 ```bash
 source ~/.nvm/nvm.sh && nvm use && npm run test:unit
@@ -128,7 +137,7 @@ source ~/.nvm/nvm.sh && nvm use && npm run test:unit
 
 Expected: all tests pass.
 
-**Step 8: Commit**
+**Step 9: Commit**
 
 ```bash
 git add -A
@@ -139,11 +148,13 @@ git commit -m "refactor: split settings.ts into settings/types.ts and settings/u
 
 ## Task 2: Split `collectors.ts` + move `browser-profiles.ts` → `collect/`
 
+> **Note on shell:** `readShellHistory` was removed from `collectors.ts` prior to this refactor. There is no `collect/shell.ts` to create.
+
 **Files:**
-- Create: `src/collect/browser.ts`, `src/collect/shell.ts`, `src/collect/claude.ts`, `src/collect/codex.ts`, `src/collect/git.ts`
+- Create: `src/collect/browser.ts`, `src/collect/claude.ts`, `src/collect/codex.ts`, `src/collect/git.ts`
 - Move: `src/browser-profiles.ts` → `src/collect/browser-profiles.ts`
 - Delete: `src/collectors.ts`
-- Modify (import path updates): `src/main.ts`, `src/settings/ui.ts`, `scripts/inspect.ts`, `scripts/daily-matrix.ts` (if it imports collectors), `scripts/test-detect.ts`, `tests/unit/collectors.test.ts`, `tests/unit/codex-collector.test.ts`, `tests/unit/git-collector.test.ts`, `tests/unit/browser-profiles.test.ts`
+- Modify (import path updates): `src/main.ts`, `src/settings/ui.ts` (verify), `scripts/inspect.ts` (browser-profiles path only), `tests/unit/collectors.test.ts`, `tests/unit/codex-collector.test.ts`, `tests/unit/git-collector.test.ts`, `tests/unit/browser-profiles.test.ts`
 
 **Step 1: Create `src/collect/` directory**
 
@@ -178,16 +189,7 @@ import { warn } from "../plugin/log";                      // was: "./log"
 // ... plus all node/sql.js imports (unchanged)
 ```
 
-**Step 4: Create `src/collect/shell.ts`**
-
-Extract `readShellHistory` from `src/collectors.ts`. Update imports:
-```typescript
-import { DailyDigestSettings } from "../settings/types";
-import { warn } from "../plugin/log";
-// ... plus node imports (unchanged)
-```
-
-**Step 5: Create `src/collect/claude.ts`**
+**Step 4: Create `src/collect/claude.ts`**
 
 Extract `readClaudeSessions`. Update imports:
 ```typescript
@@ -195,7 +197,7 @@ import { DailyDigestSettings } from "../settings/types";
 import { warn } from "../plugin/log";
 ```
 
-**Step 6: Create `src/collect/codex.ts`**
+**Step 5: Create `src/collect/codex.ts`**
 
 Extract `readCodexSessions`. Update imports:
 ```typescript
@@ -203,7 +205,7 @@ import { DailyDigestSettings } from "../settings/types";
 import { warn } from "../plugin/log";
 ```
 
-**Step 7: Create `src/collect/git.ts`**
+**Step 6: Create `src/collect/git.ts`**
 
 Extract `readGitHistory` and `parseGitLogOutput`. Update imports:
 ```typescript
@@ -211,44 +213,55 @@ import { DailyDigestSettings } from "../settings/types";
 import { warn } from "../plugin/log";
 ```
 
-**Step 8: Delete `src/collectors.ts`**
+**Step 7: Delete `src/collectors.ts`**
 
 ```bash
 git rm src/collectors.ts
 git add src/collect/
 ```
 
-**Step 9: Update imports in files that imported `./collectors`**
+**Step 8: Update imports in files that imported `./collectors`**
 
-`src/main.ts` — replace the single collectors import with five:
+`src/main.ts` — replace the single collectors import with four:
 ```typescript
 // was:
-import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
+import { collectBrowserHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 // becomes:
 import { collectBrowserHistory } from "./collect/browser";
-import { readShellHistory } from "./collect/shell";
 import { readClaudeSessions } from "./collect/claude";
 import { readCodexSessions } from "./collect/codex";
 import { readGitHistory } from "./collect/git";
 ```
 
-`src/settings/ui.ts` — the browser-profiles import:
+`src/settings/ui.ts` — the browser-profiles import was already written with the new path in Task 1. Verify:
 ```typescript
-// was: from "../collect/browser-profiles" (already set in Task 1)
-// VERIFY this is correct — settings/ui.ts is in src/settings/, browser-profiles is in src/collect/
+// should already be: from "../collect/browser-profiles"
 // relative path from src/settings/ui.ts to src/collect/browser-profiles.ts is: ../collect/browser-profiles ✓
 ```
 
-Scripts that import from collectors (check `scripts/inspect.ts`, `scripts/inspector.ts`, `scripts/daily-matrix.ts`):
-- They use paths like `../src/collectors` — update to individual files:
-  - `../src/collect/browser`, `../src/collect/shell`, etc.
-  - Also update `../src/browser-profiles` → `../src/collect/browser-profiles`
+`scripts/inspect.ts` — imports `detectAllBrowsers` directly from `../src/browser-profiles`. Update:
+```typescript
+// was: from "../src/browser-profiles"
+// becomes: from "../src/collect/browser-profiles"
+```
+
+**Note:** `scripts/inspector.ts`, `scripts/daily-matrix.ts` do NOT import from `../src/collectors` or `../src/browser-profiles` — they route collection through `scripts/lib/collector-shim`. No changes needed in those files for this task (they will need updates in Tasks 3–6 for the filter/analyze/etc. moves).
 
 Tests that import from collectors:
 - `tests/unit/collectors.test.ts`: imports `unwrapGoogleRedirect` from `../../src/collectors` → `../../src/collect/browser`
 - `tests/unit/codex-collector.test.ts:5`: `from "../../src/collectors"` → `from "../../src/collect/codex"`
 - `tests/unit/git-collector.test.ts:2`: `from "../../src/collectors"` → `from "../../src/collect/git"`
-- `tests/unit/browser-profiles.test.ts`: check for any `../../src/browser-profiles` imports → `../../src/collect/browser-profiles`
+- `tests/unit/browser-profiles.test.ts`: any `../../src/browser-profiles` imports → `../../src/collect/browser-profiles`
+
+**Step 9: Verify no stale collectors/browser-profiles imports remain**
+
+```bash
+grep -r 'from "\./collectors"' src/ scripts/ tests/
+grep -r 'from ".*\/src\/collectors"' scripts/ tests/
+grep -r 'from ".*browser-profiles"' src/ scripts/ tests/
+```
+
+All `browser-profiles` hits should now point at `collect/browser-profiles`.
 
 **Step 10: Verify build passes**
 
@@ -324,8 +337,6 @@ Files importing from `./sanitize` or `../../src/sanitize`:
 | Importer | Old path | New path |
 |----------|----------|----------|
 | `src/collect/browser.ts` | `../filter/sanitize` | already set in Task 2 |
-| `src/summarize/compress.ts` (not moved yet, still `src/compress.ts`) | `./sanitize` | `./filter/sanitize` |
-| `src/summarize/summarize.ts` (still `src/summarize.ts`) | `./sanitize` | `./filter/sanitize` |
 | `src/main.ts:16` | `./sanitize` | `./filter/sanitize` |
 | `scripts/daily-matrix.ts` | `../src/sanitize` | `../src/filter/sanitize` |
 | `scripts/inspect.ts` | `../src/sanitize` | `../src/filter/sanitize` |
@@ -336,6 +347,8 @@ Files importing from `./sanitize` or `../../src/sanitize`:
 | `tests/eval/privacy-audit.eval.ts:16` | `../../src/sanitize` | `../../src/filter/sanitize` |
 | `tests/eval/prompt-safety.eval.ts:17` | `../../src/sanitize` | `../../src/filter/sanitize` |
 | `tests/eval/summary-quality.eval.ts:16` | `../../src/sanitize` | `../../src/filter/sanitize` |
+
+> **Note:** `src/compress.ts` and `src/summarize.ts` do **not** import `sanitize` — those imports were removed. Do not add them.
 
 Files importing from `./sensitivity`:
 
@@ -478,6 +491,8 @@ git commit -m "refactor: move analyze stage files into src/analyze/"
 
 ## Task 5: Move `summarize/` group (ai-client, compress, chunker, embeddings, prompt-templates, summarize)
 
+> **Note on naming:** `src/summarize.ts` moves to `src/summarize/summarize.ts` — directory and file share the same stem. TypeScript and esbuild handle this fine; just be precise with the path.
+
 **Files:**
 - Move: `src/ai-client.ts` → `src/summarize/ai-client.ts`
 - Move: `src/compress.ts` → `src/summarize/compress.ts`
@@ -511,7 +526,7 @@ All six files are now in `src/summarize/`. Imports between them stay as `./somet
 ```typescript
 // was: from "./categorize"  → from "../filter/categorize"
 // was: from "./chunker"     → from "./chunker"    (same dir, unchanged)
-// was: from "./sanitize"    → from "../filter/sanitize"
+// Note: scrubSecrets import was already removed — do not add it back
 ```
 
 `src/summarize/chunker.ts`:
@@ -527,13 +542,12 @@ All six files are now in `src/summarize/`. Imports between them stay as `./somet
 
 `src/summarize/prompt-templates.ts`:
 ```typescript
-// Check its imports — prompts directory reference if any uses process.cwd() or similar (no import change needed for non-TS paths)
+// Check its imports — any process.cwd() or similar runtime path references need no change
 ```
 
 `src/summarize/summarize.ts`:
 ```typescript
 // was: from "./categorize"      → from "../filter/categorize"
-// was: from "./sanitize"        → from "../filter/sanitize"
 // was: from "./chunker"         → from "./chunker"          (same dir)
 // was: from "./embeddings"      → from "./embeddings"       (same dir)
 // was: from "./compress"        → from "./compress"         (same dir)
@@ -541,6 +555,7 @@ All six files are now in `src/summarize/`. Imports between them stay as `./somet
 // was: from "./ai-client"       → from "./ai-client"        (same dir)
 // was: from "./prompt-templates"→ from "./prompt-templates" (same dir)
 // was: from "./log"             → from "../plugin/log"
+// Note: scrubSecrets import was already removed — do not add it back
 ```
 
 **Step 3: Update all importers**
@@ -623,7 +638,6 @@ git mv src/merge.ts src/render/merge.ts
 // was: from "./categorize" → from "../filter/categorize"
 // was: from "./settings"   → from "../settings/types"    (AIProvider)
 // was: from "./knowledge"  → from "../analyze/knowledge"
-// (types.ts and any other imports)
 // was: from "./types"      → from "../types"
 ```
 
@@ -705,7 +719,7 @@ git mv src/log.ts src/plugin/log.ts
 ```typescript
 // settings/types and settings/ui: was "./settings/types" → "../settings/types"
 //                                   was "./settings/ui"   → "../settings/ui"
-// collect/*:     was "./collect/browser" → "../collect/browser"  (and shell, claude, codex, git)
+// collect/*:     was "./collect/browser" → "../collect/browser"  (and claude, codex, git)
 // filter/*:      was "./filter/categorize" → "../filter/categorize"
 //                was "./filter/sanitize"   → "../filter/sanitize"
 //                was "./filter/classify"   → "../filter/classify"
@@ -894,16 +908,13 @@ Expected: `main.js` produced with no errors.
 find src -type f -name "*.ts" | sort
 ```
 
-Expected output (23 files, now organized in subdirectories):
+Expected output (27 files, organized in subdirectories):
 ```
-src/settings/types.ts
-src/settings/ui.ts
 src/collect/browser-profiles.ts
 src/collect/browser.ts
 src/collect/claude.ts
 src/collect/codex.ts
 src/collect/git.ts
-src/collect/shell.ts
 src/filter/categorize.ts
 src/filter/classify.ts
 src/filter/sanitize.ts
@@ -922,6 +933,8 @@ src/plugin/log.ts
 src/plugin/main.ts
 src/plugin/pipeline-debug.ts
 src/plugin/privacy.ts
+src/settings/types.ts
+src/settings/ui.ts
 src/types.ts
 src/txt.d.ts
 ```
@@ -936,8 +949,8 @@ gh pr create \
 ## Summary
 
 - Groups 23 flat `src/` files into 6 pipeline-stage directories: `collect/`, `filter/`, `analyze/`, `summarize/`, `render/`, `plugin/`
-- Splits `settings.ts` (1,348 lines) into `settings/types.ts` (~100 lines) and `settings/ui.ts` (~1,250 lines)
-- Splits `collectors.ts` (773 lines) into one file per data source: `collect/browser.ts`, `shell.ts`, `claude.ts`, `codex.ts`, `git.ts`
+- Splits `settings.ts` (1,330 lines) into `settings/types.ts` (~100 lines) and `settings/ui.ts` (~1,230 lines)
+- Splits `collectors.ts` (692 lines) into one file per data source: `collect/browser.ts`, `claude.ts`, `codex.ts`, `git.ts`
 - Reorganizes `tests/unit/` to mirror the new `src/` layout
 - Zero logic changes — pure structural movement
 
@@ -945,7 +958,7 @@ gh pr create \
 - [ ] `npm run build` passes (production mode)
 - [ ] `npm run test:unit` passes
 - [ ] `npm run test:integration` passes
-- [ ] `find src -type f | sort` matches expected 28-file tree
+- [ ] `find src -type f | sort` matches expected 27-file tree
 EOF
 )"
 ```

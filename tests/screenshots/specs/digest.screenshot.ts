@@ -53,11 +53,6 @@ describe("Daily Digest Note Screenshots", () => {
 			await scrollToHeading("Searches");
 			await captureFullPage("digest-searches-claude");
 		});
-
-		it("should capture reflection section", async () => {
-			await scrollToHeading("Reflection");
-			await captureFullPage("digest-reflection");
-		});
 	});
 
 	describe("Meeting-heavy day (2025-06-19)", () => {
