@@ -35,7 +35,7 @@ import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
-import { renderMarkdown } from "../src/renderer";
+import { renderMarkdown } from "../src/render/renderer";
 import { buildPrompt, summarizeDay } from "../src/summarize/summarize";
 
 import type {

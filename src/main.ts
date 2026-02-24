@@ -10,7 +10,7 @@ import { compressActivity } from "./summarize/compress";
 import { summarizeDay, buildPrompt } from "./summarize/summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
 import { AICallConfig } from "./summarize/ai-client";
-import { renderMarkdown } from "./renderer";
+import { renderMarkdown } from "./render/renderer";
 import {
 	OnboardingModal,
 	DataPreviewModal,
@@ -22,7 +22,7 @@ import { classifyEvents } from "./filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "./filter/sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./analyze/patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "./analyze/knowledge";
-import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
+import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./render/merge";
 import * as log from "./log";
 
 export default class DailyDigestPlugin extends Plugin {

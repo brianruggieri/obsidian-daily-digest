@@ -4,7 +4,7 @@ import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { generateKnowledgeSections } from "../../src/analyze/knowledge";
-import { renderMarkdown } from "../../src/renderer";
+import { renderMarkdown } from "../../src/render/renderer";
 import { ALL_PERSONAS, PersonaOutput } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 
