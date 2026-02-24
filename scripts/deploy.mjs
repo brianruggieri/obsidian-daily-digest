@@ -19,7 +19,7 @@ import { join, resolve } from "path";
 import process from "process";
 
 // Load .env if present (no external deps — manual parse)
-const envPath = new URL(".env", import.meta.url).pathname;
+const envPath = new URL("../.env", import.meta.url).pathname;
 if (existsSync(envPath)) {
 	const lines = readFileSync(envPath, "utf8").split("\n");
 	for (const line of lines) {

@@ -1,6 +1,7 @@
 # Repo Restructure Design
 
 **Date:** 2026-02-23
+**Updated:** 2026-02-24 (post-shell-removal sync)
 **Status:** Approved
 
 ## Problem
@@ -8,8 +9,8 @@
 All 23 source files live flat in `src/`. There is no directory structure that reflects the 9-stage processing pipeline. Key pain points:
 
 - Finding a file requires knowing the codebase — the tree tells no story
-- `settings.ts` (1,348 lines) mixes settings interfaces/defaults with a 1,200-line Obsidian settings UI class
-- `collectors.ts` (773 lines) bundles 5 completely independent data source collectors (browser, shell, Claude, Codex, git)
+- `settings.ts` (1,330 lines) mixes settings interfaces/defaults with a 1,200-line Obsidian settings UI class
+- `collectors.ts` (692 lines) bundles 4 completely independent data source collectors (browser, Claude, Codex, git)
 
 ## Goals
 
@@ -27,7 +28,6 @@ src/
     claude.ts               split from collectors.ts
     codex.ts                split from collectors.ts
     git.ts                  split from collectors.ts
-    shell.ts                split from collectors.ts
   filter/
     sanitize.ts             moved as-is
     sensitivity.ts          moved as-is
@@ -62,7 +62,7 @@ src/
 
 | Pipeline stage       | Directory      | Files                                                        |
 |----------------------|----------------|--------------------------------------------------------------|
-| 1. Collection        | `collect/`     | browser.ts, shell.ts, claude.ts, codex.ts, git.ts, browser-profiles.ts |
+| 1. Collection        | `collect/`     | browser.ts, claude.ts, codex.ts, git.ts, browser-profiles.ts |
 | 2–4. Filter/sanitize | `filter/`      | sanitize.ts, sensitivity.ts, categorize.ts                   |
 | 5. Classification    | `filter/`      | classify.ts (optional enrichment, pre-analysis)              |
 | 6. Pattern analysis  | `analyze/`     | patterns.ts, knowledge.ts                                    |
@@ -73,29 +73,28 @@ src/
 
 ## File Splits
 
-### `collectors.ts` → 5 files in `collect/`
+### `collectors.ts` → 4 files in `collect/`
 
 | New file             | Contents from `collectors.ts`                          |
 |----------------------|--------------------------------------------------------|
 | `collect/browser.ts` | `collectBrowserHistory()`, `unwrapGoogleRedirect()`, SQLite/profile helpers |
-| `collect/shell.ts`   | `readShellHistory()`                                   |
 | `collect/claude.ts`  | `readClaudeSessions()`                                 |
 | `collect/codex.ts`   | `readCodexSessions()`                                  |
 | `collect/git.ts`     | `readGitHistory()`, `parseGitLogOutput()`              |
 
-No logic changes. Each file is a direct extraction.
+No logic changes. Each file is a direct extraction. (`readShellHistory` was removed from the codebase prior to this refactor — there is no shell collector to split out.)
 
 ### `settings.ts` → 2 files in `settings/`
 
 | New file             | Contents from `settings.ts`                            |
 |----------------------|--------------------------------------------------------|
 | `settings/types.ts`  | `SECRET_ID`, `AIProvider`, `DailyDigestSettings`, `DEFAULT_SETTINGS` (~100 lines) |
-| `settings/ui.ts`     | `DailyDigestSettingTab` class (~1,250 lines)           |
+| `settings/ui.ts`     | `DailyDigestSettingTab` class (~1,230 lines)           |
 
 ## Import Strategy
 
 - No barrel/index.ts files — direct imports only (per project convention)
-- `main.ts` gains 5 import lines (one per collector) instead of one combined line — verbose but explicit
+- `main.ts` gains 4 import lines (one per collector) instead of one combined line — verbose but explicit
 - All files that import from `./settings` update to `./settings/types` or `./settings/ui` as appropriate
 
 ## Test File Structure
@@ -105,11 +104,10 @@ Tests mirror `src/` layout:
 ```
 tests/unit/
   collect/
-    browser.test.ts         split from collectors.test.ts
-    shell.test.ts           split from collectors.test.ts
-    claude.test.ts          split from collectors.test.ts
-    codex.test.ts           split from collectors.test.ts
-    git.test.ts             split from collectors.test.ts
+    browser.test.ts         split from collectors.test.ts (tests unwrapGoogleRedirect)
+    claude.test.ts          (no existing test — create stub if desired, or skip)
+    codex.test.ts           was codex-collector.test.ts
+    git.test.ts             was git-collector.test.ts
     browser-profiles.test.ts  moved
   filter/
     sanitize.test.ts
@@ -142,16 +140,16 @@ Integration and eval tests are unaffected structurally; only import paths update
 
 | Category                     | Action                                      | Estimated files |
 |------------------------------|---------------------------------------------|-----------------|
-| `collectors.ts`              | Split into 5 new files in `collect/`        | ~8              |
+| `collectors.ts`              | Split into 4 new files in `collect/`        | ~7              |
 | `settings.ts`                | Split into `settings/types.ts` + `settings/ui.ts` | ~12       |
 | All other `src/*.ts`         | Move to subdirectory, update import paths   | ~15             |
-| `tests/unit/*.test.ts`       | Move/rename to mirror new src structure     | ~20             |
+| `tests/unit/*.test.ts`       | Move/rename to mirror new src structure     | ~19             |
 | `scripts/`                   | Import path updates only                    | ~5              |
 
-**Total: ~60 files touched. Zero logic changes.**
+**Total: ~58 files touched. Zero logic changes.**
 
 ## Non-Goals
 
 - Moving types out of `types.ts` into their domain modules (separate refactor)
 - Any logic, API, or behavior changes
-- Changing the build system or esbuild config (entry point `src/main.ts` path unchanged)
+- Changing the build system itself (esbuild stays; the entry point path does change from `src/main.ts` to `src/plugin/main.ts` as part of the plugin/ move in Task 7)
