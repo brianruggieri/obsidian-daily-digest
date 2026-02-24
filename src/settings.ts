@@ -1225,7 +1225,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						row.createSpan({ cls: "dd-profile-path", text: profile.profileDir });
 					}
 
-					new ToggleComponent(row)
+					const profileToggle = new ToggleComponent(row);
+					profileToggle.toggleEl.setAttr("aria-label", `Enable ${profile.displayName} profile`);
+					profileToggle
 						.setValue(config.selectedProfiles.includes(profile.profileDir))
 						.onChange(async (value) => {
 							const selected = new Set(config.selectedProfiles);
