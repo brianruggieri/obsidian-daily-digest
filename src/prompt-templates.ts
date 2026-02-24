@@ -9,7 +9,7 @@ export type PromptName = "standard" | "compressed" | "rag" | "classified" | "dei
  * The prompts/ directory on disk takes precedence when promptsDir is set.
  */
 export const BUILT_IN_PROMPTS: Record<PromptName, string> = {
-	standard: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}
+	standard: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}{{focusHint}}
 
 Date: {{dateStr}}
 
@@ -60,7 +60,7 @@ Only include category_summaries for categories that actually had activity.
 Write for a person reading their own notes 3 months from now — help them remember what they understood and where they were in their work.
 `,
 
-	compressed: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}
+	compressed: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's raw activity logs into meaningful, reflective intelligence — not just a log of what happened, but a clear picture of their focus, learning, and momentum for the day. This note will be read during personal reflection and linked to recurring themes, ongoing projects, and future notes in the vault.{{contextHint}}{{focusHint}}
 
 Date: {{dateStr}}
 Total events collected: {{totalEvents}}
@@ -112,7 +112,7 @@ Only include category_summaries for categories that actually had activity.
 Write for a person reading their own notes 3 months from now — help them remember what they understood and where they were in their work.
 `,
 
-	rag: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's activity into meaningful, reflective intelligence. The following activity blocks were selected as the most relevant from today's data.{{contextHint}}
+	rag: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's activity into meaningful, reflective intelligence. The following activity blocks were selected as the most relevant from today's data.{{contextHint}}{{focusHint}}
 
 Date: {{dateStr}}
 
@@ -146,7 +146,7 @@ Be specific and concrete. Only include category_summaries for categories represe
 Write for a person reading their own notes 3 months from now.
 `,
 
-	classified: `You are building a daily note entry for a personal knowledge base. You are receiving structured activity abstractions — classified events with topics, entities, and summaries. Your task is to synthesize these into meaningful, reflective intelligence that helps this person understand their day, track learning, and connect today's work to their broader knowledge graph.{{contextHint}}
+	classified: `You are building a daily note entry for a personal knowledge base. You are receiving structured activity abstractions — classified events with topics, entities, and summaries. Your task is to synthesize these into meaningful, reflective intelligence that helps this person understand their day, track learning, and connect today's work to their broader knowledge graph.{{contextHint}}{{focusHint}}
 
 Date: {{dateStr}}
 
