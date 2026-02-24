@@ -54,9 +54,9 @@ describe("Daily Digest Note Screenshots", () => {
 			await captureFullPage("digest-searches-claude");
 		});
 
-		it("should capture shell and reflection sections", async () => {
-			await scrollToHeading("Shell");
-			await captureFullPage("digest-shell-reflection");
+		it("should capture reflection section", async () => {
+			await scrollToHeading("Reflection");
+			await captureFullPage("digest-reflection");
 		});
 	});
 
