@@ -2,7 +2,7 @@ import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
-import { compressActivity, CompressedActivity } from "./compress";
+import { compressActivity } from "./compress";
 import { summarizeDay } from "./summarize";
 import { AICallConfig } from "./ai-client";
 import { renderMarkdown } from "./renderer";
@@ -89,17 +89,6 @@ export default class DailyDigestPlugin extends Plugin {
 			id: "generate-today",
 			name: "Generate today's daily note",
 			callback: () => this.generateToday(),
-		});
-
-		// Command: generate note for specific date
-		this.addCommand({
-			id: "generate-date",
-			name: "Generate daily note for a specific date",
-			callback: () => {
-				new DatePickerModal(this.app, (date) => {
-					this.generateNote(date);
-				}).open();
-			},
 		});
 
 		// Command: generate without AI
@@ -197,7 +186,7 @@ export default class DailyDigestPlugin extends Plugin {
 			return;
 		}
 
-		const since = new Date(targetDate.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
+		const since = targetDate; // targetDate is already midnight local time
 		const provider = this.settings.aiProvider;
 		const apiKey = this.getAnthropicApiKey();
 
@@ -321,20 +310,17 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
-			// ── Compress (full-day mode) ─────────
-			let compressed: CompressedActivity | undefined;
-			if (this.settings.collectionMode === "complete") {
-				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
-				compressed = compressActivity(
-					categorized, searches, shellCmds, claudeSessions, gitCommits,
-					this.settings.promptBudget
-				);
-				log.debug(
-					`Daily Digest: Compressed ${compressed.totalEvents} events ` +
-					`to ~${compressed.tokenEstimate} tokens ` +
-					`(budget: ${this.settings.promptBudget})`
-				);
-			}
+			// ── Compress ─────────────────────────
+			progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
+			const compressed = compressActivity(
+				categorized, searches, shellCmds, claudeSessions, gitCommits,
+				this.settings.promptBudget
+			);
+			log.debug(
+				`Daily Digest: Compressed ${compressed.totalEvents} events ` +
+				`to ~${compressed.tokenEstimate} tokens ` +
+				`(budget: ${this.settings.promptBudget})`
+			);
 
 			// ── Classify (Phase 2) ──────────────
 			let classification: ClassificationResult | undefined;
