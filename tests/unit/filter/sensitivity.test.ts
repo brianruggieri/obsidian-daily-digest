@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { filterSensitiveDomains, getCategoryInfo } from "../../src/filter/sensitivity";
-import { BrowserVisit, SensitivityConfig } from "../../src/types";
+import { filterSensitiveDomains, getCategoryInfo } from "../../../src/filter/sensitivity";
+import { BrowserVisit, SensitivityConfig } from "../../../src/types";
 
 function makeVisit(url: string): BrowserVisit {
 	return { url, title: "Test", time: new Date() };

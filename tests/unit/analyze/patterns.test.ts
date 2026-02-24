@@ -5,13 +5,13 @@ import {
 	updateTopicHistory,
 	buildEmptyTopicHistory,
 	computeKnowledgeDelta,
-} from "../../src/analyze/patterns";
+} from "../../../src/analyze/patterns";
 import {
 	StructuredEvent,
 	ClassificationResult,
 	PatternConfig,
 	TopicCooccurrence,
-} from "../../src/types";
+} from "../../../src/types";
 
 const TODAY = "2025-06-15";
 const baseConfig: PatternConfig = {

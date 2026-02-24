@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PRESETS, BASE_SETTINGS, resolvePreset } from "../../scripts/presets";
+import { PRESETS, BASE_SETTINGS, resolvePreset } from "../../../scripts/presets";
 
 describe("Presets", () => {
   it("exports exactly 11 presets", () => {

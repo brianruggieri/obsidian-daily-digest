@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { categorizeDomain, categorizeVisits, CATEGORY_LABELS } from "../../src/filter/categorize";
-import { BrowserVisit } from "../../src/types";
+import { categorizeDomain, categorizeVisits, CATEGORY_LABELS } from "../../../src/filter/categorize";
+import { BrowserVisit } from "../../../src/types";
 
 describe("categorizeDomain", () => {
 	it("categorizes GitHub as dev", () => {

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { renderMarkdown } from "../../src/render/renderer";
-import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../src/types";
-import { KnowledgeSections } from "../../src/analyze/knowledge";
-import { createPromptLog, appendPromptEntry } from "../../scripts/lib/prompt-logger";
+import { renderMarkdown } from "../../../src/render/renderer";
+import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../../src/types";
+import { KnowledgeSections } from "../../../src/analyze/knowledge";
+import { createPromptLog, appendPromptEntry } from "../../../scripts/lib/prompt-logger";
 
 const DATE = new Date("2025-06-15T00:00:00");
 
