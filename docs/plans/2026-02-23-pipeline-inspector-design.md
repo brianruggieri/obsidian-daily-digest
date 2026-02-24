@@ -14,7 +14,9 @@ A local dev server (`scripts/inspector.ts`) that lets you run the 9-stage pipeli
 ## Architecture
 
 **One new file:** `scripts/inspector.ts`
-**One new npm script:** `"inspect": "tsx --tsconfig tsconfig.scripts.json scripts/inspector.ts"`
+**One new npm script:** `"inspector": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig tsconfig.scripts.json scripts/inspector.ts"`
+
+Note: `"inspector"` (not `"inspect"`) — the `"inspect"` script already exists and points to the separate `scripts/inspect.ts` CLI tool.
 
 Server uses Node's native `http` module (zero new npm deps). Serves on port `3747`. HTML is an inline template string in `inspector.ts` — no separate HTML file.
 
@@ -40,7 +42,7 @@ All events are `data: <JSON>\n\n` on the response stream (`Content-Type: text/ev
 ```
 data: {"type":"stage","name":"collect","status":"running"}
 data: {"type":"stage","name":"collect","status":"done","durationMs":42,"detail":"47 visits, 12 searches"}
-data: {"type":"waiting","nextStage":"sanitize"}
+data: {"type":"waiting","completedStage":"collect"}
                                                  ← POST /api/next (client clicks Next)
 data: {"type":"stage","name":"sanitize","status":"running"}
 data: {"type":"stage","name":"sanitize","status":"done","durationMs":8,"detail":"0 secrets removed"}
@@ -129,4 +131,4 @@ Rendered via CDN `marked.js` (`<script src="https://cdn.jsdelivr.net/npm/marked/
 | File                      | Change                          |
 |---------------------------|---------------------------------|
 | `scripts/inspector.ts`    | New file                        |
-| `package.json`            | Add `"inspect"` script          |
+| `package.json`            | Add `"inspector"` script        |
