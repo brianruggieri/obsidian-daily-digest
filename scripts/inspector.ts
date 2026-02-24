@@ -25,6 +25,9 @@ import { PRESETS } from "./presets";
 
 const PORT = 3747;
 
+const VALID_DATA_MODES = ["fixtures", "real"] as const;
+const VALID_AI_MODES = ["mock", "real"] as const;
+
 // ── Step-mode state ──────────────────────────────────────
 
 interface RunState {
@@ -106,9 +109,10 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 	// POST /api/next — advance step-mode to the next stage
 	if (method === "POST" && url === "/api/next") {
 		if (currentRun) {
-			clearTimeout(currentRun.timeoutId);
-			currentRun.advance();
+			const run = currentRun;
 			currentRun = null;
+			clearTimeout(run.timeoutId);
+			run.advance();
 		}
 		res.writeHead(204);
 		res.end();
@@ -119,9 +123,10 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 	if (method === "POST" && url === "/api/run") {
 		// Cancel any in-progress run first
 		if (currentRun) {
-			clearTimeout(currentRun.timeoutId);
-			currentRun.advance();
+			const run = currentRun;
 			currentRun = null;
+			clearTimeout(run.timeoutId);
+			run.advance();
 		}
 
 		res.writeHead(200, {
@@ -157,9 +162,29 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 		const presetId = params.preset ?? "no-ai-minimal";
 		const dateStr = params.date ?? new Date().toISOString().slice(0, 10);
-		const dataMode = (params.dataMode ?? "fixtures") as "fixtures" | "real";
-		const aiMode = (params.aiMode ?? "mock") as "mock" | "real";
+		const rawDataMode = params.dataMode ?? "fixtures";
+		const rawAiMode = params.aiMode ?? "mock";
 		const stepMode = params.stepMode ?? false;
+
+		const preset = PRESETS.find(p => p.id === presetId);
+		if (!preset) {
+			sseEvent(res, { type: "error", message: `Unknown preset: "${presetId}"` });
+			res.end();
+			return;
+		}
+
+		if (!VALID_DATA_MODES.includes(rawDataMode as typeof VALID_DATA_MODES[number])) {
+			sseEvent(res, { type: "error", message: `Invalid dataMode: "${rawDataMode}"` });
+			res.end();
+			return;
+		}
+		if (!VALID_AI_MODES.includes(rawAiMode as typeof VALID_AI_MODES[number])) {
+			sseEvent(res, { type: "error", message: `Invalid aiMode: "${rawAiMode}"` });
+			res.end();
+			return;
+		}
+		const dataMode = rawDataMode as "fixtures" | "real";
+		const aiMode = rawAiMode as "mock" | "real";
 
 		try {
 			await runPipeline(res, presetId, dateStr, dataMode, aiMode, stepMode);
