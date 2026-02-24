@@ -33,8 +33,8 @@ import { sanitizeCollectedData } from "../src/filter/sanitize";
 import { filterSensitiveDomains } from "../src/filter/sensitivity";
 import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../src/patterns";
-import { generateKnowledgeSections } from "../src/knowledge";
+import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
+import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import { renderMarkdown } from "../src/renderer";
 import { buildPrompt, summarizeDay } from "../src/summarize";
 
@@ -46,7 +46,7 @@ import type {
 	PatternAnalysis,
 	AISummary,
 } from "../src/types";
-import type { KnowledgeSections } from "../src/knowledge";
+import type { KnowledgeSections } from "../src/analyze/knowledge";
 import type { AICallConfig } from "../src/ai-client";
 
 // ── Env vars ─────────────────────────────────────────────

@@ -22,7 +22,7 @@ import {
 	KnowledgeDelta,
 	PatternAnalysis,
 	PatternConfig,
-} from "./types";
+} from "../types";
 
 // ── Temporal Clustering ────────────────────────────────
 

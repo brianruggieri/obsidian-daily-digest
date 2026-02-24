@@ -12,7 +12,7 @@ import { describe, it, expect } from "vitest";
 import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
 import { categorizeVisits } from "../../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
+import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { fullStackDeveloper, devopsInfrastructureDay } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig, createPrivacyTestScenario } from "../fixtures/scenarios";

@@ -40,8 +40,8 @@ import { sanitizeCollectedData } from "../src/filter/sanitize";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../src/filter/sensitivity";
 import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../src/patterns";
-import { generateKnowledgeSections } from "../src/knowledge";
+import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
+import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import { buildPrompt } from "../src/summarize";
 import { renderMarkdown } from "../src/renderer";
 

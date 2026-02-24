@@ -13,7 +13,7 @@ import {
 	PatternAnalysis,
 	TemporalCluster,
 	RecurrenceSignal,
-} from "./types";
+} from "../types";
 
 // ── Knowledge Sections ─────────────────────────────────
 
