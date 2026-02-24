@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readGitHistory, parseGitLogOutput } from "../../src/collectors";
-import type { DailyDigestSettings } from "../../src/settings";
+import type { DailyDigestSettings } from "../../src/settings/types";
 
 // ── parseGitLogOutput tests ─────────────────────────────
 

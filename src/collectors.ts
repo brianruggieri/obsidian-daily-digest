@@ -4,7 +4,7 @@ import { homedir, tmpdir, platform } from "os";
 // Note: readdirSync is used by readClaudeSessions → findJsonlFiles below
 import { join, basename } from "path";
 import initSqlJs from "sql.js";
-import { DailyDigestSettings } from "./settings";
+import { DailyDigestSettings } from "./settings/types";
 import { scrubSecrets } from "./sanitize";
 import { warn } from "./log";
 import {
