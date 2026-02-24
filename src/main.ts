@@ -262,18 +262,6 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
-			// ── Compress ─────────────────────────
-			progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
-			const compressed = compressActivity(
-				categorized, searches, shellCmds, claudeSessions, gitCommits,
-				this.settings.promptBudget
-			);
-			log.debug(
-				`Daily Digest: Compressed ${compressed.totalEvents} events ` +
-				`to ~${compressed.tokenEstimate} tokens ` +
-				`(budget: ${this.settings.promptBudget})`
-			);
-
 			// ── Classify (Phase 2) ──────────────
 			let classification: ClassificationResult | undefined;
 			if (this.settings.enableClassification && useAI) {
@@ -375,6 +363,18 @@ export default class DailyDigestPlugin extends Plugin {
 			// ── AI Summary ───────────────────────
 			let aiSummary = null;
 			if (useAI) {
+				// ── Compress ──────────────────────
+				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
+				const compressed = compressActivity(
+					categorized, searches, shellCmds, claudeSessions, gitCommits,
+					this.settings.promptBudget
+				);
+				log.debug(
+					`Daily Digest: Compressed ${compressed.totalEvents} events ` +
+					`to ~${compressed.tokenEstimate} tokens ` +
+					`(budget: ${this.settings.promptBudget})`
+				);
+
 				if (provider === "anthropic") {
 					// Cloud provider: show data preview for explicit consent
 					progressNotice.hide();
