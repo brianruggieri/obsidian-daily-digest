@@ -1,4 +1,4 @@
-import { DailyDigestSettings } from "../../src/settings";
+import { DailyDigestSettings } from "../../src/settings/types";
 import { BrowserVisit, SearchQuery, ClaudeSession, GitCommit } from "../../src/types";
 import { softwareEngineerDeepWork } from "../../tests/fixtures/personas";
 

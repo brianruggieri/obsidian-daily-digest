@@ -8,7 +8,7 @@ import {
 	SearchQuery,
 	slugifyQuestion,
 } from "./types";
-import { AIProvider } from "./settings";
+import { AIProvider } from "./settings/types";
 import { KnowledgeSections } from "./knowledge";
 import { formatDetailsBlock, type PromptLog } from "../scripts/lib/prompt-logger";
 
