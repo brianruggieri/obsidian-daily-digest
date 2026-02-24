@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
-export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified" | "unified";
+export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified";
 
 /**
  * Built-in prompt defaults, inlined as string literals so they work in both
@@ -255,42 +255,6 @@ Write for a person reading their own notes 3 months from now — help them under
 Only include category_summaries for activity types represented in the distribution.
 `,
 
-	unified: `You are building a daily note entry for a personal knowledge base. You have access to multiple levels of data about this person's day — use all of them to produce the richest possible synthesis. This note will be read during personal reflection and linked to ongoing projects and future notes in the vault.{{contextHint}}
-
-Date: {{dateStr}}
-
-{{allSections}}
-
-Return ONLY a JSON object with these exact keys — no markdown, no preamble:
-{
-  "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
-  "work_story": "2-3 sentences narrating the arc of the day's actual work — what was really being built or solved, how understanding evolved, what was discovered or decided. Tell the story: what changed from start to end of the day?",
-  "mindset": "1 sentence characterizing the working mode today — exploring, building, debugging, synthesizing, learning? What energy or cognitive style characterized the day?",
-  "tldr": "2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next",
-  "themes": ["3-5 broad theme tags for grouping this day with related days — e.g. 'authentication', 'debugging', 'market-research'"],
-  "topics": ["4-8 specific vault-linkable noun phrases — the actual concepts, tools, or methods worked with today. Format as note titles for [[wikilinks]]: 'OAuth 2.0', 'React hooks', 'PostgreSQL indexing'. Use consistent naming across sessions."],
-  "entities": ["3-6 named tools, libraries, frameworks, services, or APIs encountered today"],
-  "category_summaries": {
-    "<category_or_activity_type>": "1-sentence summary of what they were doing in this area"
-  },
-  "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
-  "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
-  "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
-  "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
-  "focus_narrative": "1-2 sentences on the day's cognitive character — deep-dive, execution, research, or scattered? What does the temporal shape suggest about how well this person directed their attention?",
-  "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, depth vs breadth, attention fragmentation, learning style signals"],
-  "quirky_signals": ["1-3 unusual signals: topics revisited but never formalized, unexpected cross-domain connections, rabbit holes, contradictions between stated focus and actual behavior"],
-  "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'context switching between research and implementation'"],
-  "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth flows, then committed auth middleware two hours later'"]
-}
-
-Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
-Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
-Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
-Only include category_summaries for categories or activity types that had actual activity.
-Write for a person reading their own notes 3 months from now — help them remember not just what happened, but what it meant, what they understood, and where they were in their work.
-`,
 };
 
 /**

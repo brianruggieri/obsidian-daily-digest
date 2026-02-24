@@ -473,14 +473,15 @@ ${deltaLines}
 		}
 		const typeSections: string[] = [];
 		const escAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+		const escText = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 		for (const [activityType, events] of Object.entries(byType)) {
 			const typeTopics = [...new Set(events.flatMap((ev) => ev.topics))];
 			const typeEntities = [...new Set(events.flatMap((ev) => ev.entities))];
 			typeSections.push(
 				`<activity_type name="${escAttr(activityType)}" count="${events.length}">\n` +
-				`Topics: ${typeTopics.join(", ") || "none"}\n` +
-				`Entities: ${typeEntities.join(", ") || "none"}\n` +
-				`Activities:\n${events.map((ev) => `  - ${ev.summary}`).join("\n")}\n` +
+				`Topics: ${typeTopics.map(escText).join(", ") || "none"}\n` +
+				`Entities: ${typeEntities.map(escText).join(", ") || "none"}\n` +
+				`Activities:\n${events.map((ev) => `  - ${escText(ev.summary)}`).join("\n")}\n` +
 				`</activity_type>`
 			);
 		}
