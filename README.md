@@ -4,7 +4,7 @@
 
 One command. One note. A complete picture of what you did today.
 
-![Daily Digest hero screenshot](screenshots/baseline/digest-hero.png)
+![Daily Digest hero screenshot](tests/screenshots/baseline/digest-hero.png)
 
 ---
 
@@ -26,7 +26,7 @@ Every day (or whenever you want), Daily Digest:
 
 The result is a note that looks like this:
 
-![A different kind of day](screenshots/baseline/digest-meeting-day.png)
+![A different kind of day](tests/screenshots/baseline/digest-meeting-day.png)
 
 ### Data sources
 
@@ -100,7 +100,7 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into your vault's plugin 
 
 When you enable the plugin for the first time, you'll see an onboarding screen:
 
-![Onboarding screen](screenshots/baseline/privacy-onboarding.png)
+![Onboarding screen](tests/screenshots/baseline/privacy-onboarding.png)
 
 **Everything is off by default.** You choose which data sources to enable and whether you want AI summaries. Nothing is collected until you opt in.
 
@@ -126,9 +126,9 @@ When you enable the plugin for the first time, you'll see an onboarding screen:
 
 Here's what a generated note looks like:
 
-![Searches and Claude Code sessions](screenshots/baseline/digest-searches-claude.png)
+![Searches and Claude Code sessions](tests/screenshots/baseline/digest-searches-claude.png)
 
-![Browser activity by category](screenshots/baseline/digest-browser.png)
+![Browser activity by category](tests/screenshots/baseline/digest-browser.png)
 
 ### Structure
 
@@ -195,7 +195,7 @@ The plugin automatically selects the most private tier available based on your c
 
 When Anthropic is your provider, you also get a **data preview modal** before anything is sent — showing exactly what data will leave your machine, with the option to cancel or proceed without AI.
 
-![Settings panel](screenshots/baseline/settings-default.png)
+![Settings panel](tests/screenshots/baseline/settings-default.png)
 
 ### What gets scrubbed
 
