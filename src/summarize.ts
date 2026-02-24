@@ -18,7 +18,8 @@ export function buildPrompt(
 	claudeSessions: ClaudeSession[],
 	profile: string,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	focusScore?: number
 ): string {
 	const catLines: string[] = [];
 	for (const [cat, visits] of Object.entries(categorized)) {
@@ -47,9 +48,17 @@ export function buildPrompt(
 		day: "numeric",
 	});
 
+	const focusLabel = focusScore !== undefined
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		: "";
+	const focusHint = focusScore !== undefined
+		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
+		: "";
+
 	const vars: Record<string, string> = {
 		dateStr,
 		contextHint,
+		focusHint,
 		browserActivity: catLines.length ? catLines.join("\n") : "  (none)",
 		searches: searchList.length ? searchList.map((q) => `  - ${q}`).join("\n") : "  (none)",
 		claudePrompts: claudeList.length ? claudeList.map((p) => `  - ${p}`).join("\n") : "  (none)",
@@ -68,7 +77,8 @@ function buildCompressedPrompt(
 	date: Date,
 	compressed: CompressedActivity,
 	profile: string,
-	promptsDir?: string
+	promptsDir?: string,
+	focusScore?: number
 ): string {
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 	const dateStr = date.toLocaleDateString("en-US", {
@@ -78,9 +88,17 @@ function buildCompressedPrompt(
 		day: "numeric",
 	});
 
+	const focusLabel = focusScore !== undefined
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		: "";
+	const focusHint = focusScore !== undefined
+		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
+		: "";
+
 	const vars: Record<string, string> = {
 		dateStr,
 		contextHint,
+		focusHint,
 		totalEvents: String(compressed.totalEvents),
 		browserActivity: compressed.browserText,
 		searches: compressed.searchText,
@@ -97,7 +115,8 @@ function buildRAGPrompt(
 	date: Date,
 	retrievedChunks: EmbeddedChunk[],
 	profile: string,
-	promptsDir?: string
+	promptsDir?: string,
+	focusScore?: number
 ): string {
 	const dateStr = date.toLocaleDateString("en-US", {
 		weekday: "long",
@@ -114,9 +133,17 @@ function buildRAGPrompt(
 		)
 		.join("\n\n");
 
+	const focusLabel = focusScore !== undefined
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		: "";
+	const focusHint = focusScore !== undefined
+		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
+		: "";
+
 	const vars: Record<string, string> = {
 		dateStr,
 		contextHint,
+		focusHint,
 		chunkTexts,
 	};
 	return fillTemplate(loadPromptTemplate("rag", promptsDir), vars);
@@ -129,7 +156,8 @@ export function buildClassifiedPrompt(
 	date: Date,
 	classification: ClassificationResult,
 	profile: string,
-	promptsDir?: string
+	promptsDir?: string,
+	focusScore?: number
 ): string {
 	const dateStr = date.toLocaleDateString("en-US", {
 		weekday: "long",
@@ -138,6 +166,13 @@ export function buildClassifiedPrompt(
 		day: "numeric",
 	});
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
+
+	const focusLabel = focusScore !== undefined
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		: "";
+	const focusHint = focusScore !== undefined
+		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
+		: "";
 
 	// Group events by activityType
 	const byType: Record<string, StructuredEvent[]> = {};
@@ -169,6 +204,7 @@ export function buildClassifiedPrompt(
 	const vars: Record<string, string> = {
 		dateStr,
 		contextHint,
+		focusHint,
 		totalProcessed: String(classification.totalProcessed),
 		llmClassified: String(classification.llmClassified),
 		ruleClassified: String(classification.ruleClassified),
@@ -585,8 +621,8 @@ export async function summarizeDay(
 	// fixed-cap prompt builder.
 	const standardPrompt = () =>
 		compressed
-			? buildCompressedPrompt(date, compressed, profile, promptsDir)
-			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits, promptsDir);
+			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
+			: buildPrompt(date, categorized, searches, shellCmds, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
 
 	// Privacy escalation chain for Anthropic:
 	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
@@ -606,7 +642,7 @@ export async function summarizeDay(
 		);
 	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
 		// Phase 2: Per-event abstractions — no raw data
-		prompt = buildClassifiedPrompt(date, classification, profile, promptsDir);
+		prompt = buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore);
 		log.debug(
 			`Daily Digest: Using classified prompt for Anthropic ` +
 			`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
@@ -647,7 +683,7 @@ export async function summarizeDay(
 					ragConfig.embeddingModel,
 					ragConfig.topK
 				);
-				prompt = buildRAGPrompt(date, retrieved, profile, promptsDir);
+				prompt = buildRAGPrompt(date, retrieved, profile, promptsDir, patterns?.focusScore);
 				log.debug(
 					`Daily Digest RAG: Using RAG prompt (${retrieved.length} chunks, ` +
 					`~${estimateTokens(prompt)} tokens)`
