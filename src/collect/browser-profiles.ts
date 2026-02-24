@@ -29,7 +29,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir, platform } from "os";
 import { join } from "path";
-import { BrowserInstallConfig, BrowserPathConfig, DetectedProfile, BROWSER_PATH_CONFIGS } from "./types";
+import { BrowserInstallConfig, BrowserPathConfig, DetectedProfile, BROWSER_PATH_CONFIGS } from "../types";
 
 // ── Path helpers ─────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { unwrapGoogleRedirect } from "../../src/collectors";
+import { unwrapGoogleRedirect } from "../../src/collect/browser";
 
 // ── Google Redirect Extraction ──────────────────────────
 

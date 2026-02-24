@@ -33,13 +33,13 @@ export async function collectRealData(settings: DailyDigestSettings, since?: Dat
 	let visits: BrowserVisit[] = [];
 	let searches: SearchQuery[] = [];
 	if (settings.enableBrowser) {
-		const { collectBrowserHistory } = await import("../../src/collectors");
+		const { collectBrowserHistory } = await import("../../src/collect/browser");
 
 		// Auto-detect browser profiles when none are configured (inspector real-data mode).
 		// Enables all profiles that have a history database.
 		let effectiveSettings = settings;
 		if (settings.browserConfigs.length === 0) {
-			const { detectAllBrowsers } = await import("../../src/browser-profiles");
+			const { detectAllBrowsers } = await import("../../src/collect/browser-profiles");
 			const detected = await detectAllBrowsers();
 			const autoConfigs = detected.map((c) => ({
 				...c,
@@ -54,7 +54,9 @@ export async function collectRealData(settings: DailyDigestSettings, since?: Dat
 		searches = result.searches;
 	}
 
-	const { readClaudeSessions, readCodexSessions, readGitHistory } = await import("../../src/collectors");
+	const { readClaudeSessions } = await import("../../src/collect/claude");
+		const { readCodexSessions } = await import("../../src/collect/codex");
+		const { readGitHistory } = await import("../../src/collect/git");
 
 	let raw: CollectedData = {
 		visits,

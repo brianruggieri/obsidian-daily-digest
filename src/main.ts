@@ -1,7 +1,10 @@
 import { Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DEFAULT_SETTINGS, SECRET_ID } from "./settings/types";
 import { DailyDigestSettingTab } from "./settings/ui";
-import { collectBrowserHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
+import { collectBrowserHistory } from "./collect/browser";
+import { readClaudeSessions } from "./collect/claude";
+import { readCodexSessions } from "./collect/codex";
+import { readGitHistory } from "./collect/git";
 import { categorizeVisits } from "./categorize";
 import { compressActivity } from "./compress";
 import { summarizeDay, buildPrompt } from "./summarize";

@@ -34,7 +34,7 @@ import { parseArgs } from "util";
 
 import { collectFixtureData, collectRealData } from "./lib/collector-shim";
 import { BASE_SETTINGS } from "./presets";
-import { detectAllBrowsers } from "../src/browser-profiles";
+import { detectAllBrowsers } from "../src/collect/browser-profiles";
 import { getMockSummary } from "./lib/mock-ai";
 import { sanitizeCollectedData } from "../src/sanitize";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../src/sensitivity";
