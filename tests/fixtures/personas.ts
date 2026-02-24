@@ -10,7 +10,6 @@
 import {
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	GitCommit,
 	ActivityType,
@@ -21,7 +20,6 @@ import {
 	SEARCH_TEMPLATES,
 	generateBrowserVisits,
 	generateSearchQueries,
-	generateShellCommands,
 	generateClaudeSessions,
 	generateCodexSessions,
 	generateGitCommits,
@@ -32,7 +30,6 @@ export interface PersonaOutput {
 	description: string;
 	visits: BrowserVisit[];
 	searches: SearchQuery[];
-	shell: ShellCommand[];
 	claude: ClaudeSession[];
 	codex: ClaudeSession[];
 	git: GitCommit[];
@@ -48,7 +45,6 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
 	const visitTs = generateTimeSeries(180, config);
 	const searchTs = generateTimeSeries(25, config);
-	const shellTs = generateTimeSeries(40, config);
 	const claudeTs = generateTimeSeries(12, config);
 	const codexTs = generateTimeSeries(4, config);
 	const gitTs = generateTimeSeries(8, config);
@@ -73,7 +69,6 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 			engines: ["google.com", "kagi.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 40, workflow: "webdev", timestamps: shellTs }),
 		claude: generateClaudeSessions({
 			count: 12,
 			promptCategory: "coding",
@@ -104,7 +99,6 @@ export function academicResearcher(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
 	const visitTs = generateTimeSeries(220, config);
 	const searchTs = generateTimeSeries(35, config);
-	const shellTs = generateTimeSeries(15, config);
 	const claudeTs = generateTimeSeries(8, config);
 	const codexTs = generateTimeSeries(3, config);
 	const gitTs = generateTimeSeries(5, config);
@@ -129,7 +123,6 @@ export function academicResearcher(date?: Date): PersonaOutput {
 			engines: ["google.com", "scholar.google.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 15, workflow: "academic", timestamps: shellTs }),
 		claude: generateClaudeSessions({
 			count: 8,
 			promptCategory: "academic",
@@ -160,7 +153,6 @@ export function productManagerMeetings(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
 	const visitTs = generateTimeSeries(160, config);
 	const searchTs = generateTimeSeries(15, config);
-	const shellTs = generateTimeSeries(5, config);
 	const claudeTs = generateTimeSeries(6, config);
 	const codexTs = generateTimeSeries(2, config);
 
@@ -185,7 +177,6 @@ export function productManagerMeetings(date?: Date): PersonaOutput {
 			engines: ["google.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 5, workflow: "writing", timestamps: shellTs }),
 		claude: generateClaudeSessions({
 			count: 6,
 			promptCategory: "product",
@@ -216,7 +207,6 @@ export function devopsIncidentDay(date?: Date): PersonaOutput {
 	};
 	const visitTs = generateTimeSeries(140, config);
 	const searchTs = generateTimeSeries(20, config);
-	const shellTs = generateTimeSeries(60, config);
 	const claudeTs = generateTimeSeries(10, config);
 	const codexTs = generateTimeSeries(4, config);
 	const gitTs = generateTimeSeries(6, config);
@@ -239,7 +229,6 @@ export function devopsIncidentDay(date?: Date): PersonaOutput {
 			engines: ["google.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 60, workflow: "incident", timestamps: shellTs }),
 		claude: generateClaudeSessions({
 			count: 10,
 			promptCategory: "incident",
@@ -276,7 +265,6 @@ export function studentExamPrep(date?: Date): PersonaOutput {
 	};
 	const visitTs = generateTimeSeries(250, config);
 	const searchTs = generateTimeSeries(40, config);
-	const shellTs = generateTimeSeries(10, config);
 	const claudeTs = generateTimeSeries(15, config);
 	const codexTs = generateTimeSeries(3, config);
 	const gitTs = generateTimeSeries(3, config);
@@ -300,7 +288,6 @@ export function studentExamPrep(date?: Date): PersonaOutput {
 			engines: ["google.com", "duckduckgo.com"],
 			timestamps: searchTs,
 		}),
-		shell: generateShellCommands({ count: 10, workflow: "student", timestamps: shellTs }),
 		claude: generateClaudeSessions({
 			count: 15,
 			promptCategory: "student",
@@ -335,7 +322,6 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 	};
 	const visitTs = generateTimeSeries(200, config);
 	const _searchTs = generateTimeSeries(20, config);
-	const _shellTs = generateTimeSeries(35, config);
 	const gitTs = generateTimeSeries(4, config);
 
 	const domains = [
@@ -371,11 +357,6 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 		timestamps: claudeTs.slice(7, 10),
 	});
 
-	// Shell commands from 3 different workflows representing project switching
-	const shellA = generateShellCommands({ count: 12, workflow: "freelance_react", timestamps: generateTimeSeries(12, config) });
-	const shellB = generateShellCommands({ count: 8, workflow: "freelance_wordpress", timestamps: generateTimeSeries(8, config) });
-	const shellC = generateShellCommands({ count: 5, workflow: "freelance_invoicing", timestamps: generateTimeSeries(5, config) });
-	const shellMisc = generateShellCommands({ count: 10, workflow: "webdev", timestamps: generateTimeSeries(10, config) });
 
 	return {
 		name: "Freelancer — Multi-Project Day",
@@ -387,7 +368,6 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 			engines: ["google.com", "duckduckgo.com"],
 			timestamps: generateTimeSeries(20, config),
 		}),
-		shell: [...shellA, ...shellB, ...shellC, ...shellMisc].slice(0, 35),
 		claude: [...claudeA, ...claudeB, ...claudeC],
 		codex: generateCodexSessions({
 			count: 3,

@@ -1,6 +1,6 @@
 # Daily Digest for Obsidian
 
-**Your day, distilled.** Daily Digest reads your browser history, search queries, shell commands, and Claude Code sessions, then compiles everything into a single, AI-summarized daily note in your Obsidian vault.
+**Your day, distilled.** Daily Digest reads your browser history, search queries, and Claude Code sessions, then compiles everything into a single, AI-summarized daily note in your Obsidian vault.
 
 One command. One note. A complete picture of what you did today.
 
@@ -18,7 +18,7 @@ Daily Digest captures all of that and turns it into something you can actually r
 
 Every day (or whenever you want), Daily Digest:
 
-1. **Collects** your browser history, search queries, shell commands, and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions
+1. **Collects** your browser history, search queries, and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions
 2. **Sanitizes** everything — scrubs API keys, tokens, passwords, and sensitive URLs before anything touches your vault
 3. **Categorizes** browser visits into meaningful groups (Dev, Research, Work, News, etc.)
 4. **Summarizes** the whole day with AI — a headline, key themes, notable moments, and reflection questions
@@ -34,7 +34,6 @@ The result is a note that looks like this:
 |--------|--------------|-----|
 | **Browser history** | URLs, page titles, timestamps | SQLite databases (read-only copy) |
 | **Search queries** | Queries from Google, Bing, DuckDuckGo, Yahoo, Kagi, Perplexity | Extracted from browser history URLs |
-| **Shell commands** | Your terminal history with timestamps | `~/.zsh_history` or `~/.bash_history` |
 | **Claude Code sessions** | Your prompts to Claude Code (not responses) | `~/.claude/projects/**/*.jsonl` |
 
 ### Supported browsers
@@ -65,7 +64,6 @@ To collect activity data, the plugin reads files from outside your Obsidian vaul
 | Source | File path(s) | Why |
 |--------|-------------|-----|
 | **Browser history** | Platform-specific SQLite database inside the browser's profile directory (e.g., `~/Library/Application Support/Google/Chrome/…/History`) | To build a record of URLs you visited, including search queries extracted from them |
-| **Shell history** | `~/.zsh_history`, `~/.bash_history` | To include terminal commands in your daily record |
 | **Claude Code sessions** | `~/.claude/projects/**/*.jsonl` | To include your AI coding prompts, grouped by project |
 
 ---
@@ -108,7 +106,7 @@ When you enable the plugin for the first time, you'll see an onboarding screen:
 
 ### Quick setup
 
-1. **Enable the data sources you want** — browser history, shell commands, Claude Code sessions
+1. **Enable the data sources you want** — browser history, Claude Code sessions
 2. **Choose an AI provider** (or skip AI for raw data only):
    - **Local model:** Install [Ollama](https://ollama.ai), pull a model (`ollama pull llama3.2`), and start the server (`ollama serve`). Your data never leaves your machine.
    - **Anthropic API:** Add your API key in settings or set the `ANTHROPIC_API_KEY` environment variable.
@@ -132,8 +130,6 @@ Here's what a generated note looks like:
 
 ![Browser activity by category](screenshots/baseline/digest-browser.png)
 
-![Shell commands and reflection questions](screenshots/baseline/digest-shell-reflection.png)
-
 ### Structure
 
 Every note includes:
@@ -145,7 +141,6 @@ Every note includes:
 - **Searches** — every query, with engine badges and timestamps
 - **Claude Code / AI Work** — your prompts to Claude Code, grouped by project
 - **Browser Activity** — visits organized by category (Dev, Research, Work, etc.) and grouped by domain
-- **Shell** — your terminal commands in a code block
 - **Reflection** — AI-generated questions with Dataview inline fields for your answers
 - **Notes** — a section for your own thoughts (preserved across regenerations)
 
@@ -357,7 +352,7 @@ src/
   main.ts           Plugin entry point, commands, vault integration
   types.ts          TypeScript interfaces and constants
   settings.ts       Settings UI and configuration
-  collectors.ts     Browser, shell, and Claude Code data collection
+  collectors.ts     Browser and Claude Code data collection
   sanitize.ts       Defense-in-depth secret scrubbing
   sensitivity.ts    419-domain sensitivity filter
   categorize.ts     Rule-based domain categorization
@@ -385,7 +380,6 @@ Daily Digest is **desktop only** (`isDesktopOnly: true`) — it requires filesys
 | Browser history (Chrome, Brave, Edge) | ✓ | ✓ | ✓ |
 | Browser history (Firefox) | ✓ | ✓ | ✓ |
 | Browser history (Safari) | ✓ | — | — |
-| Shell history | ✓ (zsh/bash) | — | ✓ (bash) |
 | Claude Code sessions | ✓ | ✓ | ✓ |
 
 Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly) — no native binaries, no system dependencies. The wasm binary (~1.2 MB) is bundled inline.
@@ -395,7 +389,7 @@ Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite
 ## FAQ
 
 **Does this work without AI?**
-Yes. The "Generate today's daily note (no AI)" command gives you a fully structured activity log with categorized browser visits, searches, shell commands, and Claude Code sessions — just no headline, summary, or reflection questions.
+Yes. The "Generate today's daily note (no AI)" command gives you a fully structured activity log with categorized browser visits, searches, and Claude Code sessions — just no headline, summary, or reflection questions.
 
 **Does my data leave my computer?**
 Only if you choose Anthropic as your AI provider. With a local model (or no AI), everything stays on your machine. Even with Anthropic, the privacy escalation chain minimizes what gets sent.
@@ -422,7 +416,6 @@ Features already shipped are in the current release. The following are planned b
 These stubs exist in the codebase and return gracefully (no-op / empty array). They are intentionally excluded from the current feature set.
 
 **Platform expansion**
-- Windows/Linux shell history support
 
 ---
 

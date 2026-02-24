@@ -412,8 +412,7 @@ async function runPipeline(
 			: await collectFixtureData(settings);
 		return {
 			detail: `${raw.visits.length} visits, ${raw.searches.length} searches, ` +
-				`${raw.shell.length} shell, ${raw.claudeSessions.length} sessions, ` +
-				`${raw.gitCommits.length} commits`,
+				`${raw.claudeSessions.length} sessions, ${raw.gitCommits.length} commits`,
 		};
 	});
 
@@ -433,7 +432,6 @@ async function runPipeline(
 		sanitized = sanitizeCollectedData(
 			raw.visits,
 			raw.searches,
-			raw.shell,
 			raw.claudeSessions,
 			raw.gitCommits,
 			sanitizeConfig
@@ -489,7 +487,6 @@ async function runPipeline(
 				classification = await classifyEvents(
 					filteredVisits,
 					sanitized.searches,
-					sanitized.shellCommands,
 					sanitized.claudeSessions,
 					sanitized.gitCommits,
 					categorized,
@@ -500,7 +497,6 @@ async function runPipeline(
 				classification = classifyEventsRuleOnly(
 					filteredVisits,
 					sanitized.searches,
-					sanitized.shellCommands,
 					sanitized.claudeSessions,
 					sanitized.gitCommits,
 					categorized
@@ -563,7 +559,6 @@ async function runPipeline(
 				date,
 				categorized,
 				sanitized.searches,
-				sanitized.shellCommands,
 				sanitized.claudeSessions,
 				settings.profile,
 				sanitized.gitCommits
@@ -595,7 +590,6 @@ async function runPipeline(
 				date,
 				categorized,
 				sanitized.searches,
-				sanitized.shellCommands,
 				sanitized.claudeSessions,
 				aiCallConfig,
 				settings.profile,
@@ -617,7 +611,6 @@ async function runPipeline(
 			date,
 			filteredVisits,
 			sanitized.searches,
-			sanitized.shellCommands,
 			sanitized.claudeSessions,
 			sanitized.gitCommits,
 			categorized,

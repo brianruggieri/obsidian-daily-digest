@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Daily Digest is an Obsidian desktop plugin that compiles browser history, search queries, shell commands, Claude Code sessions, Codex CLI sessions, and git commits into AI-summarized daily notes. Privacy-first architecture with a 4-tier escalation chain controlling what data reaches cloud APIs.
+Daily Digest is an Obsidian desktop plugin that compiles browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits into AI-summarized daily notes. Privacy-first architecture with a 4-tier escalation chain controlling what data reaches cloud APIs.
 
 - **Plugin ID:** `daily-digest`
 - **Author:** Brian Ruggieri
 - **License:** MIT
-- **Desktop only** (reads local SQLite databases, shell history, and filesystem)
+- **Desktop only** (reads local SQLite databases and filesystem)
 
 > **Development status:** This plugin is **unpublished** — it has not been submitted to the Obsidian community plugin registry and has no end users other than the developer (Brian). Schema-breaking changes, settings migrations, and data format changes carry **zero backward-compatibility risk** at this time. Agents should feel free to make clean, breaking improvements without adding migration shims or deprecation paths.
 
@@ -27,7 +27,7 @@ src/
   main.ts           - Plugin entry point, commands, vault integration
   types.ts          - All TypeScript interfaces and type definitions
   settings.ts       - Settings UI (largest file ~1,350 lines)
-  collectors.ts     - Data collection from browsers, shell, Claude sessions
+  collectors.ts     - Data collection from browsers and Claude sessions
   sanitize.ts       - Secret scrubbing (API keys, tokens, credentials)
   sensitivity.ts    - 419-domain privacy filter with 11 categories
   categorize.ts     - Rule-based domain → category mapping
@@ -81,7 +81,7 @@ npm run deploy:dev     # Quick deploy without full rebuild
 
 ## Architecture: 9-Stage Processing Pipeline
 
-1. **Collection** — Read from browser SQLite, shell history, Claude JSONL logs, Codex CLI JSONL logs
+1. **Collection** — Read from browser SQLite, Claude JSONL logs, Codex CLI JSONL logs
 2. **Sanitization** — Scrub secrets (15+ regex patterns for API keys, tokens, JWTs, etc.)
 3. **Sensitivity Filtering** — Remove/redact visits to private domains (419 built-in + custom)
 4. **Categorization** — Rule-based domain grouping (10 categories)

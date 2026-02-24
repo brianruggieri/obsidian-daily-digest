@@ -75,7 +75,6 @@ Raw URLs                    ✓           ✓           ✓           ✗       
 Page titles                 ✓           ✓           ✓           ✗           ✗
 Domain names                ✓           ✓           ✓           ✗           ✗
 Search query text           ✓           ✓           ✓           ✗           ✗
-Shell command text          ✓           ✓           ✓           ✗           ✗
 Claude prompt text          ✓           ✓           ✓           ✗           ✗
 Git commit messages         ✓           ✓           ✓           ✗           ✗
 Per-event summaries         ✗           ✗           ✗           ✓           ✗
@@ -94,7 +93,6 @@ Knowledge delta counts      ✗           ✗           ✗           ✗       
 - Browser: top 8 domains per category, top 5 titles each
 - Searches: top 20 queries
 - Claude prompts: top 10, truncated to 120 chars
-- Shell commands: top 15, truncated to 80 chars
 - Git commits: top 20, truncated to 80 chars
 
 ---
@@ -118,7 +116,6 @@ date                              ──►  # 📅 Monday, February 23, 2026  (
 
 visits.length                     ──►  ┐
 searches.length                   ──►  ├─  > [!info] N visits · N searches · …
-shell.length                      ──►  │
 claudeSessions.length             ──►  │
 gitCommits.length                 ──►  │
 categorized key count             ──►  ┘
@@ -161,10 +158,6 @@ CategorizedVisits                 ──►  ## 🌐 Browser Activity
                                        ### emoji Category (N)
                                        **domain** (N)
                                          - [title](url) — HH:MM
-
-ShellCommand[]                    ──►  ## 💻 Shell
-                                       <details><summary>N commands</summary>
-                                       ```bash  # HH:MM  cmd  ```
 
 GitCommit[]                       ──►  ## 📦 Git Activity
                                        ### repo (N commits)
@@ -238,7 +231,7 @@ Write merged (or new) note to vault
 Generated headings (never treated as user content):
   Notable, Cognitive Patterns, Knowledge Insights,
   Searches, Claude Code / AI Work, Browser Activity,
-  Shell, Reflection, Notes
+  Reflection, Notes
 
 Any ## heading NOT in the above set → treated as
 user-authored custom section and preserved.
@@ -256,9 +249,6 @@ SETTING                     GATES
 enableBrowser = false   ──► BrowserVisit[] is empty → no categorized data
                              → no browser section in note
                              → no browser-based classification events
-
-enableShell = false     ──► ShellCommand[] is empty → no shell section
-                             → shell not included in prompt
 
 enableClaude = false    ──► ClaudeSession[] is empty → no AI Work section
 enableCodex = false     ──► (same — both feed ClaudeSession[])

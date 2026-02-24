@@ -1,6 +1,6 @@
 import { Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
-import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
+import { collectBrowserHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
 import { compressActivity } from "./compress";
 import { summarizeDay, buildPrompt } from "./summarize";
@@ -125,7 +125,6 @@ export default class DailyDigestPlugin extends Plugin {
 		const since = date; // collection window: midnight on the requested date
 
 		const { visits: rawVisits, searches: rawSearches } = await collectBrowserHistory(this.settings, since);
-		const rawShell = readShellHistory(this.settings, since);
 		const rawClaude = [
 			...readClaudeSessions(this.settings, since),
 			...readCodexSessions(this.settings, since),
@@ -136,21 +135,19 @@ export default class DailyDigestPlugin extends Plugin {
 			return {
 				visits: rawVisits.length,
 				searches: rawSearches.length,
-				shell: rawShell.length,
 				claude: rawClaude.length,
 				git: rawGit.length,
 			};
 		}
 
 		const sanitized = sanitizeCollectedData(
-			rawVisits, rawSearches, rawShell, rawClaude, rawGit,
+			rawVisits, rawSearches, rawClaude, rawGit,
 			{ enabled: true, level: "standard", excludedDomains: [], redactPaths: false, scrubEmails: true }
 		);
 		if (stage === "sanitized") {
 			return {
 				visits: sanitized.visits.length,
 				searches: sanitized.searches.length,
-				shell: sanitized.shellCommands.length,
 				claude: sanitized.claudeSessions.length,
 				git: sanitized.gitCommits.length,
 				excluded: sanitized.excludedVisitCount,
@@ -166,7 +163,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 		if (stage === "prompt") {
 			return buildPrompt(
-				date, categorized, sanitized.searches, sanitized.shellCommands,
+				date, categorized, sanitized.searches,
 				sanitized.claudeSessions, this.settings.profile, sanitized.gitCommits,
 				this.settings.promptsDir
 			);
@@ -273,9 +270,6 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Reading browser history\u2026");
 			let { visits: rawVisits, searches: rawSearches } = await collectBrowserHistory(this.settings, since);
 
-			progressNotice.setMessage("Daily Digest: Reading shell history\u2026");
-			const rawShellCmds = readShellHistory(this.settings, since);
-
 			progressNotice.setMessage("Daily Digest: Reading Claude Code and Codex sessions\u2026");
 			const rawClaudeSessions = [
 				...readClaudeSessions(this.settings, since),
@@ -311,12 +305,11 @@ export default class DailyDigestPlugin extends Plugin {
 			// ── Sanitize ────────────────────────
 			progressNotice.setMessage("Daily Digest: Sanitizing data\u2026");
 			const sanitized = sanitizeCollectedData(
-				rawVisits, rawSearches, rawShellCmds, rawClaudeSessions, rawGitCommits,
+				rawVisits, rawSearches, rawClaudeSessions, rawGitCommits,
 				sanitizeConfig
 			);
 			const visits = sanitized.visits;
 			const searches = sanitized.searches;
-			const shellCmds = sanitized.shellCommands;
 			const claudeSessions = sanitized.claudeSessions;
 			const gitCommits = sanitized.gitCommits;
 			const excludedCount = sanitized.excludedVisitCount;
@@ -344,7 +337,7 @@ export default class DailyDigestPlugin extends Plugin {
 					};
 					try {
 						classification = await classifyEvents(
-							visits, searches, shellCmds, claudeSessions, gitCommits,
+							visits, searches, claudeSessions, gitCommits,
 							categorized, classConfig
 						);
 						log.debug(
@@ -434,7 +427,7 @@ export default class DailyDigestPlugin extends Plugin {
 				// ── Compress ──────────────────────
 				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
 				const compressed = compressActivity(
-					categorized, searches, shellCmds, claudeSessions, gitCommits,
+					categorized, searches, claudeSessions, gitCommits,
 					this.settings.promptBudget
 				);
 				log.debug(
@@ -450,7 +443,6 @@ export default class DailyDigestPlugin extends Plugin {
 					const result = await new DataPreviewModal(this.app, {
 						visitCount: visits.length,
 						searchCount: searches.length,
-						shellCount: shellCmds.length,
 						claudeCount: claudeSessions.length,
 						gitCount: gitCommits.length,
 						excludedCount: totalExcluded,
@@ -460,9 +452,6 @@ export default class DailyDigestPlugin extends Plugin {
 							})),
 							searches: searches.slice(0, 5).map((s) => ({
 								text: s.query,
-							})),
-							shell: shellCmds.slice(0, 5).map((c) => ({
-								text: c.cmd.slice(0, 80),
 							})),
 							claude: claudeSessions.slice(0, 3).map((c) => ({
 								text: c.prompt.slice(0, 100),
@@ -491,8 +480,7 @@ export default class DailyDigestPlugin extends Plugin {
 							0
 						);
 						aiSummary = await summarizeDay(
-							targetDate, categorized, searches, shellCmds,
-							claudeSessions, aiConfig, this.settings.profile,
+							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
 							compressed, gitCommits, this.settings.promptsDir
 						);
@@ -508,8 +496,7 @@ export default class DailyDigestPlugin extends Plugin {
 							: "Daily Digest: Generating AI summary (local)\u2026"
 					);
 					aiSummary = await summarizeDay(
-						targetDate, categorized, searches, shellCmds,
-						claudeSessions, aiConfig, this.settings.profile,
+						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
 						compressed, gitCommits, this.settings.promptsDir
 					);
@@ -525,7 +512,6 @@ export default class DailyDigestPlugin extends Plugin {
 				targetDate,
 				visits,
 				searches,
-				shellCmds,
 				claudeSessions,
 				gitCommits,
 				categorized,
@@ -541,7 +527,7 @@ export default class DailyDigestPlugin extends Plugin {
 			renderNotice.hide();
 			this.statusBarItem.setText("Daily Digest ready");
 
-			const stats = `${visits.length} visits, ${searches.length} searches, ${shellCmds.length} commands, ${claudeSessions.length} prompts, ${gitCommits.length} commits`;
+			const stats = `${visits.length} visits, ${searches.length} searches, ${claudeSessions.length} prompts, ${gitCommits.length} commits`;
 			new Notice(`Daily Digest: Daily note created!\n${stats}`, 6000);
 
 			// Open the file

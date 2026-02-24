@@ -8,7 +8,7 @@ import {
 	VaultAdapter,
 } from "../../src/merge";
 import { renderMarkdown } from "../../src/renderer";
-import { AISummary, BrowserVisit, SearchQuery, ShellCommand, ClaudeSession, CategorizedVisits, slugifyQuestion } from "../../src/types";
+import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, slugifyQuestion } from "../../src/types";
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -19,9 +19,6 @@ const sampleVisits: BrowserVisit[] = [
 ];
 const sampleSearches: SearchQuery[] = [
 	{ query: "react hooks tutorial", time: new Date("2025-06-15T10:30:00"), engine: "google.com" },
-];
-const sampleShell: ShellCommand[] = [
-	{ cmd: "git status", time: new Date("2025-06-15T11:00:00") },
 ];
 const sampleClaude: ClaudeSession[] = [
 	{ prompt: "Fix the auth bug", time: new Date("2025-06-15T11:30:00"), project: "webapp" },
@@ -44,7 +41,7 @@ const ANSWER_SLUG = `answer_${slugifyQuestion(QUESTION)}`;
 /** Generate a fresh daily-digest note using the real renderer. */
 function freshNote(ai: AISummary | null = sampleAISummary): string {
 	return renderMarkdown(
-		DATE, sampleVisits, sampleSearches, sampleShell,
+		DATE, sampleVisits, sampleSearches,
 		sampleClaude, [], sampleCategorized, ai,
 	);
 }
@@ -521,7 +518,7 @@ describe("createBackup", () => {
 describe("edge cases", () => {
 	it("handles note without AI summary (no reflection section)", () => {
 		const md = renderMarkdown(
-			DATE, sampleVisits, sampleSearches, sampleShell,
+			DATE, sampleVisits, sampleSearches,
 			sampleClaude, [], sampleCategorized, null,
 		);
 		const edited = withUserNotes(md, "User wrote some notes");

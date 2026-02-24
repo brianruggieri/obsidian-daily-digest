@@ -10,7 +10,6 @@ import { warn } from "./log";
 import {
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	GitCommit,
 	SEARCH_ENGINES,
@@ -327,117 +326,6 @@ export async function collectBrowserHistory(
 		visits: clean.slice(0, visitLimit),
 		searches: searches.slice(0, searchLimit),
 	};
-}
-
-// ── Shell History ────────────────────────────────
-
-const NOISE_COMMANDS = new Set(["ls", "cd", "pwd", "clear", "exit", "history", ""]);
-
-export function readShellHistory(settings: DailyDigestSettings, since: Date): ShellCommand[] {
-	if (!settings.enableShell) return [];
-
-	const entries: ShellCommand[] = [];
-	const cutoff = Math.floor(since.getTime() / 1000);
-
-	// ── fish shell (timestamped YAML, highest fidelity) ──────────────────────
-	// fish always records timestamps, so prefer it when available.
-	const fishHist = expandHome("~/.local/share/fish/fish_history");
-	if (existsSync(fishHist)) {
-		try {
-			const content = readFileSync(fishHist, "utf-8");
-			let currentCmd: string | null = null;
-			for (const line of content.split("\n")) {
-				if (line.startsWith("- cmd: ")) {
-					currentCmd = line.slice("- cmd: ".length).trim();
-				} else if (line.startsWith("  when: ") && currentCmd !== null) {
-					const ts = parseInt(line.slice("  when: ".length).trim());
-					if (!isNaN(ts) && ts >= cutoff) {
-						entries.push({ cmd: scrubSecrets(currentCmd), time: new Date(ts * 1000) });
-					}
-					currentCmd = null;
-				}
-			}
-		} catch {
-			// fish history read failed
-		}
-	}
-
-	// ── zsh history ──────────────────────────────────────────────────────────
-	const zshHist = expandHome("~/.zsh_history");
-	if (existsSync(zshHist)) {
-		try {
-			const raw = readFileSync(zshHist);
-			const lines = raw.toString("utf-8").split("\n");
-			let hasTimestamps = false;
-
-			for (const line of lines) {
-				try {
-					if (line.startsWith(": ")) {
-						hasTimestamps = true;
-						const parts = line.slice(2).split(";", 2);
-						if (parts.length === 2) {
-							const ts = parseInt(parts[0].split(":")[0].trim());
-							const cmd = parts[1].trim();
-							if (ts >= cutoff && cmd) {
-								entries.push({ cmd: scrubSecrets(cmd), time: new Date(ts * 1000) });
-							}
-						}
-					}
-				} catch {
-					// skip unparseable lines
-				}
-			}
-
-			// EXTENDED_HISTORY not enabled — read last 200 lines as untimestamped
-			if (!hasTimestamps) {
-				for (const line of lines.slice(-200)) {
-					const cmd = line.trim();
-					if (cmd) entries.push({ cmd: scrubSecrets(cmd), time: null });
-				}
-			}
-		} catch {
-			// zsh history read failed
-		}
-	}
-
-	// ── bash history ─────────────────────────────────────────────────────────
-	// Only read if no zsh history found at all.
-	if (entries.length === 0) {
-		const bashHist = expandHome("~/.bash_history");
-		if (existsSync(bashHist)) {
-			try {
-				const content = readFileSync(bashHist, "utf-8");
-				for (const line of content.trim().split("\n").slice(-200)) {
-					if (line.trim()) {
-						entries.push({ cmd: scrubSecrets(line.trim()), time: null });
-					}
-				}
-			} catch {
-				// bash history read failed
-			}
-		}
-	}
-
-	// Deduplicate and filter noise
-	const seen = new Set<string>();
-	const clean: ShellCommand[] = [];
-
-	for (const e of entries) {
-		const base = e.cmd.split(/\s+/)[0] || "";
-		if (NOISE_COMMANDS.has(base) || seen.has(e.cmd)) continue;
-		seen.add(e.cmd);
-		clean.push(e);
-	}
-
-	const timestamped = clean
-		.filter((e) => e.time !== null)
-		.sort((a, b) => (b.time!.getTime()) - (a.time!.getTime()));
-	const plain = clean.filter((e) => e.time === null);
-
-	const SHELL_CEILING = 500;
-	const shellLimit = SHELL_CEILING;
-
-	return [...timestamped, ...plain].slice(0, shellLimit);
 }
 
 // ── Claude Code Sessions ─────────────────────────

@@ -25,10 +25,6 @@ Date: {{dateStr}}
 {{claudePrompts}}
 </ai_sessions>
 
-<shell_commands>
-{{shellCommands}}
-</shell_commands>
-
 <git_commits>
 {{gitCommits}}
 </git_commits>
@@ -77,10 +73,6 @@ Total events collected: {{totalEvents}}
 <ai_sessions>
 {{claudePrompts}}
 </ai_sessions>
-
-<shell_commands>
-{{shellCommands}}
-</shell_commands>
 
 <git_commits>
 {{gitCommits}}

@@ -331,23 +331,17 @@ describe("sanitizeCollectedData", () => {
 	];
 
 	it("returns input unchanged when disabled", () => {
-		const result = sanitizeCollectedData(visits, [], [], [], [], disabledConfig);
+		const result = sanitizeCollectedData(visits, [], [], [], disabledConfig);
 		expect(result.visits).toBe(visits); // same reference
 		expect(result.excludedVisitCount).toBe(0);
 	});
 
 	it("filters and sanitizes when enabled", () => {
-		const result = sanitizeCollectedData(visits, [], [], [], [], fullConfig);
+		const result = sanitizeCollectedData(visits, [], [], [], fullConfig);
 		expect(result.visits).toHaveLength(1); // bank filtered
 		expect(result.excludedVisitCount).toBe(1);
 		// Remaining URL should be sanitized
 		expect(result.visits[0].url).toContain("github.com");
-	});
-
-	it("sanitizes shell commands", () => {
-		const shell = [{ cmd: "export API_KEY=sk-1234567890abcdefghijklmn", time: new Date() }];
-		const result = sanitizeCollectedData([], [], shell, [], [], fullConfig);
-		expect(result.shellCommands[0].cmd).toContain("[REDACTED]");
 	});
 
 	it("redacts paths in Claude sessions", () => {
@@ -356,14 +350,14 @@ describe("sanitizeCollectedData", () => {
 			time: new Date(),
 			project: "test",
 		}];
-		const result = sanitizeCollectedData([], [], [], claude, [], fullConfig);
+		const result = sanitizeCollectedData([], [], claude, [], fullConfig);
 		expect(result.claudeSessions[0].prompt).not.toContain("/Users/brian");
 		expect(result.claudeSessions[0].prompt).toContain("~");
 	});
 
 	it("scrubs emails in search queries", () => {
 		const searches = [{ query: "settings for user@example.com", time: new Date(), engine: "google.com" }];
-		const result = sanitizeCollectedData([], searches, [], [], [], fullConfig);
+		const result = sanitizeCollectedData([], searches, [], [], fullConfig);
 		expect(result.searches[0].query).toContain("[EMAIL]");
 	});
 });

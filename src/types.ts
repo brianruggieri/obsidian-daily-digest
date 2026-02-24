@@ -12,11 +12,6 @@ export interface SearchQuery {
 	engine: string;
 }
 
-export interface ShellCommand {
-	cmd: string;
-	time: Date | null;
-}
-
 export interface ClaudeSession {
 	prompt: string;
 	time: Date;
@@ -268,7 +263,7 @@ export type IntentType =
 
 export interface StructuredEvent {
 	timestamp: string;
-	source: "browser" | "search" | "shell" | "claude" | "git";
+	source: "browser" | "search" | "claude" | "git";
 	activityType: ActivityType;
 	topics: string[];
 	entities: string[];
@@ -382,7 +377,7 @@ export interface PatternConfig {
 export interface ActivityChunk {
 	id: string;
 	date: string;
-	type: "browser" | "search" | "shell" | "claude" | "git";
+	type: "browser" | "search" | "claude" | "git";
 	category?: string;
 	text: string;
 	metadata: {

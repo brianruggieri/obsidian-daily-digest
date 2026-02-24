@@ -31,18 +31,6 @@ export const PRIVACY_DESCRIPTIONS = {
 			"(iCloud, Obsidian Sync, Dropbox, etc.), this data will be uploaded " +
 			"to those services.",
 	},
-	shell: {
-		label: "Shell History",
-		access:
-			"Reads your terminal command history from ~/.zsh_history or " +
-			"~/.bash_history. Secrets and tokens are automatically redacted " +
-			"using pattern matching, but redaction is not guaranteed to catch " +
-			"all sensitive values.",
-		files: "~/.zsh_history, ~/.bash_history",
-		destination:
-			"Stored in your vault as part of the daily note. Commands may " +
-			"reveal project names, file paths, and tools you use.",
-	},
 	claude: {
 		label: "Claude Code Sessions",
 		access:
@@ -83,8 +71,8 @@ export const PRIVACY_DESCRIPTIONS = {
 			"Local model: all data stays on your machine. " +
 			"Anthropic API: data is sent to api.anthropic.com via HTTPS.",
 		warning:
-			"If using Anthropic API, your browser history, search queries, shell " +
-			"commands, and Claude Code prompts are sent to Anthropic's servers for " +
+			"If using Anthropic API, your browser history, search queries, " +
+			"and Claude Code prompts are sent to Anthropic's servers for " +
 			"processing. Using a local model keeps everything on your machine.",
 	},
 	rag: {
@@ -115,7 +103,6 @@ export class OnboardingModal extends Modal {
 	private onComplete: (settings: DailyDigestSettings) => Promise<void>;
 	private localToggles: {
 		enableBrowser: boolean;
-		enableShell: boolean;
 		enableClaude: boolean;
 		enableGit: boolean;
 		enableAI: boolean;
@@ -131,7 +118,6 @@ export class OnboardingModal extends Modal {
 		this.onComplete = onComplete;
 		this.localToggles = {
 			enableBrowser: settings.enableBrowser,
-			enableShell: settings.enableShell,
 			enableClaude: settings.enableClaude,
 			enableGit: settings.enableGit,
 			enableAI: settings.enableAI,
@@ -181,17 +167,6 @@ export class OnboardingModal extends Modal {
 					.setValue(this.localToggles.enableBrowser)
 					.onChange((v) => {
 						this.localToggles.enableBrowser = v;
-					})
-			);
-
-		new Setting(contentEl)
-			.setName(PRIVACY_DESCRIPTIONS.shell.label)
-			.setDesc(PRIVACY_DESCRIPTIONS.shell.access)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.localToggles.enableShell)
-					.onChange((v) => {
-						this.localToggles.enableShell = v;
 					})
 			);
 
@@ -263,7 +238,6 @@ export class OnboardingModal extends Modal {
 				.setCta()
 				.onClick(async () => {
 					this.settings.enableBrowser = this.localToggles.enableBrowser;
-					this.settings.enableShell = this.localToggles.enableShell;
 					this.settings.enableClaude = this.localToggles.enableClaude;
 					this.settings.enableGit = this.localToggles.enableGit;
 					this.settings.enableAI = this.localToggles.enableAI;
@@ -300,14 +274,12 @@ export interface DataPreviewSample {
 export interface DataPreviewStats {
 	visitCount: number;
 	searchCount: number;
-	shellCount: number;
 	claudeCount: number;
 	gitCount: number;
 	excludedCount?: number;
 	samples?: {
 		visits: DataPreviewSample[];
 		searches: DataPreviewSample[];
-		shell: DataPreviewSample[];
 		claude: DataPreviewSample[];
 		git: DataPreviewSample[];
 	};
@@ -364,11 +336,6 @@ export class DataPreviewModal extends Modal {
 				text: `${this.stats.searchCount} search queries`,
 			});
 		}
-		if (this.stats.shellCount > 0) {
-			statsList.createEl("li", {
-				text: `${this.stats.shellCount} shell commands (sanitized)`,
-			});
-		}
 		if (this.stats.claudeCount > 0) {
 			statsList.createEl("li", {
 				text: `${this.stats.claudeCount} Claude Code session prompts`,
@@ -421,14 +388,6 @@ export class DataPreviewModal extends Modal {
 				const searchList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
 				for (const s of samples.searches) {
 					searchList.createEl("li", { text: s.text });
-				}
-			}
-
-			if (samples.shell.length > 0) {
-				sampleContent.createEl("h4", { text: "Shell commands" });
-				const shellList = sampleContent.createEl("ul", { cls: "dd-preview-items" });
-				for (const s of samples.shell) {
-					shellList.createEl("li", { text: s.text, cls: "dd-preview-mono" });
 				}
 			}
 

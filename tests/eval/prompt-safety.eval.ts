@@ -15,7 +15,7 @@ import { categorizeVisits } from "../../src/categorize";
 import { classifyEventsRuleOnly } from "../../src/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
 import { sanitizeCollectedData } from "../../src/sanitize";
-import { ClassificationResult, StructuredEvent, BrowserVisit, SearchQuery, ShellCommand, ClaudeSession } from "../../src/types";
+import { ClassificationResult, StructuredEvent, BrowserVisit, SearchQuery, ClaudeSession } from "../../src/types";
 import { fullStackDeveloper } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 import {
@@ -32,12 +32,12 @@ const TODAY = "2025-06-15";
 function buildPipelinePrompts() {
 	const persona = fullStackDeveloper(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(
@@ -234,16 +234,7 @@ ${deidentified.slice(-800)}
 					domain: "github.com",
 				},
 			];
-			const dirtyShell: ShellCommand[] = [
-				{
-					cmd: "export ANTHROPIC_API_KEY=sk-ant-api03-realkey12345",
-					time: DATE,
-				},
-				{
-					cmd: "curl -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.test' https://api.example.com",
-					time: DATE,
-				},
-			];
+
 			const dirtySearches: SearchQuery[] = [
 				{ query: "settings for admin@company.com SMTP config", time: DATE, engine: "google.com" },
 			];
@@ -252,12 +243,12 @@ ${deidentified.slice(-800)}
 			];
 
 			const sanitized = sanitizeCollectedData(
-				dirtyVisits, dirtySearches, dirtyShell, dirtyClaude, [],
+				dirtyVisits, dirtySearches, dirtyClaude, [],
 				defaultSanitizeConfig()
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(
-				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+				sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 				categorized
 			);
 			const prompt = buildClassifiedPrompt(DATE, classification, "");

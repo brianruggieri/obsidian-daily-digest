@@ -30,12 +30,12 @@ const TODAY = "2025-06-15";
 function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	return buildClassifiedPrompt(DATE, classification, "");
@@ -44,12 +44,12 @@ function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof f
 function buildDeidentifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, persona.shell, persona.claude, [],
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 		defaultSanitizeConfig()
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
-		sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+		sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 		categorized
 	);
 	const patterns = extractPatterns(
@@ -175,7 +175,7 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("dirty data is properly sanitized before reaching prompts", async () => {
 			const dirty = createPrivacyTestScenario();
 			const sanitized = sanitizeCollectedData(
-				dirty.dirtyVisits, dirty.dirtySearches, dirty.dirtyShell, dirty.dirtyClaude, [],
+				dirty.dirtyVisits, dirty.dirtySearches, dirty.dirtyClaude, [],
 				defaultSanitizeConfig()
 			);
 
@@ -186,9 +186,6 @@ Score 0.0 = both prompts have the same level of detail.`,
 				"",
 				"## Sanitized Searches:",
 				...sanitized.searches.map((s) => `  Query: ${s.query}`),
-				"",
-				"## Sanitized Shell Commands:",
-				...sanitized.shellCommands.map((s) => `  Cmd: ${s.cmd}`),
 				"",
 				"## Sanitized Claude Sessions:",
 				...sanitized.claudeSessions.map((c) => `  Prompt: ${c.prompt}`),
@@ -221,12 +218,12 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("three prompt tiers have correct privacy ordering", async () => {
 			const persona = fullStackDeveloper(DATE);
 			const sanitized = sanitizeCollectedData(
-				persona.visits, persona.searches, persona.shell, persona.claude, [],
+				persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
 				defaultSanitizeConfig()
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(
-				sanitized.visits, sanitized.searches, sanitized.shellCommands, sanitized.claudeSessions, sanitized.gitCommits,
+				sanitized.visits, sanitized.searches, sanitized.claudeSessions, sanitized.gitCommits,
 				categorized
 			);
 			const patterns = extractPatterns(

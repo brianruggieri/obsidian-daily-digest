@@ -6,7 +6,6 @@
 import {
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	SanitizeConfig,
 	SensitivityConfig,
@@ -20,7 +19,6 @@ import { PersonaOutput } from "./personas";
 export interface PrivacyTestScenario {
 	dirtyVisits: BrowserVisit[];
 	dirtySearches: SearchQuery[];
-	dirtyShell: ShellCommand[];
 	dirtyClaude: ClaudeSession[];
 	expectedRedactions: string[];
 }
@@ -67,16 +65,6 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 				time: BASE_DATE,
 				engine: "google.com",
 			},
-		],
-		dirtyShell: [
-			{ cmd: "export OPENAI_API_KEY=sk-1234567890abcdefghijklmn", time: BASE_DATE },
-			{ cmd: "export ANTHROPIC_API_KEY=sk-ant-api03-abc123def456ghi789jklmnopqrst", time: BASE_DATE },
-			{ cmd: "export GITHUB_TOKEN=ghp_ABCDEFghijklmnopqrstuvwxyz1234567890", time: BASE_DATE },
-			{ cmd: "curl -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' https://api.example.com", time: BASE_DATE },
-			{ cmd: "psql postgres://admin:supersecret@db.example.com:5432/production", time: BASE_DATE },
-			{ cmd: "ssh -i /Users/testuser/.ssh/id_rsa bastion.example.com", time: BASE_DATE },
-			{ cmd: "npm publish --token npm_abcdefghijklmnopqrstuvwxyz1234567890", time: BASE_DATE },
-			{ cmd: "stripe listen --api-key sk_test_abcdefghijklmnopqrstuvwxyz", time: BASE_DATE },
 		],
 		dirtyClaude: [
 			{
@@ -145,7 +133,6 @@ export function createEmptyScenario(): PersonaOutput {
 		description: "No activity at all",
 		visits: [],
 		searches: [],
-		shell: [],
 		claude: [],
 		git: [],
 		expectedThemes: [],
@@ -167,7 +154,6 @@ export function createSingleEventScenario(): PersonaOutput {
 			domain: "github.com",
 		}],
 		searches: [],
-		shell: [],
 		claude: [],
 		git: [],
 		expectedThemes: ["development"],
@@ -190,10 +176,6 @@ export function createMalformedDataScenario(): PersonaOutput {
 		searches: [
 			{ query: "", time: null, engine: "" },
 			{ query: "valid search query", time: BASE_DATE, engine: "google.com" },
-		],
-		shell: [
-			{ cmd: "", time: null },
-			{ cmd: "git status", time: BASE_DATE },
 		],
 		claude: [
 			{ prompt: "help", time: BASE_DATE, project: "" },

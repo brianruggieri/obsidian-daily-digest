@@ -6,7 +6,6 @@ import {
 	ClaudeSession,
 	GitCommit,
 	SearchQuery,
-	ShellCommand,
 	slugifyQuestion,
 } from "./types";
 import { AIProvider } from "./settings";
@@ -34,7 +33,6 @@ export function renderMarkdown(
 	date: Date,
 	visits: BrowserVisit[],
 	searches: SearchQuery[],
-	shell: ShellCommand[],
 	claudeSessions: ClaudeSession[],
 	gitCommits: GitCommit[],
 	categorized: CategorizedVisits,
@@ -90,7 +88,7 @@ export function renderMarkdown(
 	// ── Stats ────────────────────────────────────
 	lines.push(
 		`> [!info] ${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
-			`${shell.length} commands \u00B7 ${claudeSessions.length} AI prompts \u00B7 ` +
+			`${claudeSessions.length} AI prompts \u00B7 ` +
 			`${gitCommits.length} commits \u00B7 ` +
 			`${Object.keys(categorized).length} categories`
 	);
@@ -320,23 +318,6 @@ export function renderMarkdown(
 			}
 			lines.push("");
 		}
-	}
-
-	// ── Shell ────────────────────────────────────
-	if (shell.length) {
-		lines.push("## \u{1F4BB} Shell");
-		lines.push("");
-		lines.push(`<details><summary>${shell.length} commands</summary>`);
-		lines.push("");
-		lines.push("```bash");
-		for (const e of shell) {
-			const ts = formatTime(e.time) || "     ";
-			lines.push(`# ${ts}  ${e.cmd}`);
-		}
-		lines.push("```");
-		lines.push("");
-		lines.push("</details>");
-		lines.push("");
 	}
 
 	// ── Git Activity ────────────────────────────────

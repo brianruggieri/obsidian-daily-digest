@@ -6,7 +6,6 @@
 import {
 	BrowserVisit,
 	SearchQuery,
-	ShellCommand,
 	ClaudeSession,
 	GitCommit,
 } from "../../src/types";
@@ -167,176 +166,6 @@ export const DOMAIN_SETS: Record<string, DomainSpec[]> = {
 	],
 };
 
-// ── Shell Command Templates ─────────────────────────────
-
-export const SHELL_WORKFLOWS: Record<string, string[]> = {
-	webdev: [
-		"git status",
-		"git pull origin main",
-		"npm install",
-		"npm run dev",
-		"npm run test -- --watch",
-		"git checkout -b feature/oauth-flow",
-		"git add src/auth.ts src/middleware.ts",
-		'git commit -m "Add OAuth PKCE flow"',
-		"git push origin feature/oauth-flow",
-		"npm run build",
-		"npm run lint",
-		"npx vitest run",
-		"curl -s http://localhost:3000/api/health | jq .",
-		"docker compose up -d",
-		"docker logs webapp-api-1 --tail 50",
-		"git diff HEAD~1",
-		"git log --oneline -15",
-		"npx vitest run --coverage",
-		"npm run generate:openapi",
-		'gh pr create --title "feat: Add OAuth PKCE flow"',
-		"gh pr status",
-		"git stash",
-		"git stash pop",
-		"npm audit",
-		"npx tsc --noEmit",
-	],
-	backend: [
-		"git status",
-		"git diff HEAD~3",
-		"python -m pytest tests/ -v",
-		"python manage.py migrate",
-		"python manage.py runserver",
-		"pip install -r requirements.txt",
-		"docker build -t api:latest .",
-		"docker compose up -d postgres redis",
-		'curl -X POST http://localhost:8000/api/auth/token -d \'{"username":"test"}\'',
-		"redis-cli ping",
-		"psql -U postgres -d myapp -c 'SELECT count(*) FROM users'",
-	],
-	devops: [
-		"kubectl get pods -n production",
-		"kubectl logs deploy/api-server -n production --tail=100",
-		"kubectl describe pod api-server-7d4f8b9c5-x2j4k -n production",
-		"terraform plan -var-file=prod.tfvars",
-		"terraform apply -auto-approve",
-		"aws ec2 describe-instances --filters 'Name=tag:Environment,Values=prod'",
-		"ssh bastion.example.com",
-		"docker pull nginx:latest",
-		"helm upgrade --install monitoring prometheus-community/kube-prometheus-stack",
-		"kubectl rollout status deploy/api-server -n production",
-		"aws cloudwatch get-metric-statistics --namespace AWS/ECS --metric-name CPUUtilization",
-	],
-	incident: [
-		"kubectl get pods -n production -o wide",
-		"kubectl logs deploy/api-server -n production --tail=200 --since=1h",
-		"kubectl describe pod api-server-7d4f8b9c5-x2j4k -n production",
-		"kubectl top pods -n production",
-		"kubectl top nodes",
-		"kubectl get events -n production --sort-by='.lastTimestamp'",
-		"kubectl rollout restart deploy/api-server -n production",
-		"kubectl rollout status deploy/api-server -n production",
-		"kubectl scale deploy/api-server -n production --replicas=5",
-		"aws ecs describe-services --cluster prod --services api-server",
-		"aws cloudwatch get-metric-data --metric-data-queries file://queries.json",
-		"docker logs api-server-1 --since 2h | grep ERROR",
-		"redis-cli info memory",
-		"redis-cli slowlog get 20",
-		"psql -U postgres -c \"SELECT * FROM pg_stat_activity WHERE state = 'active'\"",
-		"psql -U postgres -c 'SELECT count(*) FROM pg_locks WHERE NOT granted'",
-		"curl -s http://internal-lb:8080/healthz | jq .",
-		"curl -w '%{time_total}' -o /dev/null -s http://internal-lb:8080/api/users",
-		"dig api.example.com",
-		"traceroute api.example.com",
-		"tail -f /var/log/api-server/error.log",
-		"grep 'OOMKilled' /var/log/syslog | tail -20",
-		"htop",
-		"ss -tlnp",
-		"terraform plan -var-file=prod.tfvars -target=aws_ecs_service.api",
-		"helm rollback monitoring 2",
-		"git log --oneline -5",
-		'git commit -m "hotfix: Increase memory limits for api-server pods"',
-		"git push origin hotfix/memory-limits",
-		"kubectl apply -f manifests/api-server-hotfix.yaml",
-	],
-	data_science: [
-		"jupyter notebook",
-		"python train_model.py --epochs 50 --lr 0.001",
-		"python evaluate.py --model checkpoints/best.pt",
-		"pip install torch transformers datasets",
-		"dvc pull",
-		"dvc push",
-		"git add dvc.lock",
-		'git commit -m "Update model training pipeline"',
-		"wandb login",
-		"python scripts/preprocess_data.py --input data/raw --output data/processed",
-	],
-	writing: [
-		"git status",
-		"git add content/posts/new-article.md",
-		'git commit -m "Draft: distributed systems overview"',
-		"hugo server -D",
-		"pandoc draft.md -o output.pdf",
-		"wc -w content/posts/*.md",
-		"grep -r 'TODO' content/",
-	],
-	academic: [
-		"git status",
-		"cd ~/research/thesis && git pull",
-		"pdflatex chapter3.tex",
-		"bibtex chapter3",
-		"pdflatex chapter3.tex && pdflatex chapter3.tex",
-		"python scripts/generate_figures.py --chapter 3",
-		"python scripts/run_experiment.py --config configs/ablation.yaml",
-		"jupyter lab",
-		"pip install -r requirements.txt",
-		"grep -r 'TODO\\|FIXME' chapters/",
-		"wc -w chapters/*.tex",
-		"latexdiff chapters/chapter3_v1.tex chapters/chapter3_v2.tex > diff.tex",
-		'git add chapters/ figures/ && git commit -m "Update lit review section 3.2"',
-		"zotero --export bib > references.bib",
-		"python scripts/plot_results.py --experiment attention_heads",
-	],
-	student: [
-		"gcc -o bst bst.c && ./bst",
-		"python3 dijkstra.py test_graph.txt",
-		"javac BinaryTree.java && java BinaryTree",
-		"python3 -m pytest test_sorting.py -v",
-		"make clean && make",
-		"gdb ./a.out",
-		"valgrind --leak-check=full ./bst",
-		"python3 dynamic_programming.py",
-		"git add hw5/ && git commit -m 'Complete homework 5'",
-		"python3 -c 'import heapq; help(heapq)'",
-	],
-	freelance_react: [
-		"git status",
-		"git pull origin main",
-		"npm install",
-		"npm run dev",
-		"npm run test -- --watch",
-		"npx vitest run --coverage",
-		"npm run build",
-		"git add src/ && git commit -m 'Fix SSR hydration mismatch'",
-		"git push origin fix/ssr-hydration",
-		"vercel --prod",
-		"npm run lint",
-		"curl -s http://localhost:3000/api/health | jq .",
-	],
-	freelance_wordpress: [
-		"wp plugin list --status=active",
-		"wp theme activate client-theme-v2",
-		"wp db export backup-$(date +%Y%m%d).sql",
-		"wp search-replace 'staging.client-b.com' 'client-b.com' --dry-run",
-		"php -l wp-content/themes/client-theme-v2/functions.php",
-		"wp cache flush",
-		"rsync -avz wp-content/ user@server:/var/www/html/wp-content/",
-		"ssh client-b-server 'systemctl restart php-fpm'",
-	],
-	freelance_invoicing: [
-		"git status",
-		'git add content/ && git commit -m "New blog post draft: React Server Components"',
-		"hugo server -D",
-		"npm run build",
-		"wc -w content/posts/react-server-components.md",
-	],
-};
 
 // ── Claude Prompt Templates ─────────────────────────────
 
@@ -764,21 +593,6 @@ export function generateSearchQueries(options: {
 		});
 	}
 	return searches;
-}
-
-export function generateShellCommands(options: {
-	count: number;
-	workflow: string;
-	timestamps: Date[];
-}): ShellCommand[] {
-	const commands = SHELL_WORKFLOWS[options.workflow] || SHELL_WORKFLOWS.webdev;
-	const shell: ShellCommand[] = [];
-	for (let i = 0; i < options.count; i++) {
-		const cmd = commands[i % commands.length];
-		const time = i < options.timestamps.length ? options.timestamps[i] : options.timestamps[options.timestamps.length - 1];
-		shell.push({ cmd, time });
-	}
-	return shell;
 }
 
 export function generateClaudeSessions(options: {
