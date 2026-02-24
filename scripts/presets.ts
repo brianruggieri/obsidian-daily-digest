@@ -18,16 +18,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	// General
 	dailyFolder: "",
 	filenameTemplate: "{{date}}",
-	lookbackHours: 24,
-	collectionMode: "complete",
 	promptBudget: 4000,
-
-	// Data sources — caps (used in limited mode)
-	maxBrowserVisits: 500,
-	maxSearches: 100,
-	maxShellCommands: 200,
-	maxClaudeSessions: 20,
-	maxGitCommits: 100,
 
 	// Data sources — toggles & paths
 	browserConfigs: [],
@@ -37,7 +28,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	claudeSessionsDir: "~/.claude/projects",
 	enableCodex: true,
 	codexSessionsDir: "~/.codex/sessions",
-	maxCodexSessions: 30,
 	enableGit: true,
 	gitParentDir: "~/git",
 
@@ -88,7 +78,6 @@ export const PRESETS: Preset[] = [
 			enableAI: false,
 			aiProvider: "none",
 			enablePatterns: false,
-			collectionMode: "limited",
 		},
 	},
 	{
@@ -200,18 +189,6 @@ export const PRESETS: Preset[] = [
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
 			] as SensitivityCategory[],
 			sensitivityAction: "redact",
-		},
-	},
-	{
-		id: "compression-limited",
-		description: "All sources, Haiku, limited collection mode (fixed caps)",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-haiku-4-5-20251001",
-			collectionMode: "limited",
-			maxBrowserVisits: 100,
-			maxShellCommands: 50,
 		},
 	},
 ];

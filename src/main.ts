@@ -1,8 +1,8 @@
-import { Notice, Plugin, TFile, Modal, Setting, App } from "obsidian";
+import { Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DailyDigestSettingTab, DEFAULT_SETTINGS, SECRET_ID } from "./settings";
 import { collectBrowserHistory, readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } from "./collectors";
 import { categorizeVisits } from "./categorize";
-import { compressActivity, CompressedActivity } from "./compress";
+import { compressActivity } from "./compress";
 import { summarizeDay } from "./summarize";
 import { AICallConfig } from "./ai-client";
 import { renderMarkdown } from "./renderer";
@@ -19,54 +19,6 @@ import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHisto
 import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
 import * as log from "./log";
-
-class DatePickerModal extends Modal {
-	onSubmit: (date: Date) => void;
-	selectedDate: string;
-
-	constructor(app: App, onSubmit: (date: Date) => void) {
-		super(app);
-		this.onSubmit = onSubmit;
-		const now = new Date();
-		this.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		this.setTitle("Generate daily note");
-
-		new Setting(contentEl)
-			.setName("Date")
-			.setDesc("Select which date to compile")
-			.addText((text) => {
-				text.inputEl.type = "date";
-				text.setValue(this.selectedDate).onChange((value) => {
-					this.selectedDate = value;
-				});
-			});
-
-		new Setting(contentEl).addButton((btn) =>
-			btn
-				.setButtonText("Generate")
-				.setCta()
-				.onClick(() => {
-					this.close();
-					const parts = this.selectedDate.split("-");
-					const date = new Date(
-						parseInt(parts[0]),
-						parseInt(parts[1]) - 1,
-						parseInt(parts[2])
-					);
-					this.onSubmit(date);
-				})
-		);
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
 
 export default class DailyDigestPlugin extends Plugin {
 	settings: DailyDigestSettings;
@@ -89,17 +41,6 @@ export default class DailyDigestPlugin extends Plugin {
 			id: "generate-today",
 			name: "Generate today's daily note",
 			callback: () => this.generateToday(),
-		});
-
-		// Command: generate note for specific date
-		this.addCommand({
-			id: "generate-date",
-			name: "Generate daily note for a specific date",
-			callback: () => {
-				new DatePickerModal(this.app, (date) => {
-					this.generateNote(date);
-				}).open();
-			},
 		});
 
 		// Command: generate without AI
@@ -197,7 +138,7 @@ export default class DailyDigestPlugin extends Plugin {
 			return;
 		}
 
-		const since = new Date(targetDate.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
+		const since = targetDate; // targetDate is already midnight local time
 		const provider = this.settings.aiProvider;
 		const apiKey = this.getAnthropicApiKey();
 
@@ -321,21 +262,6 @@ export default class DailyDigestPlugin extends Plugin {
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");
 			const categorized = categorizeVisits(visits);
 
-			// ── Compress (full-day mode) ─────────
-			let compressed: CompressedActivity | undefined;
-			if (this.settings.collectionMode === "complete") {
-				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
-				compressed = compressActivity(
-					categorized, searches, shellCmds, claudeSessions, gitCommits,
-					this.settings.promptBudget
-				);
-				log.debug(
-					`Daily Digest: Compressed ${compressed.totalEvents} events ` +
-					`to ~${compressed.tokenEstimate} tokens ` +
-					`(budget: ${this.settings.promptBudget})`
-				);
-			}
-
 			// ── Classify (Phase 2) ──────────────
 			let classification: ClassificationResult | undefined;
 			if (this.settings.enableClassification && useAI) {
@@ -437,6 +363,18 @@ export default class DailyDigestPlugin extends Plugin {
 			// ── AI Summary ───────────────────────
 			let aiSummary = null;
 			if (useAI) {
+				// ── Compress ──────────────────────
+				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");
+				const compressed = compressActivity(
+					categorized, searches, shellCmds, claudeSessions, gitCommits,
+					this.settings.promptBudget
+				);
+				log.debug(
+					`Daily Digest: Compressed ${compressed.totalEvents} events ` +
+					`to ~${compressed.tokenEstimate} tokens ` +
+					`(budget: ${this.settings.promptBudget})`
+				);
+
 				if (provider === "anthropic") {
 					// Cloud provider: show data preview for explicit consent
 					progressNotice.hide();
