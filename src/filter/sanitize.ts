@@ -5,7 +5,7 @@ import {
 	GitCommit,
 	SanitizationLevel,
 	SanitizeConfig,
-} from "./types";
+} from "../types";
 
 // ── Expanded Secret Patterns ─────────────────────────────
 // Supersedes the 5 patterns in categorize.ts with broader coverage.

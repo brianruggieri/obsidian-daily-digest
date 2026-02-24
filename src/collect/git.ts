@@ -3,7 +3,7 @@ import { execFileSync } from "child_process";
 import { homedir } from "os";
 import { join } from "path";
 import { DailyDigestSettings } from "../settings/types";
-import { scrubSecrets } from "../sanitize";
+import { scrubSecrets } from "../filter/sanitize";
 import { warn } from "../log";
 import { GitCommit } from "../types";
 

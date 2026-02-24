@@ -15,7 +15,7 @@
  * but curated and trimmed to a reasonable size for an Obsidian plugin.
  */
 
-import { BrowserVisit, SensitivityCategory, SensitivityConfig, SensitivityFilterResult } from "./types";
+import { BrowserVisit, SensitivityCategory, SensitivityConfig, SensitivityFilterResult } from "../types";
 
 // ── Domain Lists by Category ────────────────────────────
 

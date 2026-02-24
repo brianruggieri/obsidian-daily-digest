@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS } from "./categorize";
+import { CATEGORY_LABELS } from "./filter/categorize";
 import { estimateTokens } from "./chunker";
 import {
 	CategorizedVisits,

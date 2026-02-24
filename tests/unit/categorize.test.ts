@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { categorizeDomain, categorizeVisits, CATEGORY_LABELS } from "../../src/categorize";
+import { categorizeDomain, categorizeVisits, CATEGORY_LABELS } from "../../src/filter/categorize";
 import { BrowserVisit } from "../../src/types";
 
 describe("categorizeDomain", () => {

@@ -9,12 +9,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { categorizeVisits } from "../../src/categorize";
-import { classifyEventsRuleOnly } from "../../src/classify";
+import { categorizeVisits } from "../../src/filter/categorize";
+import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
 import { generateKnowledgeSections } from "../../src/knowledge";
 import { renderMarkdown } from "../../src/renderer";
-import { sanitizeCollectedData } from "../../src/sanitize";
+import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import {
 	fullStackDeveloper,
 	researchKnowledgeWorker,
