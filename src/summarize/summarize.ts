@@ -5,7 +5,7 @@ import { CompressedActivity } from "./compress";
 import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
-import * as log from "../log";
+import * as log from "../plugin/log";
 
 // ── Prompt builder & summarizer ─────────────────────────
 

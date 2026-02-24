@@ -1,10 +1,10 @@
 import { App, Notice, PluginSettingTab, Setting, setIcon, ToggleComponent } from "obsidian";
-import type DailyDigestPlugin from "../main";
-import { PRIVACY_DESCRIPTIONS } from "../privacy";
+import type DailyDigestPlugin from "../plugin/main";
+import { PRIVACY_DESCRIPTIONS } from "../plugin/privacy";
 import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "../types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "../filter/sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../collect/browser-profiles";
-import * as log from "../log";
+import * as log from "../plugin/log";
 import { DailyDigestSettings, DEFAULT_SETTINGS, AIProvider, SECRET_ID } from "./types";
 
 export class DailyDigestSettingTab extends PluginSettingTab {
