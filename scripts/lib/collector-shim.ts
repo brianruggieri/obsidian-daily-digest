@@ -26,15 +26,31 @@ export async function collectFixtureData(settings: DailyDigestSettings): Promise
 
 export async function collectRealData(settings: DailyDigestSettings, since?: Date, until?: Date): Promise<CollectedData> {
 	if (!since) {
-		since = new Date();
-		since.setHours(since.getHours() - settings.lookbackHours);
+		// Default: start of today in local time
+		const now = new Date();
+		since = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 	}
 
 	let visits: BrowserVisit[] = [];
 	let searches: SearchQuery[] = [];
 	if (settings.enableBrowser) {
 		const { collectBrowserHistory } = await import("../../src/collectors");
-		const result = await collectBrowserHistory(settings, since);
+
+		// Auto-detect browser profiles when none are configured (inspector real-data mode).
+		// Enables all profiles that have a history database.
+		let effectiveSettings = settings;
+		if (settings.browserConfigs.length === 0) {
+			const { detectAllBrowsers } = await import("../../src/browser-profiles");
+			const detected = await detectAllBrowsers();
+			const autoConfigs = detected.map((c) => ({
+				...c,
+				enabled: true,
+				selectedProfiles: c.profiles.filter((p) => p.hasHistory).map((p) => p.profileDir),
+			}));
+			effectiveSettings = { ...settings, browserConfigs: autoConfigs };
+		}
+
+		const result = await collectBrowserHistory(effectiveSettings, since);
 		visits = result.visits;
 		searches = result.searches;
 	}

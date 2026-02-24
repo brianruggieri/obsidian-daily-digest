@@ -383,9 +383,15 @@ export function mergeDetectedWithExisting(
 
 /** Human-readable browser display name for use in settings UI labels. */
 export const BROWSER_DISPLAY_NAMES: Record<string, string> = {
-	chrome:  "Google Chrome",
-	brave:   "Brave",
-	edge:    "Microsoft Edge",
-	firefox: "Firefox",
-	safari:  "Safari",
+	chrome:     "Google Chrome",
+	brave:      "Brave",
+	edge:       "Microsoft Edge",
+	arc:        "Arc",
+	vivaldi:    "Vivaldi",
+	opera:      "Opera",
+	"opera-gx": "Opera GX",
+	chromium:   "Chromium",
+	helium:     "Helium",
+	firefox:    "Firefox",
+	safari:     "Safari",
 };

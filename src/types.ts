@@ -149,6 +149,50 @@ export const BROWSER_PATH_CONFIGS: Record<string, BrowserPathConfig> = {
 			linux:  "~/.config/microsoft-edge",
 		},
 	},
+	arc: {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Arc/User Data",
+		},
+	},
+	vivaldi: {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Vivaldi",
+			win32:  "%LOCALAPPDATA%/Vivaldi/User Data",
+			linux:  "~/.config/vivaldi",
+		},
+	},
+	opera: {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/com.operasoftware.Opera",
+			win32:  "%APPDATA%/Opera Software/Opera Stable",
+			linux:  "~/.config/opera",
+		},
+	},
+	"opera-gx": {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/com.operasoftware.OperaGX",
+			win32:  "%APPDATA%/Opera Software/Opera GX Stable",
+			linux:  "~/.config/opera-gx",
+		},
+	},
+	chromium: {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/Chromium",
+			win32:  "%LOCALAPPDATA%/Chromium/User Data",
+			linux:  "~/.config/chromium",
+		},
+	},
+	helium: {
+		type: "chromium",
+		userDataDirs: {
+			darwin: "~/Library/Application Support/net.imput.helium",
+		},
+	},
 	firefox: {
 		type: "firefox",
 		userDataDirs: {
@@ -170,6 +214,8 @@ export const SEARCH_ENGINES: Record<string, string> = {
 	"bing.com": "q",
 	"duckduckgo.com": "q",
 	"search.yahoo.com": "p",
+	"search.brave.com": "q",
+	"ecosia.org": "q",
 	"kagi.com": "q",
 	"perplexity.ai": "q",
 };

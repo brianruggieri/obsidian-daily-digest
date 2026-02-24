@@ -401,10 +401,14 @@ async function runPipeline(
 
 	// ── 1. Collect ───────────────────────────────────────
 
+	// Build the day's time window from the UI-selected date
+	const dayStart = new Date(`${dateStr}T00:00:00`);
+	const dayEnd = new Date(`${dateStr}T23:59:59.999`);
+
 	let raw!: CollectedData;
 	await stage("collect", async () => {
 		raw = dataMode === "real"
-			? await collectRealData(settings)
+			? await collectRealData(settings, dayStart, dayEnd)
 			: await collectFixtureData(settings);
 		return {
 			detail: `${raw.visits.length} visits, ${raw.searches.length} searches, ` +
