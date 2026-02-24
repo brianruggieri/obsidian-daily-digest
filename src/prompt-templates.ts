@@ -54,6 +54,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
@@ -106,6 +107,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
@@ -141,6 +143,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Be specific and concrete. Only include category_summaries for categories represented in the activity blocks above.
 Write for a person reading their own notes 3 months from now.
@@ -181,6 +184,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 meaningful connections across activity types, e.g. 'Researched OAuth patterns, then implemented the flow in the same session'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Be specific and concrete. Refer to the topics and entities in the activity data above.
 Write for a person reading their own notes 3 months from now — help them remember not just what happened, but what it meant and where they were in their work.
@@ -247,6 +251,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 patterns suggesting connections between activity types, e.g. 'Research topics align with the implementation cluster two hours later'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Be insightful and specific. You're analyzing work patterns for someone building their own knowledge base, not writing a task log. Look for:
 - Research spirals (same topic approached from multiple angles over time)
 - Implementation momentum (sustained, uninterrupted focus on building)
@@ -288,6 +293,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth flows, then committed auth middleware two hours later'"]
 }
 
+Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories or activity types that had actual activity.
