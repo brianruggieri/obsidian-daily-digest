@@ -1,5 +1,4 @@
 import { CATEGORY_LABELS } from "./categorize";
-import { scrubSecrets } from "./sanitize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";

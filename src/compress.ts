@@ -1,6 +1,5 @@
 import { CATEGORY_LABELS } from "./categorize";
 import { estimateTokens } from "./chunker";
-import { scrubSecrets } from "./sanitize";
 import {
 	CategorizedVisits,
 	ClaudeSession,
