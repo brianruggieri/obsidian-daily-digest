@@ -11,18 +11,10 @@ export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
-export type CollectionMode = "complete" | "limited";
-
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
-	lookbackHours: number;
-	collectionMode: CollectionMode;
 	promptBudget: number;
-	maxBrowserVisits: number;
-	maxSearches: number;
-	maxShellCommands: number;
-	maxClaudeSessions: number;
 	/**
 	 * Per-browser, per-profile selection. Replaces the old `browsers: string[]`.
 	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
@@ -40,7 +32,6 @@ export interface DailyDigestSettings {
 	claudeSessionsDir: string;
 	enableCodex: boolean;
 	codexSessionsDir: string;
-	maxCodexSessions: number;
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
@@ -58,7 +49,6 @@ export interface DailyDigestSettings {
 	sensitivityAction: "exclude" | "redact";
 	enableGit: boolean;
 	gitParentDir: string;
-	maxGitCommits: number;
 	enablePatterns: boolean;
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
@@ -70,13 +60,7 @@ export interface DailyDigestSettings {
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	dailyFolder: "daily",
 	filenameTemplate: "YYYY-MM-DD",
-	lookbackHours: 24,
-	collectionMode: "complete",
 	promptBudget: 3000,
-	maxBrowserVisits: 80,
-	maxSearches: 40,
-	maxShellCommands: 50,
-	maxClaudeSessions: 30,
 	// Empty until the user clicks "Detect Browsers & Profiles". Nothing is
 	// collected until the user has reviewed and enabled specific profiles.
 	browserConfigs: [],
@@ -92,7 +76,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	claudeSessionsDir: "~/.claude/projects",
 	enableCodex: false,
 	codexSessionsDir: "~/.codex/sessions",
-	maxCodexSessions: 30,
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
@@ -110,7 +93,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityAction: "exclude" as "exclude" | "redact",
 	enableGit: false,
 	gitParentDir: "",
-	maxGitCommits: 50,
 	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
@@ -164,63 +146,27 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Lookback hours")
-			.setDesc("How many hours of history to collect")
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 72, 1)
-					.setValue(this.plugin.settings.lookbackHours)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.lookbackHours = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		// ━━ 2. Data Sources ━━━━━━━━━━━━━━━━━━━━━━━━━
 		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
 		this.prependIcon(dataHeading.nameEl, "database");
 
-		// ── Collection mode ──────────────────────────
 		new Setting(containerEl)
-			.setName("Collection mode")
+			.setName("Prompt detail budget")
 			.setDesc(
-				"Complete: collects all activity within the lookback window, " +
-				"then compresses to fit the prompt budget. " +
-				"Limited: caps each source at a fixed item count (legacy)."
+				"Target token budget for the data section of AI prompts. " +
+				"Higher values include more detail but use more context. " +
+				"Activity is compressed proportionally to fit."
 			)
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("complete", "Complete day")
-					.addOption("limited", "Limited (legacy)")
-					.setValue(this.plugin.settings.collectionMode)
+			.addSlider((slider) =>
+				slider
+					.setLimits(1000, 8000, 500)
+					.setValue(this.plugin.settings.promptBudget)
+					.setDynamicTooltip()
 					.onChange(async (value) => {
-						this.plugin.settings.collectionMode = value as CollectionMode;
+						this.plugin.settings.promptBudget = value;
 						await this.plugin.saveSettings();
-						this.display();
 					})
 			);
-
-		if (this.plugin.settings.collectionMode === "complete") {
-			new Setting(containerEl)
-				.setName("Prompt detail budget")
-				.setDesc(
-					"Target token budget for the data section of AI prompts. " +
-					"Higher values include more detail but use more context. " +
-					"Activity is compressed proportionally to fit."
-				)
-				.addSlider((slider) =>
-					slider
-						.setLimits(1000, 8000, 500)
-						.setValue(this.plugin.settings.promptBudget)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.promptBudget = value;
-							await this.plugin.saveSettings();
-						})
-				);
-		}
 
 		// ── Browser history ───────────────────────────
 		new Setting(containerEl)
@@ -238,34 +184,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		if (this.plugin.settings.enableBrowser) {
 			this.renderBrowserProfileSection(containerEl);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max browser visits")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 200, 10)
-							.setValue(this.plugin.settings.maxBrowserVisits)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxBrowserVisits = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Max searches")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 100, 5)
-							.setValue(this.plugin.settings.maxSearches)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxSearches = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
 		// ── Shell history ─────────────────────────────
@@ -285,20 +203,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (this.plugin.settings.enableShell && this.plugin.settings.collectionMode === "limited") {
-			new Setting(containerEl)
-				.setName("Max shell commands")
-				.addSlider((slider) =>
-					slider
-						.setLimits(10, 100, 5)
-						.setValue(this.plugin.settings.maxShellCommands)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.maxShellCommands = value;
-							await this.plugin.saveSettings();
-						})
-				);
-		}
 
 		// ── Claude Code sessions ──────────────────────
 		new Setting(containerEl)
@@ -330,21 +234,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max Claude Code sessions")
-					.addSlider((slider) =>
-						slider
-							.setLimits(5, 100, 5)
-							.setValue(this.plugin.settings.maxClaudeSessions)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxClaudeSessions = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
 		// ── Codex CLI sessions ────────────────────────
@@ -377,21 +266,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max Codex sessions")
-					.addSlider((slider) =>
-						slider
-							.setLimits(5, 100, 5)
-							.setValue(this.plugin.settings.maxCodexSessions)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxCodexSessions = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
 		// ── Git history ──────────────────────────────
@@ -428,21 +302,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max git commits")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 200, 10)
-							.setValue(this.plugin.settings.maxGitCommits)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxGitCommits = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
 		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
