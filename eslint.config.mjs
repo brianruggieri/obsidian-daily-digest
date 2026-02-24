@@ -24,7 +24,7 @@ export default ts.config(
 		},
 	},
 	{
-		files: ["src/log.ts"],
+		files: ["src/plugin/log.ts"],
 		rules: {
 			"no-console": "off",
 		},
