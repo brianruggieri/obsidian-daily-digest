@@ -1185,10 +1185,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.onClick(() => this.detectBrowserProfiles())
 			);
 
-		if (configs.length > 0) {
-			detectRow.descEl.addClass("dd-browser-status");
-		}
-
 		if (configs.length === 0) {
 			const hint = containerEl.createDiv({ cls: "dd-settings-callout" });
 			hint.createEl("p", { text: "Click 'Detect Browsers & Profiles' to scan for installed browsers." });
