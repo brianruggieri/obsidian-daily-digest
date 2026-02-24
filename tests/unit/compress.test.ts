@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { compressActivity } from "../../src/compress";
 import { estimateTokens } from "../../src/chunker";
-import { categorizeVisits } from "../../src/categorize";
+import { categorizeVisits } from "../../src/filter/categorize";
 import {
 	generateBrowserVisits,
 	generateSearchQueries,

@@ -1,4 +1,4 @@
-import { BrowserVisit, CategorizedVisits } from "./types";
+import { BrowserVisit, CategorizedVisits } from "../types";
 
 // Rule-based domain categorization. The AI refines unknowns.
 export const CATEGORY_RULES: Record<string, string[]> = {

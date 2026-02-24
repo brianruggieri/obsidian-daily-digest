@@ -9,10 +9,10 @@ import {
 	ClaudeSession,
 	GitCommit,
 	CategorizedVisits,
-} from "./types";
-import { callLocal } from "./ai-client";
+} from "../types";
+import { callLocal } from "../ai-client";
 import { categorizeDomain } from "./categorize";
-import * as log from "./log";
+import * as log from "../log";
 
 // ── Raw Event Normalization ─────────────────────────────
 

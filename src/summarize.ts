@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS } from "./categorize";
+import { CATEGORY_LABELS } from "./filter/categorize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";

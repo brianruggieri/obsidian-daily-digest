@@ -5,7 +5,7 @@ import { collectBrowserHistory } from "./collect/browser";
 import { readClaudeSessions } from "./collect/claude";
 import { readCodexSessions } from "./collect/codex";
 import { readGitHistory } from "./collect/git";
-import { categorizeVisits } from "./categorize";
+import { categorizeVisits } from "./filter/categorize";
 import { compressActivity } from "./compress";
 import { summarizeDay, buildPrompt } from "./summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
@@ -17,9 +17,9 @@ import {
 	shouldShowOnboarding,
 } from "./privacy";
 import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "./types";
-import { sanitizeCollectedData } from "./sanitize";
-import { classifyEvents } from "./classify";
-import { filterSensitiveDomains, filterSensitiveSearches } from "./sensitivity";
+import { sanitizeCollectedData } from "./filter/sanitize";
+import { classifyEvents } from "./filter/classify";
+import { filterSensitiveDomains, filterSensitiveSearches } from "./filter/sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "./patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "./knowledge";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "./merge";
