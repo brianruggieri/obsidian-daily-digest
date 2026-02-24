@@ -1,27 +1,11 @@
 import { existsSync, readdirSync, statSync } from "fs";
 import { execFileSync } from "child_process";
-import { homedir } from "os";
 import { join } from "path";
 import { DailyDigestSettings } from "../settings/types";
 import { scrubSecrets } from "../filter/sanitize";
 import { warn } from "../plugin/log";
 import { GitCommit } from "../types";
-
-function expandHome(p: string): string {
-	if (p.startsWith("~/")) {
-		return join(homedir(), p.slice(2));
-	}
-	// Windows: expand %LOCALAPPDATA% and %APPDATA%
-	if (p.startsWith("%LOCALAPPDATA%")) {
-		const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-		return join(localAppData, p.slice("%LOCALAPPDATA%/".length));
-	}
-	if (p.startsWith("%APPDATA%")) {
-		const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-		return join(appData, p.slice("%APPDATA%/".length));
-	}
-	return p;
-}
+import { expandHome } from "./browser-profiles";
 
 // ── Git History ──────────────────────────────────────────
 

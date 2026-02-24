@@ -55,8 +55,8 @@ export async function collectRealData(settings: DailyDigestSettings, since?: Dat
 	}
 
 	const { readClaudeSessions } = await import("../../src/collect/claude");
-		const { readCodexSessions } = await import("../../src/collect/codex");
-		const { readGitHistory } = await import("../../src/collect/git");
+	const { readCodexSessions } = await import("../../src/collect/codex");
+	const { readGitHistory } = await import("../../src/collect/git");
 
 	let raw: CollectedData = {
 		visits,

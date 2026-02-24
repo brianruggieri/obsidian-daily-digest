@@ -1,26 +1,10 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
-import { homedir } from "os";
 import { join, basename } from "path";
 import { DailyDigestSettings } from "../settings/types";
 import { ClaudeSession } from "../types";
+import { expandHome } from "./browser-profiles";
 
-function expandHome(p: string): string {
-	if (p.startsWith("~/")) {
-		return join(homedir(), p.slice(2));
-	}
-	// Windows: expand %LOCALAPPDATA% and %APPDATA%
-	if (p.startsWith("%LOCALAPPDATA%")) {
-		const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-		return join(localAppData, p.slice("%LOCALAPPDATA%/".length));
-	}
-	if (p.startsWith("%APPDATA%")) {
-		const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-		return join(appData, p.slice("%APPDATA%/".length));
-	}
-	return p;
-}
-
-function findJsonlFiles(dir: string): string[] {
+export function findJsonlFiles(dir: string): string[] {
 	const results: string[] = [];
 	if (!existsSync(dir)) return results;
 

@@ -1,53 +1,9 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "fs";
-import { homedir } from "os";
+import { existsSync, readFileSync, statSync } from "fs";
 import { join, basename } from "path";
 import { DailyDigestSettings } from "../settings/types";
 import { ClaudeSession } from "../types";
-
-function expandHome(p: string): string {
-	if (p.startsWith("~/")) {
-		return join(homedir(), p.slice(2));
-	}
-	// Windows: expand %LOCALAPPDATA% and %APPDATA%
-	if (p.startsWith("%LOCALAPPDATA%")) {
-		const localAppData = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-		return join(localAppData, p.slice("%LOCALAPPDATA%/".length));
-	}
-	if (p.startsWith("%APPDATA%")) {
-		const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-		return join(appData, p.slice("%APPDATA%/".length));
-	}
-	return p;
-}
-
-function findJsonlFiles(dir: string): string[] {
-	const results: string[] = [];
-	if (!existsSync(dir)) return results;
-
-	function walk(d: string): void {
-		try {
-			const entries = readdirSync(d);
-			for (const entry of entries) {
-				const full = join(d, entry);
-				try {
-					const stat = statSync(full);
-					if (stat.isDirectory()) {
-						walk(full);
-					} else if (entry.endsWith(".jsonl")) {
-						results.push(full);
-					}
-				} catch {
-					// skip inaccessible entries
-				}
-			}
-		} catch {
-			// skip inaccessible directories
-		}
-	}
-
-	walk(dir);
-	return results;
-}
+import { expandHome } from "./browser-profiles";
+import { findJsonlFiles } from "./claude";
 
 // ── Codex CLI Sessions ────────────────────────────────────
 
