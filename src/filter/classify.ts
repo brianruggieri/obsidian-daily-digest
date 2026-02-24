@@ -10,7 +10,7 @@ import {
 	GitCommit,
 	CategorizedVisits,
 } from "../types";
-import { callLocal } from "../ai-client";
+import { callLocal } from "../summarize/ai-client";
 import { categorizeDomain } from "./categorize";
 import * as log from "../log";
 

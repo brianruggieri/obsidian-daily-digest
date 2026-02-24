@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize/summarize";
 import { ClassificationResult, PatternAnalysis } from "../../src/types";
 
 /**

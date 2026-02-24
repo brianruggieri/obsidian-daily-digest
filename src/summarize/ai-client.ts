@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { AIProvider } from "./settings/types";
+import { AIProvider } from "../settings/types";
 
 // ── Anthropic caller ────────────────────────────────────
 

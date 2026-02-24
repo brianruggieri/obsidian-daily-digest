@@ -35,7 +35,7 @@ import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import type { KnowledgeSections } from "../src/analyze/knowledge";
 import { renderMarkdown } from "../src/renderer";
-import { buildPrompt, summarizeDay } from "../src/summarize";
+import { buildPrompt, summarizeDay } from "../src/summarize/summarize";
 
 import type {
 	SanitizeConfig,
@@ -45,7 +45,7 @@ import type {
 	PatternAnalysis,
 	AISummary,
 } from "../src/types";
-import type { AICallConfig } from "../src/ai-client";
+import type { AICallConfig } from "../src/summarize/ai-client";
 
 // ── Constants ────────────────────────────────────────────
 

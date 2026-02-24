@@ -6,10 +6,10 @@ import { readClaudeSessions } from "./collect/claude";
 import { readCodexSessions } from "./collect/codex";
 import { readGitHistory } from "./collect/git";
 import { categorizeVisits } from "./filter/categorize";
-import { compressActivity } from "./compress";
-import { summarizeDay, buildPrompt } from "./summarize";
+import { compressActivity } from "./summarize/compress";
+import { summarizeDay, buildPrompt } from "./summarize/summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
-import { AICallConfig } from "./ai-client";
+import { AICallConfig } from "./summarize/ai-client";
 import { renderMarkdown } from "./renderer";
 import {
 	OnboardingModal,

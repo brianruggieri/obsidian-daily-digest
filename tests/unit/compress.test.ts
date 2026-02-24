@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { compressActivity } from "../../src/compress";
-import { estimateTokens } from "../../src/chunker";
+import { compressActivity } from "../../src/summarize/compress";
+import { estimateTokens } from "../../src/summarize/chunker";
 import { categorizeVisits } from "../../src/filter/categorize";
 import {
 	generateBrowserVisits,

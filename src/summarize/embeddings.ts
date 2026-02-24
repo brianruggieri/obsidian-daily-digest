@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
-import { ActivityChunk, EmbeddedChunk } from "./types";
-import * as log from "./log";
+import { ActivityChunk, EmbeddedChunk } from "../types";
+import * as log from "../log";
 
 // ── Fetch helper (localhost-aware) ──────────────────────
 

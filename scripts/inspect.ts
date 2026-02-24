@@ -42,7 +42,7 @@ import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
-import { buildPrompt } from "../src/summarize";
+import { buildPrompt } from "../src/summarize/summarize";
 import { renderMarkdown } from "../src/renderer";
 
 type Stage = "raw" | "sanitized" | "categorized" | "classified" | "patterns" | "knowledge" | "prompt" | "summary" | "rendered";

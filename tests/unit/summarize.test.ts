@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../src/summarize/summarize";
 import { ClassificationResult, StructuredEvent, PatternAnalysis } from "../../src/types";
 
 const DATE = new Date("2025-06-15T00:00:00");
