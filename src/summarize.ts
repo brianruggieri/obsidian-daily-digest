@@ -585,7 +585,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-3 evergreen questions this day's activity surfaces — durable reflective questions worth revisiting: principles being tested, assumptions challenged, skills being built"],
+  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"]${metaFields}
 }
 
