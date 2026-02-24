@@ -197,6 +197,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.enableShell = value;
 						await this.plugin.saveSettings();
+						this.display();
 					})
 			);
 
