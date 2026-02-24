@@ -54,10 +54,24 @@ export interface AISummary {
 	headline: string;
 	tldr: string;
 	themes: string[];
+	/** Specific vault-linkable noun phrases → rendered as [[wikilinks]] in Obsidian */
+	topics?: string[];
+	/** Named tools, frameworks, services, APIs encountered today → [[wikilinks]] */
+	entities?: string[];
+	/** Topics that surfaced repeatedly today and most deserve their own permanent note */
+	note_seeds?: string[];
+	/** Narrative arc of the day's actual work: what was being built/solved, how it evolved, what was discovered */
+	work_story?: string;
+	/** 1-sentence characterization of the working mode: exploring, building, debugging, synthesizing, learning */
+	mindset?: string;
+	/** Concrete things the person learned or understood today that can be applied later */
+	learnings?: string[];
+	/** Specific things worth remembering for quick future recall: commands, configs, findings, resource names */
+	remember?: string[];
 	category_summaries: Record<string, string>;
 	notable: string[];
 	questions: string[];
-	// Phase 4: De-identified meta-insights (Anthropic only, patterns required)
+	// De-identified meta-insights (Anthropic + patterns, or local unified prompt)
 	meta_insights?: string[];       // cognitive pattern observations from aggregated data
 	quirky_signals?: string[];      // unusual combos, contradictions, unformalized interests
 	focus_narrative?: string;       // AI narrative about focus/fragmentation patterns

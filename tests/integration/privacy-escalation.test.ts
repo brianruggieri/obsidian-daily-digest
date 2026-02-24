@@ -55,9 +55,9 @@ describe("privacy escalation chain", () => {
 	describe("deidentified prompt (Phase 4)", () => {
 		it("contains ONLY aggregated statistics", () => {
 			const prompt = buildDeidentifiedPrompt(DATE, patterns, "");
-			// Should have aggregated data
-			expect(prompt).toContain("Activity Distribution");
-			expect(prompt).toContain("Temporal Clusters");
+			// Should have aggregated data (XML section tags)
+			expect(prompt).toContain("activity_distribution");
+			expect(prompt).toContain("temporal_clusters");
 			expect(prompt).toContain("Focus score");
 			// Should NOT have per-event data
 			expect(prompt).not.toMatch(/https?:\/\//);

@@ -216,9 +216,10 @@ describe("buildDeidentifiedPrompt", () => {
 		expect(prompt).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
 	});
 
-	it("identifies itself as cognitive pattern analyst", () => {
+	it("describes synthesizing cognitive patterns for knowledge base", () => {
 		const prompt = buildDeidentifiedPrompt(DATE, patterns, "");
-		expect(prompt).toContain("cognitive pattern analyst");
+		expect(prompt).toContain("cognitive patterns");
+		expect(prompt).toContain("knowledge base");
 	});
 
 	it("asks about cross-pollination and unformalized knowledge", () => {
