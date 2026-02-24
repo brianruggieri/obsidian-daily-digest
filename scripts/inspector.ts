@@ -116,7 +116,7 @@ async function runPipeline(
 			detail: result.detail ?? "",
 		});
 		if (stepMode) {
-			sseEvent(res, { type: "waiting", nextStage: name });
+			sseEvent(res, { type: "waiting", completedStage: name });
 			await waitForNext();
 		}
 	}
@@ -267,6 +267,10 @@ async function runPipeline(
 	}
 
 	// ── 8. Summarize ─────────────────────────────────────
+	//
+	// Note: In real-AI mode, summarizeDay selects the privacy tier internally (Tier 1-4)
+	// based on settings. The promptLog will only show the mock/Tier-1 estimate
+	// from the AI-disabled and mock branches above — not the actual prompt sent.
 
 	const promptLog: PromptLog = createPromptLog();
 	let aiSummary: AISummary | null = null;
@@ -309,22 +313,6 @@ async function runPipeline(
 			localModel: settings.localModel,
 		};
 		await stage("summarize", async () => {
-			const promptText = buildPrompt(
-				date,
-				categorized,
-				sanitized.searches,
-				sanitized.shellCommands,
-				sanitized.claudeSessions,
-				settings.profile,
-				sanitized.gitCommits
-			);
-			appendPromptEntry(promptLog, {
-				stage: "summarize",
-				model: aiCallConfig.anthropicModel ?? aiCallConfig.localModel ?? "unknown",
-				tokenCount: estimateTokens(promptText),
-				privacyTier: 1,
-				prompt: promptText,
-			});
 			aiSummary = await summarizeDay(
 				date,
 				categorized,
