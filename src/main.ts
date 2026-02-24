@@ -121,8 +121,8 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async runPipelineStage(dateStr: string, stage: string): Promise<unknown> {
 		const [y, m, d] = dateStr.split("-").map(Number);
-		const date = new Date(y, m - 1, d);
-		const since = new Date(date.getTime() - this.settings.lookbackHours * 60 * 60 * 1000);
+		const date = new Date(y, m - 1, d); // midnight local time
+		const since = date; // collection window: midnight on the requested date
 
 		const { visits: rawVisits, searches: rawSearches } = await collectBrowserHistory(this.settings, since);
 		const rawShell = readShellHistory(this.settings, since);
