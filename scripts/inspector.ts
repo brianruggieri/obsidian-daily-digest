@@ -80,7 +80,267 @@ function sseEvent(res: ServerResponse, data: object): void {
 
 // ── HTML stub ────────────────────────────────────────────
 
-const HTML = `<!DOCTYPE html><html><body><h1>Pipeline Inspector (UI coming later)</h1></body></html>`;
+const HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Inspector</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace; font-size: 13px; background: #1a1a1a; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 10px 16px; background: #111; border-bottom: 1px solid #333; color: #888; font-size: 12px; }
+  header strong { color: #ccc; }
+  .workspace { display: flex; flex: 1; overflow: hidden; }
+  .sidebar { width: 220px; min-width: 220px; background: #111; border-right: 1px solid #333; padding: 16px 12px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  .sidebar label { display: block; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .sidebar input[type=date], .sidebar select { width: 100%; background: #1a1a1a; border: 1px solid #444; color: #d4d4d4; padding: 5px 7px; border-radius: 3px; font-family: inherit; font-size: 12px; }
+  .sidebar input[type=date]:focus, .sidebar select:focus { outline: none; border-color: #7b68ee; }
+  .radio-group { display: flex; gap: 0; border: 1px solid #444; border-radius: 3px; overflow: hidden; }
+  .radio-group label { flex: 1; text-align: center; padding: 4px 0; cursor: pointer; color: #888; font-size: 11px; text-transform: none; letter-spacing: 0; margin: 0; }
+  .radio-group input[type=radio] { display: none; }
+  .radio-group input[type=radio]:checked + label { background: #7b68ee22; color: #7b68ee; }
+  .btn-group { display: flex; gap: 6px; }
+  button { flex: 1; padding: 7px 0; border: none; border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; transition: opacity 0.1s; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #btn-step  { background: #7b68ee; color: #fff; }
+  #btn-run   { background: #333; color: #ccc; border: 1px solid #555; }
+  #btn-next  { background: #2d6a4f; color: #74c69d; border: 1px solid #2d6a4f; width: 100%; margin-top: 4px; display: none; }
+  #btn-next.visible { display: block; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .log-panel { flex: 0 0 auto; max-height: 240px; overflow-y: auto; border-bottom: 1px solid #333; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .stage-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; font-size: 12px; }
+  .stage-row .dot { width: 10px; text-align: center; flex-shrink: 0; }
+  .stage-row .name { width: 90px; color: #ccc; }
+  .stage-row .dur { width: 55px; color: #666; text-align: right; }
+  .stage-row .detail { color: #888; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dot.running { animation: spin 0.8s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dot.done { color: #7b68ee; }
+  .dot.skipped { color: #555; }
+  .dot.error { color: #f87171; }
+  .output-panel { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .markdown-body { max-width: 760px; line-height: 1.6; color: #d4d4d4; }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: #eee; border-bottom: 1px solid #333; padding-bottom: 4px; margin: 16px 0 8px; }
+  .markdown-body code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .markdown-body pre { background: #2a2a2a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+  .markdown-body a { color: #7b68ee; }
+  .markdown-body ul, .markdown-body ol { padding-left: 20px; }
+  .markdown-body blockquote { border-left: 3px solid #555; padding-left: 12px; color: #888; }
+  .raw-toggle { margin-top: 16px; max-width: 760px; }
+  .raw-toggle summary { color: #555; cursor: pointer; font-size: 11px; }
+  .raw-toggle textarea { width: 100%; height: 200px; background: #111; border: 1px solid #333; color: #666; padding: 8px; font-family: inherit; font-size: 11px; margin-top: 6px; resize: vertical; }
+  .error-msg { color: #f87171; padding: 12px; background: #2a1515; border-radius: 4px; border: 1px solid #5a2020; max-width: 760px; }
+  .idle-msg { color: #555; font-size: 12px; padding: 20px 0; }
+<\/style>
+<\/head>
+<body>
+<header><strong>Pipeline Inspector<\/strong> &nbsp;\u00b7&nbsp; obsidian-claude-daily<\/header>
+<div class="workspace">
+  <div class="sidebar">
+    <div>
+      <label>Date<\/label>
+      <input type="date" id="date" />
+    <\/div>
+    <div>
+      <label>Preset<\/label>
+      <select id="preset"><\/select>
+    <\/div>
+    <div>
+      <label>Data<\/label>
+      <div class="radio-group">
+        <input type="radio" name="dataMode" id="dm-fixtures" value="fixtures" checked />
+        <label for="dm-fixtures">fixtures<\/label>
+        <input type="radio" name="dataMode" id="dm-real" value="real" />
+        <label for="dm-real">real<\/label>
+      <\/div>
+    <\/div>
+    <div>
+      <label>AI<\/label>
+      <div class="radio-group">
+        <input type="radio" name="aiMode" id="ai-mock" value="mock" checked />
+        <label for="ai-mock">mock<\/label>
+        <input type="radio" name="aiMode" id="ai-real" value="real" />
+        <label for="ai-real">real<\/label>
+      <\/div>
+    <\/div>
+    <div class="btn-group">
+      <button id="btn-step">Step<\/button>
+      <button id="btn-run">Run All<\/button>
+    <\/div>
+    <button id="btn-next">Next Stage \u2192<\/button>
+  <\/div>
+
+  <div class="main">
+    <div class="log-panel" id="log"><\/div>
+    <div class="output-panel" id="output">
+      <p class="idle-msg">Select a preset and click Step or Run All.<\/p>
+    <\/div>
+  <\/div>
+<\/div>
+
+<script>
+const STAGES = ["collect","sanitize","sensitivity","categorize","classify","patterns","knowledge","summarize","render"];
+
+(async function init() {
+  document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+
+  const res = await fetch("/api/presets");
+  const presets = await res.json();
+  const sel = document.getElementById("preset");
+  for (const p of presets) {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.id;
+    opt.title = p.description;
+    sel.appendChild(opt);
+  }
+
+  document.getElementById("btn-step").addEventListener("click", () => startRun(true));
+  document.getElementById("btn-run").addEventListener("click", () => startRun(false));
+  document.getElementById("btn-next").addEventListener("click", advanceStep);
+})();
+
+function setRunning(running) {
+  document.getElementById("btn-step").disabled = running;
+  document.getElementById("btn-run").disabled = running;
+}
+
+function showNextBtn(visible) {
+  document.getElementById("btn-next").classList.toggle("visible", visible);
+}
+
+async function startRun(stepMode) {
+  setRunning(true);
+  showNextBtn(false);
+
+  const log = document.getElementById("log");
+  const output = document.getElementById("output");
+  log.innerHTML = "";
+  output.innerHTML = '<p class="idle-msg">Running\u2026<\/p>';
+
+  for (const name of STAGES) {
+    const row = makeStageRow(name, "pending");
+    row.id = "stage-" + name;
+    log.appendChild(row);
+  }
+
+  const preset = document.getElementById("preset").value;
+  const date = document.getElementById("date").value;
+  const dataMode = document.querySelector('[name=dataMode]:checked').value;
+  const aiMode = document.querySelector('[name=aiMode]:checked').value;
+
+  try {
+    const response = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preset, date, dataMode, aiMode, stepMode }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            handleEvent(JSON.parse(line.slice(6)));
+          } catch (_) {}
+        }
+      }
+    }
+  } catch (err) {
+    showError(String(err));
+  } finally {
+    setRunning(false);
+    showNextBtn(false);
+  }
+}
+
+async function advanceStep() {
+  showNextBtn(false);
+  await fetch("/api/next", { method: "POST" });
+}
+
+function handleEvent(evt) {
+  if (evt.type === "stage") {
+    updateStageRow(evt.name, evt.status, evt.durationMs, evt.detail);
+  } else if (evt.type === "waiting") {
+    showNextBtn(true);
+  } else if (evt.type === "complete") {
+    renderOutput(evt.markdown);
+  } else if (evt.type === "error") {
+    showError(evt.message);
+  }
+}
+
+function dotChar(status) {
+  if (status === "running") return "\u25cc";
+  if (status === "done") return "\u25cf";
+  if (status === "skipped") return "\u25cb";
+  if (status === "pending") return "\u00b7";
+  return "\u00b7";
+}
+
+function makeStageRow(name, status) {
+  const row = document.createElement("div");
+  row.className = "stage-row";
+  row.innerHTML =
+    '<span class="dot ' + status + '">' + dotChar(status) + '<\/span>' +
+    '<span class="name">' + name + '<\/span>' +
+    '<span class="dur"><\/span>' +
+    '<span class="detail"><\/span>';
+  return row;
+}
+
+function updateStageRow(name, status, durationMs, detail) {
+  let row = document.getElementById("stage-" + name);
+  if (!row) {
+    row = makeStageRow(name, status);
+    row.id = "stage-" + name;
+    document.getElementById("log").appendChild(row);
+  }
+  const dot = row.querySelector(".dot");
+  dot.className = "dot " + status;
+  dot.textContent = dotChar(status);
+  if (durationMs !== undefined) {
+    row.querySelector(".dur").textContent = durationMs + "ms";
+  }
+  if (detail !== undefined) {
+    row.querySelector(".detail").textContent = detail;
+  }
+}
+
+function renderOutput(raw) {
+  const output = document.getElementById("output");
+  const html = marked.parse(raw);
+  output.innerHTML =
+    '<div class="markdown-body">' + html + '<\/div>' +
+    '<details class="raw-toggle"><summary>Raw markdown<\/summary>' +
+    '<textarea readonly>' + escapeHtml(raw) + '<\/textarea><\/details>';
+}
+
+function showError(msg) {
+  document.getElementById("output").innerHTML =
+    '<div class="error-msg">Error: ' + escapeHtml(msg) + '<\/div>';
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+<\/script>
+<\/body>
+<\/html>`;
 
 // ── Pipeline runner ──────────────────────────────────────
 
