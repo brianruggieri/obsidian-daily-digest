@@ -9,7 +9,7 @@ describe("loadPromptTemplate", () => {
 
 	it("returns file content when template file exists", () => {
 		vi.mocked(fs.existsSync).mockReturnValue(true);
-		vi.mocked(fs.readFileSync).mockReturnValue("Hello {{name}}!" as any);
+		vi.mocked(fs.readFileSync).mockReturnValue("Hello {{name}}!");
 		const result = loadPromptTemplate("standard", "/some/dir");
 		expect(result).toBe("Hello {{name}}!");
 	});
