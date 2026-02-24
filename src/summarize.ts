@@ -589,7 +589,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"]${metaFields}
 }
 
-Generate fields in the order shown. Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
+Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories or activity types that had actual activity.
