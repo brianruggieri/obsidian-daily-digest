@@ -261,17 +261,10 @@ export async function collectBrowserHistory(
 	clean.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 	searches.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 
-	// In "complete" mode, collect everything (with safety ceilings to guard
-	// against pathological cases like auto-refresh tabs). In "limited" mode,
-	// apply the user's per-source caps.
 	const VISIT_CEILING = 2000;
 	const SEARCH_CEILING = 500;
-	const visitLimit = settings.collectionMode === "complete"
-		? VISIT_CEILING
-		: settings.maxBrowserVisits;
-	const searchLimit = settings.collectionMode === "complete"
-		? SEARCH_CEILING
-		: settings.maxSearches;
+	const visitLimit = VISIT_CEILING;
+	const searchLimit = SEARCH_CEILING;
 
 	return {
 		visits: clean.slice(0, visitLimit),
@@ -354,9 +347,7 @@ export function readShellHistory(settings: DailyDigestSettings, since: Date): Sh
 	const plain = clean.filter((e) => e.time === null);
 
 	const SHELL_CEILING = 500;
-	const shellLimit = settings.collectionMode === "complete"
-		? SHELL_CEILING
-		: settings.maxShellCommands;
+	const shellLimit = SHELL_CEILING;
 
 	return [...timestamped, ...plain].slice(0, shellLimit);
 }
@@ -462,9 +453,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 	entries.sort((a, b) => b.time.getTime() - a.time.getTime());
 
 	const CLAUDE_CEILING = 300;
-	const claudeLimit = settings.collectionMode === "complete"
-		? CLAUDE_CEILING
-		: settings.maxClaudeSessions;
+	const claudeLimit = CLAUDE_CEILING;
 
 	return entries.slice(0, claudeLimit);
 }
@@ -569,9 +558,7 @@ export function readCodexSessions(settings: DailyDigestSettings, since: Date): C
 	entries.sort((a, b) => b.time.getTime() - a.time.getTime());
 
 	const CODEX_CEILING = 300;
-	const codexLimit = settings.collectionMode === "complete"
-		? CODEX_CEILING
-		: settings.maxCodexSessions;
+	const codexLimit = CODEX_CEILING;
 
 	return entries.slice(0, codexLimit);
 }
@@ -723,9 +710,7 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 	allCommits.sort((a, b) => (b.time?.getTime() ?? 0) - (a.time?.getTime() ?? 0));
 
 	const GIT_CEILING = 500;
-	const gitLimit = settings.collectionMode === "complete"
-		? GIT_CEILING
-		: settings.maxGitCommits;
+	const gitLimit = GIT_CEILING;
 
 	return allCommits.slice(0, gitLimit);
 }

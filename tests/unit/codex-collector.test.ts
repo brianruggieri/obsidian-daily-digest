@@ -11,8 +11,6 @@ function makeSettings(overrides: Record<string, unknown> = {}) {
 	return {
 		...DEFAULT_SETTINGS,
 		enableCodex: true,
-		maxCodexSessions: 30,
-		collectionMode: "complete" as const,
 		...overrides,
 	};
 }
@@ -199,37 +197,15 @@ describe("readCodexSessions", () => {
 		expect(result[0].prompt).toBe("recent prompt that should be included");
 	});
 
-	it("respects maxCodexSessions limit in limited mode", () => {
-		const sessionFile = join(tmpDir, "session.jsonl");
-		const lines = [metaLine("/Users/test/proj")];
-		for (let i = 0; i < 20; i++) {
-			lines.push(userLine(`prompt number ${i} from the session`));
-		}
-		writeFileSync(sessionFile, lines.join("\n"));
-
-		const settings = makeSettings({
-			codexSessionsDir: tmpDir,
-			collectionMode: "limited",
-			maxCodexSessions: 5,
-		});
-		const result = readCodexSessions(settings, new Date(0));
-
-		expect(result).toHaveLength(5);
-	});
-
-	it("returns up to 300 entries in complete mode regardless of maxCodexSessions", () => {
+	it("respects 300 entry ceiling", () => {
 		const sessionFile = join(tmpDir, "session.jsonl");
 		const lines = [metaLine("/Users/test/proj")];
 		for (let i = 0; i < 50; i++) {
-			lines.push(userLine(`bulk prompt number ${i} for complete mode test`));
+			lines.push(userLine(`bulk prompt number ${i} for ceiling test`));
 		}
 		writeFileSync(sessionFile, lines.join("\n"));
 
-		const settings = makeSettings({
-			codexSessionsDir: tmpDir,
-			collectionMode: "complete",
-			maxCodexSessions: 5, // ignored in complete mode
-		});
+		const settings = makeSettings({ codexSessionsDir: tmpDir });
 		const result = readCodexSessions(settings, new Date(0));
 
 		expect(result).toHaveLength(50);

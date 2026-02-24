@@ -125,14 +125,4 @@ describe("readGitHistory", () => {
 		expect(result).toEqual([]);
 	});
 
-	it("applies collection mode limits", () => {
-		const settings = {
-			enableGit: true,
-			gitParentDir: "/nonexistent",
-			maxGitCommits: 5,
-			collectionMode: "limited",
-		} as DailyDigestSettings;
-		const result = readGitHistory(settings, new Date());
-		expect(result.length).toBeLessThanOrEqual(5);
-	});
 });

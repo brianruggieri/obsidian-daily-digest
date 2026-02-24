@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, setIcon, ToggleComponent } from "obsidian";
 import type DailyDigestPlugin from "./main";
 import { PRIVACY_DESCRIPTIONS } from "./privacy";
 import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "./types";
@@ -11,18 +11,10 @@ export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
 
-export type CollectionMode = "complete" | "limited";
-
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
-	lookbackHours: number;
-	collectionMode: CollectionMode;
 	promptBudget: number;
-	maxBrowserVisits: number;
-	maxSearches: number;
-	maxShellCommands: number;
-	maxClaudeSessions: number;
 	/**
 	 * Per-browser, per-profile selection. Replaces the old `browsers: string[]`.
 	 * Populated when the user clicks "Detect Browsers & Profiles". Empty by default.
@@ -40,7 +32,6 @@ export interface DailyDigestSettings {
 	claudeSessionsDir: string;
 	enableCodex: boolean;
 	codexSessionsDir: string;
-	maxCodexSessions: number;
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
@@ -58,7 +49,6 @@ export interface DailyDigestSettings {
 	sensitivityAction: "exclude" | "redact";
 	enableGit: boolean;
 	gitParentDir: string;
-	maxGitCommits: number;
 	enablePatterns: boolean;
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
@@ -70,13 +60,7 @@ export interface DailyDigestSettings {
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	dailyFolder: "daily",
 	filenameTemplate: "YYYY-MM-DD",
-	lookbackHours: 24,
-	collectionMode: "complete",
 	promptBudget: 3000,
-	maxBrowserVisits: 80,
-	maxSearches: 40,
-	maxShellCommands: 50,
-	maxClaudeSessions: 30,
 	// Empty until the user clicks "Detect Browsers & Profiles". Nothing is
 	// collected until the user has reviewed and enabled specific profiles.
 	browserConfigs: [],
@@ -92,7 +76,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	claudeSessionsDir: "~/.claude/projects",
 	enableCodex: false,
 	codexSessionsDir: "~/.codex/sessions",
-	maxCodexSessions: 30,
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
@@ -110,7 +93,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityAction: "exclude" as "exclude" | "redact",
 	enableGit: false,
 	gitParentDir: "",
-	maxGitCommits: 50,
 	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
@@ -164,66 +146,31 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Lookback hours")
-			.setDesc("How many hours of history to collect")
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 72, 1)
-					.setValue(this.plugin.settings.lookbackHours)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.lookbackHours = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		// ━━ 2. Data Sources ━━━━━━━━━━━━━━━━━━━━━━━━━
 		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
 		this.prependIcon(dataHeading.nameEl, "database");
 
-		// ── Collection mode ──────────────────────────
 		new Setting(containerEl)
-			.setName("Collection mode")
+			.setName("Prompt detail budget")
 			.setDesc(
-				"Complete: collects all activity within the lookback window, " +
-				"then compresses to fit the prompt budget. " +
-				"Limited: caps each source at a fixed item count (legacy)."
+				"Target token budget for the data section of AI prompts. " +
+				"Higher values include more detail but use more context. " +
+				"Activity is compressed proportionally to fit."
 			)
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("complete", "Complete day")
-					.addOption("limited", "Limited (legacy)")
-					.setValue(this.plugin.settings.collectionMode)
+			.addSlider((slider) =>
+				slider
+					.setLimits(1000, 8000, 500)
+					.setValue(this.plugin.settings.promptBudget)
+					.setDynamicTooltip()
 					.onChange(async (value) => {
-						this.plugin.settings.collectionMode = value as CollectionMode;
+						this.plugin.settings.promptBudget = value;
 						await this.plugin.saveSettings();
-						this.display();
 					})
 			);
 
-		if (this.plugin.settings.collectionMode === "complete") {
-			new Setting(containerEl)
-				.setName("Prompt detail budget")
-				.setDesc(
-					"Target token budget for the data section of AI prompts. " +
-					"Higher values include more detail but use more context. " +
-					"Activity is compressed proportionally to fit."
-				)
-				.addSlider((slider) =>
-					slider
-						.setLimits(1000, 8000, 500)
-						.setValue(this.plugin.settings.promptBudget)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.promptBudget = value;
-							await this.plugin.saveSettings();
-						})
-				);
-		}
-
-		// ── Browser history ───────────────────────────
-		new Setting(containerEl)
+		// ── Browser ──────────────────────────────────
+		const browserGroup = containerEl.createDiv({ cls: "dd-source-group" });
+		new Setting(browserGroup)
 			.setName("Browser history")
 			.setDesc(PRIVACY_DESCRIPTIONS.browser.access + " " + PRIVACY_DESCRIPTIONS.browser.destination)
 			.addToggle((toggle) =>
@@ -235,46 +182,15 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
 		if (this.plugin.settings.enableBrowser) {
-			this.renderBrowserProfileSection(containerEl);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max browser visits")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 200, 10)
-							.setValue(this.plugin.settings.maxBrowserVisits)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxBrowserVisits = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Max searches")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 100, 5)
-							.setValue(this.plugin.settings.maxSearches)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxSearches = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
+			this.renderBrowserProfileSection(browserGroup);
 		}
 
-		// ── Shell history ─────────────────────────────
-		new Setting(containerEl)
+		// ── Shell ─────────────────────────────────────
+		const shellGroup = containerEl.createDiv({ cls: "dd-source-group" });
+		new Setting(shellGroup)
 			.setName("Shell history")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.shell.access + " " +
-				PRIVACY_DESCRIPTIONS.shell.destination
-			)
+			.setDesc(PRIVACY_DESCRIPTIONS.shell.access + " " + PRIVACY_DESCRIPTIONS.shell.destination)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableShell)
@@ -285,28 +201,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (this.plugin.settings.enableShell && this.plugin.settings.collectionMode === "limited") {
-			new Setting(containerEl)
-				.setName("Max shell commands")
-				.addSlider((slider) =>
-					slider
-						.setLimits(10, 100, 5)
-						.setValue(this.plugin.settings.maxShellCommands)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.maxShellCommands = value;
-							await this.plugin.saveSettings();
-						})
-				);
-		}
-
-		// ── Claude Code sessions ──────────────────────
-		new Setting(containerEl)
+		// ── Claude ────────────────────────────────────
+		const claudeGroup = containerEl.createDiv({ cls: "dd-source-group" });
+		new Setting(claudeGroup)
 			.setName("Claude Code sessions")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.claude.access + " " +
-				PRIVACY_DESCRIPTIONS.claude.destination
-			)
+			.setDesc(PRIVACY_DESCRIPTIONS.claude.access + " " + PRIVACY_DESCRIPTIONS.claude.destination)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableClaude)
@@ -316,10 +215,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
 		if (this.plugin.settings.enableClaude) {
-			new Setting(containerEl)
-				.setName("Claude Code sessions directory")
+			new Setting(claudeGroup)
+				.setName("Sessions directory")
 				.setDesc("Path to Claude Code session logs (uses ~ for home)")
 				.addText((text) =>
 					text
@@ -330,30 +228,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max Claude Code sessions")
-					.addSlider((slider) =>
-						slider
-							.setLimits(5, 100, 5)
-							.setValue(this.plugin.settings.maxClaudeSessions)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxClaudeSessions = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
-		// ── Codex CLI sessions ────────────────────────
-		new Setting(containerEl)
+		// ── Codex ─────────────────────────────────────
+		const codexGroup = containerEl.createDiv({ cls: "dd-source-group" });
+		new Setting(codexGroup)
 			.setName("Codex CLI sessions")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.codex.access + " " +
-				PRIVACY_DESCRIPTIONS.codex.destination
-			)
+			.setDesc(PRIVACY_DESCRIPTIONS.codex.access + " " + PRIVACY_DESCRIPTIONS.codex.destination)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableCodex)
@@ -363,10 +244,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
 		if (this.plugin.settings.enableCodex) {
-			new Setting(containerEl)
-				.setName("Codex sessions directory")
+			new Setting(codexGroup)
+				.setName("Sessions directory")
 				.setDesc("Path to Codex CLI session logs. No API key required — reads local files only.")
 				.addText((text) =>
 					text
@@ -377,30 +257,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max Codex sessions")
-					.addSlider((slider) =>
-						slider
-							.setLimits(5, 100, 5)
-							.setValue(this.plugin.settings.maxCodexSessions)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxCodexSessions = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
-		// ── Git history ──────────────────────────────
-		new Setting(containerEl)
+		// ── Git ───────────────────────────────────────
+		const gitGroup = containerEl.createDiv({ cls: "dd-source-group" });
+		new Setting(gitGroup)
 			.setName("Git commit history")
-			.setDesc(
-				PRIVACY_DESCRIPTIONS.git.access + " " +
-				PRIVACY_DESCRIPTIONS.git.destination
-			)
+			.setDesc(PRIVACY_DESCRIPTIONS.git.access + " " + PRIVACY_DESCRIPTIONS.git.destination)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableGit)
@@ -410,9 +273,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
 		if (this.plugin.settings.enableGit) {
-			new Setting(containerEl)
+			new Setting(gitGroup)
 				.setName("Git parent directory")
 				.setDesc(
 					"Parent directory containing your git repositories. " +
@@ -428,21 +290,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-
-			if (this.plugin.settings.collectionMode === "limited") {
-				new Setting(containerEl)
-					.setName("Max git commits")
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 200, 10)
-							.setValue(this.plugin.settings.maxGitCommits)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.maxGitCommits = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
 		}
 
 		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
@@ -718,6 +565,19 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					"domains for anything specific to your situation.",
 			});
 		}
+
+		// ── Reset onboarding ──────────────────────────
+		new Setting(containerEl)
+			.setName("Reset privacy onboarding")
+			.setDesc("Show the first-run privacy disclosure modal again next time the plugin loads.")
+			.addButton((btn) =>
+				btn.setButtonText("Reset").onClick(async () => {
+					this.plugin.settings.hasCompletedOnboarding = false;
+					this.plugin.settings.privacyConsentVersion = 0;
+					await this.plugin.saveSettings();
+					new Notice("Onboarding will be shown again when Obsidian restarts.");
+				})
+			);
 
 		// ━━ 4. AI Summarization ━━━━━━━━━━━━━━━━━━━━━━
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
@@ -1199,21 +1059,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
-		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-		const advancedHeading = new Setting(containerEl).setName("Advanced").setHeading();
-		this.prependIcon(advancedHeading.nameEl, "wrench");
-
-		new Setting(containerEl)
-			.setName("Reset privacy onboarding")
-			.setDesc("Show the first-run privacy disclosure modal again next time the plugin loads.")
-			.addButton((btn) =>
-				btn.setButtonText("Reset").onClick(async () => {
-					this.plugin.settings.hasCompletedOnboarding = false;
-					this.plugin.settings.privacyConsentVersion = 0;
-					await this.plugin.saveSettings();
-					new Notice("Onboarding will be shown again when Obsidian restarts.");
-				})
-			);
 	}
 
 	/** Prepend a Lucide icon before the text content of a heading element. */
@@ -1316,7 +1161,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 	 *   Per-browser toggles with indented per-profile sub-toggles
 	 */
 	private renderBrowserProfileSection(containerEl: HTMLElement): void {
-		// Privacy note — shown every time as a reminder of what we access
 		const privacyNote = containerEl.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
 		privacyNote.createEl("p", {
 			text:
@@ -1326,8 +1170,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		const configs = this.plugin.settings.browserConfigs;
 
-		// Detect button + status line
-		const detectRow = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName("Browser & profile detection")
 			.setDesc(
 				configs.length === 0
@@ -1342,21 +1185,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.onClick(() => this.detectBrowserProfiles())
 			);
 
-		if (configs.length > 0) {
-			detectRow.descEl.addClass("dd-browser-status");
-		}
-
-		// Nothing detected yet — show hint and stop
 		if (configs.length === 0) {
 			const hint = containerEl.createDiv({ cls: "dd-settings-callout" });
-			hint.createEl("p", {
-				text: "Click 'Detect Browsers & Profiles' to scan for installed browsers.",
-			});
+			hint.createEl("p", { text: "Click 'Detect Browsers & Profiles' to scan for installed browsers." });
 			return;
 		}
-
-		// ── Per-browser toggles ─────────────────────────
-		const browserContainer = containerEl.createDiv({ cls: "dd-browser-configs" });
 
 		for (const config of configs) {
 			const displayName = BROWSER_DISPLAY_NAMES[config.browserId] ?? config.browserId;
@@ -1367,8 +1200,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				browserDesc += " · macOS Full Disk Access may be required";
 			}
 
-			// Browser master toggle
-			new Setting(browserContainer)
+			new Setting(containerEl)
 				.setName(displayName)
 				.setDesc(browserDesc)
 				.addToggle((toggle) =>
@@ -1381,38 +1213,36 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						})
 				);
 
-			// Per-profile sub-toggles (only when browser is enabled)
 			if (config.enabled && config.profiles.length > 0) {
-				const profileContainer = browserContainer.createDiv({ cls: "dd-browser-profile-sub" });
+				const profileList = containerEl.createDiv({ cls: "dd-profile-list" });
 
 				for (const profile of config.profiles) {
-					// Show folder path only when it differs from display name (Firefox uses full paths)
-					const profileDesc = profile.profileDir !== profile.displayName
-						? `Folder: ${profile.profileDir}`
-						: "";
+					const row = profileList.createDiv({ cls: "dd-profile-row" });
 
-					new Setting(profileContainer)
-						.setName(profile.displayName)
-						.setDesc(profileDesc)
-						.addToggle((toggle) =>
-							toggle
-								.setValue(config.selectedProfiles.includes(profile.profileDir))
-								.onChange(async (value) => {
-									const selected = new Set(config.selectedProfiles);
-									if (value) {
-										selected.add(profile.profileDir);
-									} else {
-										selected.delete(profile.profileDir);
-									}
-									config.selectedProfiles = [...selected];
-									await this.plugin.saveSettings();
-								})
-						);
+					row.createSpan({ cls: "dd-profile-name", text: profile.displayName });
+
+					if (profile.profileDir !== profile.displayName) {
+						row.createSpan({ cls: "dd-profile-path", text: profile.profileDir });
+					}
+
+					const profileToggle = new ToggleComponent(row);
+					profileToggle.toggleEl.setAttr("aria-label", `Enable ${profile.displayName} profile`);
+					profileToggle
+						.setValue(config.selectedProfiles.includes(profile.profileDir))
+						.onChange(async (value) => {
+							const selected = new Set(config.selectedProfiles);
+							if (value) {
+								selected.add(profile.profileDir);
+							} else {
+								selected.delete(profile.profileDir);
+							}
+							config.selectedProfiles = [...selected];
+							await this.plugin.saveSettings();
+						});
 				}
 			}
 		}
 
-		// Warn if a browser is enabled but no profiles are selected
 		const anyEnabledWithNoProfiles = configs.some(
 			(c) => c.enabled && c.selectedProfiles.length === 0
 		);
