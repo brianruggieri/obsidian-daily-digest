@@ -49,7 +49,7 @@ export function buildPrompt(
 	});
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -89,7 +89,7 @@ function buildCompressedPrompt(
 	});
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -134,7 +134,7 @@ function buildRAGPrompt(
 		.join("\n\n");
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -168,7 +168,7 @@ export function buildClassifiedPrompt(
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "scattered")
+		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
