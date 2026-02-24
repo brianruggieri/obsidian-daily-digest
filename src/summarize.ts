@@ -442,11 +442,12 @@ ${deltaLines}
 			byType[event.activityType].push(event);
 		}
 		const typeSections: string[] = [];
+		const escAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 		for (const [activityType, events] of Object.entries(byType)) {
 			const typeTopics = [...new Set(events.flatMap((ev) => ev.topics))];
 			const typeEntities = [...new Set(events.flatMap((ev) => ev.entities))];
 			typeSections.push(
-				`<activity_type name="${activityType}" count="${events.length}">\n` +
+				`<activity_type name="${escAttr(activityType)}" count="${events.length}">\n` +
 				`Topics: ${typeTopics.join(", ") || "none"}\n` +
 				`Entities: ${typeEntities.join(", ") || "none"}\n` +
 				`Activities:\n${events.map((ev) => `  - ${ev.summary}`).join("\n")}\n` +
