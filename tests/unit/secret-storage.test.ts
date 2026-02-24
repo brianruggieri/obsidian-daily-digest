@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { SECRET_ID } from "../../src/settings";
+import { SECRET_ID } from "../../src/settings/types";
 
 /**
  * Tests for the SecretStorage API key resolution logic.

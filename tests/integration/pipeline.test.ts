@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { categorizeVisits } from "../../src/categorize";
-import { sanitizeCollectedData } from "../../src/sanitize";
-import { classifyEventsRuleOnly } from "../../src/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../../src/patterns";
-import { generateKnowledgeSections } from "../../src/knowledge";
-import { renderMarkdown } from "../../src/renderer";
+import { categorizeVisits } from "../../src/filter/categorize";
+import { sanitizeCollectedData } from "../../src/filter/sanitize";
+import { classifyEventsRuleOnly } from "../../src/filter/classify";
+import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
+import { generateKnowledgeSections } from "../../src/analyze/knowledge";
+import { renderMarkdown } from "../../src/render/renderer";
 import { ALL_PERSONAS, PersonaOutput } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 

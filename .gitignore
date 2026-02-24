@@ -21,7 +21,7 @@ data.json
 Thumbs.db
 
 # Screenshot automation
-screenshots/vault/
+tests/screenshots/vault/
 .obsidian-cache/
 
 # Claude / AI tooling

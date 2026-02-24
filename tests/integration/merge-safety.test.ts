@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderMarkdown } from "../../src/renderer";
+import { renderMarkdown } from "../../src/render/renderer";
 import {
 	extractUserContent,
 	mergeContent,
@@ -16,7 +16,7 @@ import {
 	hasUserEdits,
 	VaultAdapter,
 	ExtractionResult,
-} from "../../src/merge";
+} from "../../src/render/merge";
 import {
 	AISummary,
 	BrowserVisit,
