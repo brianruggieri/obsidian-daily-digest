@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { compressActivity } from "../../src/summarize/compress";
-import { estimateTokens } from "../../src/summarize/chunker";
-import { categorizeVisits } from "../../src/filter/categorize";
+import { compressActivity } from "../../../src/summarize/compress";
+import { estimateTokens } from "../../../src/summarize/chunker";
+import { categorizeVisits } from "../../../src/filter/categorize";
 import {
 	generateBrowserVisits,
 	generateSearchQueries,
 	generateClaudeSessions,
 	DOMAIN_SETS,
 	SEARCH_TEMPLATES,
-} from "../fixtures/generators";
-import { generateTimeSeries, defaultTimeConfig } from "../fixtures/time-utils";
+} from "../../fixtures/generators";
+import { generateTimeSeries, defaultTimeConfig } from "../../fixtures/time-utils";
 
 const TIME_CONFIG = defaultTimeConfig(new Date("2025-06-15T00:00:00"));
 

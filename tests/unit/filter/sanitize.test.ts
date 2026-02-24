@@ -8,8 +8,8 @@ import {
 	filterExcludedDomains,
 	isExcludedDomain,
 	sanitizeCollectedData,
-} from "../../src/filter/sanitize";
-import { BrowserVisit, SanitizeConfig } from "../../src/types";
+} from "../../../src/filter/sanitize";
+import { BrowserVisit, SanitizeConfig } from "../../../src/types";
 
 // ── Secret Scrubbing ────────────────────────────────────
 

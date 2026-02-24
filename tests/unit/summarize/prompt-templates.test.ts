@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as fs from "fs";
-import { loadPromptTemplate, fillTemplate, BUILT_IN_PROMPTS } from "../../src/summarize/prompt-templates";
+import { loadPromptTemplate, fillTemplate, BUILT_IN_PROMPTS } from "../../../src/summarize/prompt-templates";
 
 vi.mock("fs");
 

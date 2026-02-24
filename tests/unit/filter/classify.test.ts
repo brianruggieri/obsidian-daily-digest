@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { classifyEventsRuleOnly } from "../../src/filter/classify";
-import { BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../src/types";
+import { classifyEventsRuleOnly } from "../../../src/filter/classify";
+import { BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../../src/types";
 
 const NOW = new Date("2025-06-15T10:00:00");
 

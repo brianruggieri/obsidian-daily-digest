@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getMockSummary } from "../../scripts/lib/mock-ai";
+import { getMockSummary } from "../../../scripts/lib/mock-ai";
 
 describe("MockAI", () => {
   it("returns a valid AISummary shape", () => {

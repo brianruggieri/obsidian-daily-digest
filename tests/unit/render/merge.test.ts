@@ -6,9 +6,9 @@ import {
 	hasUserEdits,
 	ExtractionResult,
 	VaultAdapter,
-} from "../../src/render/merge";
-import { renderMarkdown } from "../../src/render/renderer";
-import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, slugifyQuestion } from "../../src/types";
+} from "../../../src/render/merge";
+import { renderMarkdown } from "../../../src/render/renderer";
+import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, slugifyQuestion } from "../../../src/types";
 
 // ── Helpers ──────────────────────────────────────────────
 

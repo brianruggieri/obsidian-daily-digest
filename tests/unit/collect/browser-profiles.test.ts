@@ -6,8 +6,8 @@ import {
 	mergeDetectedWithExisting,
 	expandHome,
 	BROWSER_DISPLAY_NAMES,
-} from "../../src/collect/browser-profiles";
-import { BrowserInstallConfig } from "../../src/types";
+} from "../../../src/collect/browser-profiles";
+import { BrowserInstallConfig } from "../../../src/types";
 import { join } from "path";
 import { homedir } from "os";
 
