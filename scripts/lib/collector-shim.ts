@@ -24,9 +24,11 @@ export async function collectFixtureData(settings: DailyDigestSettings): Promise
 	};
 }
 
-export async function collectRealData(settings: DailyDigestSettings): Promise<CollectedData> {
-	const since = new Date();
-	since.setHours(since.getHours() - settings.lookbackHours);
+export async function collectRealData(settings: DailyDigestSettings, since?: Date, until?: Date): Promise<CollectedData> {
+	if (!since) {
+		since = new Date();
+		since.setHours(since.getHours() - settings.lookbackHours);
+	}
 
 	let visits: BrowserVisit[] = [];
 	let searches: SearchQuery[] = [];
@@ -39,7 +41,7 @@ export async function collectRealData(settings: DailyDigestSettings): Promise<Co
 
 	const { readShellHistory, readClaudeSessions, readCodexSessions, readGitHistory } = await import("../../src/collectors");
 
-	return {
+	let raw: CollectedData = {
 		visits,
 		searches,
 		shell: settings.enableShell ? readShellHistory(settings, since) : [],
@@ -49,4 +51,16 @@ export async function collectRealData(settings: DailyDigestSettings): Promise<Co
 		],
 		gitCommits: settings.enableGit ? readGitHistory(settings, since) : [],
 	};
+
+	if (until) {
+		raw = {
+			visits: raw.visits.filter((v) => v.time === null || v.time <= until!),
+			searches: raw.searches.filter((s) => s.time === null || s.time <= until!),
+			shell: raw.shell.filter((s) => s.time === null || s.time <= until!),
+			claudeSessions: raw.claudeSessions.filter((s) => s.time <= until!),
+			gitCommits: raw.gitCommits.filter((c) => c.time === null || c.time <= until!),
+		};
+	}
+
+	return raw;
 }

@@ -1,0 +1,27 @@
+You are summarizing a person's digital activity for {{dateStr}}.
+Your job is to distill classified activity abstractions into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
+
+## Activity Overview
+Total events: {{totalProcessed}} ({{llmClassified}} LLM-classified, {{ruleClassified}} rule-classified)
+All topics: {{allTopics}}
+All entities: {{allEntities}}
+
+## Activity by Type
+{{activitySections}}
+
+Return ONLY a JSON object with these exact keys — no markdown, no preamble:
+{
+  "headline": "one punchy sentence summarizing the whole day (max 15 words)",
+  "tldr": "2-3 sentence paragraph. What was this person focused on? What did they accomplish or investigate?",
+  "themes": ["3-5 short theme labels inferred from activity, e.g. 'API integration', 'market research', 'debugging'"],
+  "category_summaries": {
+    "<activity_type>": "1-sentence plain-English summary of what they did in this activity type"
+  },
+  "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections"],
+  "questions": ["1-2 open questions this day's activity raises, useful for future reflection"],
+  "work_patterns": ["1-3 behavioral observations, e.g. 'deep 2-hour focus block', 'frequent context switching between X and Y'"],
+  "cross_source_connections": ["1-2 connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
+}
+
+Be specific and concrete. Refer to the topics and entities mentioned.
+Only include category_summaries for activity types that had events.
