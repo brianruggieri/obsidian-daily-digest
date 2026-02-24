@@ -1,4 +1,4 @@
-import { detectAllBrowsers } from "../src/browser-profiles";
+import { detectAllBrowsers } from "../src/collect/browser-profiles";
 const browsers = await detectAllBrowsers();
 process.stdout.write("browsers found: " + browsers.length + "\n");
 for (const b of browsers) {

@@ -3,7 +3,7 @@ import type DailyDigestPlugin from "../main";
 import { PRIVACY_DESCRIPTIONS } from "../privacy";
 import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "../types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "../sensitivity";
-import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../browser-profiles";
+import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../collect/browser-profiles";
 import * as log from "../log";
 import { DailyDigestSettings, DEFAULT_SETTINGS, AIProvider, SECRET_ID } from "./types";
 

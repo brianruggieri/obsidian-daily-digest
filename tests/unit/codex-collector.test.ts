@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { readCodexSessions } from "../../src/collectors";
+import { readCodexSessions } from "../../src/collect/codex";
 import { DEFAULT_SETTINGS } from "../../src/settings/types";
 
 // ── Helpers ──────────────────────────────────────────────
