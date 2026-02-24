@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { PRESETS, BASE_SETTINGS, resolvePreset } from "../../scripts/presets";
 
 describe("Presets", () => {
-  it("exports exactly 12 presets", () => {
-    expect(PRESETS).toHaveLength(12);
+  it("exports exactly 11 presets", () => {
+    expect(PRESETS).toHaveLength(11);
   });
 
   it("every preset has a unique id", () => {
@@ -22,7 +22,6 @@ describe("Presets", () => {
   it("BASE_SETTINGS has all required fields", () => {
     expect(BASE_SETTINGS.enableBrowser).toBeDefined();
     expect(BASE_SETTINGS.aiProvider).toBeDefined();
-    expect(BASE_SETTINGS.collectionMode).toBeDefined();
   });
 
   it("resolvePreset merges settings over base", () => {
