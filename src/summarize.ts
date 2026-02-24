@@ -532,6 +532,8 @@ Date: ${dateStr}
 
 ${sections.join("\n\n")}
 
+The sections above represent the same day at different levels of granularity — statistical patterns, structured abstractions, and raw activity logs. Synthesize across all available layers to produce observations richer than any single layer would support. Use the patterns layer as a calibrating prior, the structured layer as evidence of what those patterns mean, and the raw layer for concrete specifics.
+
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
   "headline": "one punchy sentence capturing the day's essential character (max 15 words)",
