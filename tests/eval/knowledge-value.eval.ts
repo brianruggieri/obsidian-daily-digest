@@ -13,7 +13,7 @@ import { categorizeVisits } from "../../src/filter/categorize";
 import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { generateKnowledgeSections } from "../../src/analyze/knowledge";
-import { renderMarkdown } from "../../src/renderer";
+import { renderMarkdown } from "../../src/render/renderer";
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import {
 	fullStackDeveloper,

@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS } from "./filter/categorize";
+import { CATEGORY_LABELS } from "../filter/categorize";
 import {
 	AISummary,
 	BrowserVisit,
@@ -7,10 +7,10 @@ import {
 	GitCommit,
 	SearchQuery,
 	slugifyQuestion,
-} from "./types";
-import { AIProvider } from "./settings/types";
-import { KnowledgeSections } from "./analyze/knowledge";
-import { formatDetailsBlock, type PromptLog } from "../scripts/lib/prompt-logger";
+} from "../types";
+import { AIProvider } from "../settings/types";
+import { KnowledgeSections } from "../analyze/knowledge";
+import { formatDetailsBlock, type PromptLog } from "../../scripts/lib/prompt-logger";
 
 function formatTime(d: Date | null): string {
 	if (!d) return "";

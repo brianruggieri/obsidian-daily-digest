@@ -6,8 +6,8 @@ import {
 	hasUserEdits,
 	ExtractionResult,
 	VaultAdapter,
-} from "../../src/merge";
-import { renderMarkdown } from "../../src/renderer";
+} from "../../src/render/merge";
+import { renderMarkdown } from "../../src/render/renderer";
 import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, slugifyQuestion } from "../../src/types";
 
 // ── Helpers ──────────────────────────────────────────────
