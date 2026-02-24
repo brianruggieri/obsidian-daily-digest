@@ -182,6 +182,7 @@ const HTML = `<!DOCTYPE html>
 
 <script>
 const STAGES = ["collect","sanitize","sensitivity","categorize","classify","patterns","knowledge","summarize","render"];
+let gotComplete = false;
 
 (async function init() {
   document.getElementById("date").value = new Date().toISOString().slice(0, 10);
@@ -200,7 +201,10 @@ const STAGES = ["collect","sanitize","sensitivity","categorize","classify","patt
   document.getElementById("btn-step").addEventListener("click", () => startRun(true));
   document.getElementById("btn-run").addEventListener("click", () => startRun(false));
   document.getElementById("btn-next").addEventListener("click", advanceStep);
-})();
+})().catch(function(err) {
+  document.getElementById("output").innerHTML =
+    '<div class="error-msg">Failed to initialize: ' + String(err) + '<\/div>';
+});
 
 function setRunning(running) {
   document.getElementById("btn-step").disabled = running;
@@ -212,6 +216,7 @@ function showNextBtn(visible) {
 }
 
 async function startRun(stepMode) {
+  gotComplete = false;
   setRunning(true);
   showNextBtn(false);
 
@@ -246,7 +251,7 @@ async function startRun(stepMode) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\\n");
+      const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
@@ -261,12 +266,19 @@ async function startRun(stepMode) {
   } finally {
     setRunning(false);
     showNextBtn(false);
+    if (!gotComplete) {
+      showError("Run ended without a result \u2014 the server may have crashed.");
+    }
   }
 }
 
 async function advanceStep() {
   showNextBtn(false);
-  await fetch("/api/next", { method: "POST" });
+  try {
+    await fetch("/api/next", { method: "POST" });
+  } catch (_err) {
+    showNextBtn(true); // restore button if POST failed
+  }
 }
 
 function handleEvent(evt) {
@@ -275,8 +287,10 @@ function handleEvent(evt) {
   } else if (evt.type === "waiting") {
     showNextBtn(true);
   } else if (evt.type === "complete") {
+    gotComplete = true;
     renderOutput(evt.markdown);
   } else if (evt.type === "error") {
+    gotComplete = true; // error counts as a terminal event
     showError(evt.message);
   }
 }
