@@ -318,6 +318,33 @@ function renderGroupBoundary(fromNotes: ParsedNote[], toNotes: ParsedNote[], fro
 	return lines.join("\n");
 }
 
+// ── Homogeneity detection ─────────────────────────────────
+
+function detectMockModeHomogeneity(notes: ParsedNote[]): {
+	isHomogeneous: boolean;
+	identicalTier: number | null;
+	identicalTokens: number | null;
+	aiCount: number;
+} {
+	const aiEnabled = notes.filter((n) => n.privacyGroup !== "no-ai" && n.tokenCount !== null);
+	if (aiEnabled.length < 2) {
+		return { isHomogeneous: false, identicalTier: null, identicalTokens: null, aiCount: aiEnabled.length };
+	}
+
+	const allSameTier = aiEnabled.every((n) => n.privacyTier === aiEnabled[0].privacyTier);
+	const allSameTokens = aiEnabled.every((n) => n.tokenCount === aiEnabled[0].tokenCount);
+
+	if (allSameTier && allSameTokens) {
+		return {
+			isHomogeneous: true,
+			identicalTier: aiEnabled[0].privacyTier,
+			identicalTokens: aiEnabled[0].tokenCount,
+			aiCount: aiEnabled.length,
+		};
+	}
+	return { isHomogeneous: false, identicalTier: null, identicalTokens: null, aiCount: aiEnabled.length };
+}
+
 // ── Main ──────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -356,31 +383,44 @@ async function main(): Promise<void> {
 	}
 
 	// Build report
+	const homogeneity = detectMockModeHomogeneity(notes);
+
 	const lines: string[] = [
 		`# Privacy Diff Report — ${DATE_STR}`,
 		"",
 		`> Generated: ${new Date().toISOString()}  `,
 		`> Presets loaded: ${notes.length}/${PRESETS.length}${missing.length ? ` (missing: ${missing.join(", ")})` : ""}`,
 		"",
-		"---",
-		"",
-		"## Summary Table",
-		"",
-		renderSummaryTable(notes),
-		"",
-		"---",
-		"",
-		"## AI Exposure Table",
-		"",
-		renderExposureTable(notes),
-		"",
-		"---",
-		"",
-		"## Incremental Diffs",
-		"",
-		"> Each step shows what changes when you move from the more-private preset to the less-private one immediately below it.",
-		"",
 	];
+
+	if (homogeneity.isHomogeneous) {
+		lines.push(
+			`> ⚠️ **Mock-mode data detected:** All ${homogeneity.aiCount} AI-enabled presets show ` +
+			`identical Tier ${homogeneity.identicalTier} prompts (${homogeneity.identicalTokens} tokens). ` +
+			`Privacy tier differences are not meaningful in this report. ` +
+			`Re-run \`npm run matrix\` and \`npm run matrix:diff\` to get accurate tier data.`
+		);
+		lines.push("");
+	}
+
+	lines.push("---");
+	lines.push("");
+	lines.push("## Summary Table");
+	lines.push("");
+	lines.push(renderSummaryTable(notes));
+	lines.push("");
+	lines.push("---");
+	lines.push("");
+	lines.push("## AI Exposure Table");
+	lines.push("");
+	lines.push(renderExposureTable(notes));
+	lines.push("");
+	lines.push("---");
+	lines.push("");
+	lines.push("## Incremental Diffs");
+	lines.push("");
+	lines.push("> Each step shows what changes when you move from the more-private preset to the less-private one immediately below it.");
+	lines.push("");
 
 	for (let i = 0; i < notes.length - 1; i++) {
 		lines.push(renderIncrementalDiff(notes[i], notes[i + 1]));
