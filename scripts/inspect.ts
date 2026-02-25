@@ -155,7 +155,6 @@ async function main(): Promise<void> {
 		output({
 			visits: raw.visits,
 			searches: raw.searches,
-			shell: raw.shell,
 			claudeSessions: raw.claudeSessions,
 			gitCommits: raw.gitCommits,
 		}, format, outFile);
@@ -164,7 +163,7 @@ async function main(): Promise<void> {
 
 	// ── Stage: sanitized ─────────────────────────────────
 	const sanitized = sanitizeCollectedData(
-		raw.visits, raw.searches, raw.shell, raw.claudeSessions, raw.gitCommits,
+		raw.visits, raw.searches, raw.claudeSessions, raw.gitCommits,
 		{ enabled: true, level: "standard", excludedDomains: [], redactPaths: false, scrubEmails: true }
 	);
 	const visitResult = filterSensitiveDomains(sanitized.visits, {
@@ -178,7 +177,6 @@ async function main(): Promise<void> {
 		output({
 			visits: visitResult.kept,
 			searches: searchResult.kept,
-			shell: sanitized.shellCommands,
 			claudeSessions: sanitized.claudeSessions,
 			gitCommits: sanitized.gitCommits,
 			filtered: visitResult.filtered + searchResult.filtered,
@@ -196,7 +194,7 @@ async function main(): Promise<void> {
 
 	// ── Stage: classified ────────────────────────────────
 	const classification = classifyEventsRuleOnly(
-		visitResult.kept, searchResult.kept, sanitized.shellCommands,
+		visitResult.kept, searchResult.kept,
 		sanitized.claudeSessions, sanitized.gitCommits, categorized
 	);
 
@@ -229,7 +227,7 @@ async function main(): Promise<void> {
 	// ── Stage: prompt ────────────────────────────────────
 	if (stage === "prompt") {
 		const promptText = buildPrompt(
-			date, categorized, searchResult.kept, sanitized.shellCommands,
+			date, categorized, searchResult.kept,
 			sanitized.claudeSessions, settings.profile, sanitized.gitCommits, promptsDir
 		);
 		output(promptText, "md", outFile);
@@ -252,7 +250,7 @@ async function main(): Promise<void> {
 	if (stage === "rendered") {
 		const aiSummary = aiMode === "mock" ? getMockSummary("inspect") : null;
 		const md = renderMarkdown(
-			date, visitResult.kept, searchResult.kept, sanitized.shellCommands,
+			date, visitResult.kept, searchResult.kept,
 			sanitized.claudeSessions, sanitized.gitCommits, categorized,
 			aiSummary, aiMode === "mock" ? "local" : "none",
 			knowledge

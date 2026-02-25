@@ -6,7 +6,17 @@ export type PresetOverride = Partial<DailyDigestSettings>;
 export interface Preset {
 	id: string;
 	description: string;
+	privacyRank: number;           // 1 = most private, 11 = least private
+	privacyGroup: "no-ai" | "local" | "cloud";
 	settings: PresetOverride;
+}
+
+/**
+ * Returns a zero-padded filename prefix for a preset so Obsidian sorts them
+ * in privacy order (most private first). E.g. "01-no-ai-minimal".
+ */
+export function getPresetFilename(preset: Preset): string {
+	return `${String(preset.privacyRank).padStart(2, "0")}-${preset.id}`;
 }
 
 /**
@@ -42,6 +52,8 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	sensitivityCustomDomains: "",
 
 	// AI
+	promptsDir: "",
+	debugMode: false,
 	enableAI: false,
 	profile: "",
 	aiProvider: "none",
@@ -66,10 +78,16 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	privacyConsentVersion: 1,
 };
 
+// Presets are ordered from most private (rank 1) to least private (rank 11).
+// This order drives the inspector dropdown and the numbered output filenames.
 export const PRESETS: Preset[] = [
+	// ── No-AI group (ranks 1–2) ──────────────────────────────────────────────
+	// No data ever leaves the machine; no LLM sees any content.
 	{
 		id: "no-ai-minimal",
 		description: "Browser only, no AI, no patterns — minimum viable note",
+		privacyRank: 1,
+		privacyGroup: "no-ai",
 		settings: {
 			enableClaude: false,
 			enableGit: false,
@@ -81,25 +99,35 @@ export const PRESETS: Preset[] = [
 	{
 		id: "no-ai-full",
 		description: "All 4 sources, no AI, patterns enabled",
+		privacyRank: 2,
+		privacyGroup: "no-ai",
 		settings: {
 			enableAI: false,
 			aiProvider: "none",
 			enablePatterns: true,
 		},
 	},
+
+	// ── Local-LLM group (ranks 3–5) ──────────────────────────────────────────
+	// Data stays on-device; a local model sees it. Ordered by least exposure:
+	// classified abstractions → RAG chunks → full context.
 	{
-		id: "local-llm-basic",
-		description: "All sources, local model, no RAG or classification",
+		id: "local-llm-classified",
+		description: "All sources, local model + classification (no RAG)",
+		privacyRank: 3,
+		privacyGroup: "local",
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
 			enableRAG: false,
-			enableClassification: false,
+			enableClassification: true,
 		},
 	},
 	{
 		id: "local-llm-rag",
 		description: "All sources, local model + RAG",
+		privacyRank: 4,
+		privacyGroup: "local",
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
@@ -108,62 +136,26 @@ export const PRESETS: Preset[] = [
 		},
 	},
 	{
-		id: "local-llm-classified",
-		description: "All sources, local model + classification (no RAG)",
+		id: "local-llm-basic",
+		description: "All sources, local model, no RAG or classification",
+		privacyRank: 5,
+		privacyGroup: "local",
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
 			enableRAG: false,
-			enableClassification: true,
-		},
-	},
-	{
-		id: "cloud-haiku-tier1",
-		description: "Anthropic Haiku, full sanitized context (Tier 1)",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: false,
 			enableClassification: false,
 		},
 	},
-	{
-		id: "cloud-haiku-tier2",
-		description: "Anthropic Haiku, RAG chunks only (Tier 2)",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: true,
-			enableClassification: false,
-		},
-	},
-	{
-		id: "cloud-sonnet-tier1",
-		description: "Anthropic Sonnet, full sanitized context (Tier 1)",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-sonnet-4-6",
-			enableRAG: false,
-			enableClassification: false,
-		},
-	},
-	{
-		id: "cloud-sonnet-tier3",
-		description: "Anthropic Sonnet, classified abstractions only (Tier 3)",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-sonnet-4-6",
-			enableClassification: true,
-			enableRAG: false,
-		},
-	},
+
+	// ── Cloud group (ranks 6–11) ─────────────────────────────────────────────
+	// Data sent to Anthropic API. Ordered by least exposure:
+	// stats-only → abstractions → RAG chunks → aggressive sanitization → full context.
 	{
 		id: "cloud-tier4-stats",
 		description: "Anthropic Haiku, aggregated statistics only (Tier 4)",
+		privacyRank: 6,
+		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
 			aiProvider: "anthropic",
@@ -175,8 +167,36 @@ export const PRESETS: Preset[] = [
 		},
 	},
 	{
+		id: "cloud-sonnet-tier3",
+		description: "Anthropic Sonnet, classified abstractions only (Tier 3)",
+		privacyRank: 7,
+		privacyGroup: "cloud",
+		settings: {
+			enableAI: true,
+			aiProvider: "anthropic",
+			aiModel: "claude-sonnet-4-6",
+			enableClassification: true,
+			enableRAG: false,
+		},
+	},
+	{
+		id: "cloud-haiku-tier2",
+		description: "Anthropic Haiku, RAG chunks only (Tier 2)",
+		privacyRank: 8,
+		privacyGroup: "cloud",
+		settings: {
+			enableAI: true,
+			aiProvider: "anthropic",
+			aiModel: "claude-haiku-4-5-20251001",
+			enableRAG: true,
+			enableClassification: false,
+		},
+	},
+	{
 		id: "privacy-aggressive",
 		description: "All sources, Sonnet, aggressive sanitization + all sensitivity categories",
+		privacyRank: 9,
+		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
 			aiProvider: "anthropic",
@@ -187,6 +207,32 @@ export const PRESETS: Preset[] = [
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
 			] as SensitivityCategory[],
 			sensitivityAction: "redact",
+		},
+	},
+	{
+		id: "cloud-haiku-tier1",
+		description: "Anthropic Haiku, full sanitized context (Tier 1)",
+		privacyRank: 10,
+		privacyGroup: "cloud",
+		settings: {
+			enableAI: true,
+			aiProvider: "anthropic",
+			aiModel: "claude-haiku-4-5-20251001",
+			enableRAG: false,
+			enableClassification: false,
+		},
+	},
+	{
+		id: "cloud-sonnet-tier1",
+		description: "Anthropic Sonnet, full sanitized context (Tier 1)",
+		privacyRank: 11,
+		privacyGroup: "cloud",
+		settings: {
+			enableAI: true,
+			aiProvider: "anthropic",
+			aiModel: "claude-sonnet-4-6",
+			enableRAG: false,
+			enableClassification: false,
 		},
 	},
 ];

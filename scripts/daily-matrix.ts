@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
-import { PRESETS, resolvePreset } from "./presets";
+import { PRESETS, resolvePreset, getPresetFilename } from "./presets";
 import { collectFixtureData, collectRealData } from "./lib/collector-shim";
 import { getMockSummary } from "./lib/mock-ai";
 import { createPromptLog, appendPromptEntry, estimateTokens } from "./lib/prompt-logger";
@@ -267,7 +267,7 @@ async function runPreset(
 	);
 
 	// ── 10. Write file ───────────────────────────────────
-	const filePath = join(outputDir, `${presetId}.md`);
+	const filePath = join(outputDir, `${getPresetFilename(preset)}.md`);
 	writeFileSync(filePath, md, "utf-8");
 	console.log(`[${presetId}] Written to ${filePath}`);
 
