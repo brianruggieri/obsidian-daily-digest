@@ -26,8 +26,8 @@ import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdap
 import * as log from "./log";
 
 export default class DailyDigestPlugin extends Plugin {
-	settings: DailyDigestSettings;
-	statusBarItem: HTMLElement;
+	settings!: DailyDigestSettings;
+	statusBarItem!: HTMLElement;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -460,7 +460,7 @@ export default class DailyDigestPlugin extends Plugin {
 							claude: claudeSessions.slice(0, 3).map((c) => ({
 								text: c.prompt.slice(0, 100),
 							})),
-							git: rawGitCommits.slice(0, 5).map((c) => ({
+							git: gitCommits.slice(0, 5).map((c) => ({
 								text: `${c.repo}: ${c.message}`.slice(0, 80),
 							})),
 						},

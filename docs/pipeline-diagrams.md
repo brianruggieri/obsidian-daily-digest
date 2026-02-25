@@ -11,54 +11,70 @@ How `summarizeDay()` in `summarize.ts` selects which prompt to build.
 ```
 summarizeDay() called
          │
-         ├─ provider === "anthropic"?
+         ├─ patterns available AND provider === "anthropic"?
          │         │
-         │         ├─ YES ── patterns available?
-         │         │                │
-         │         │                ├─ YES ──► Tier 5: deidentified
-         │         │                │          buildDeidentifiedPrompt()
-         │         │                │          Aggregated stats only.
-         │         │                │          maxTokens = 1500
-         │         │                │
-         │         │                └─ NO ─── classification available
-         │         │                          AND events.length > 0?
-         │         │                                │
-         │         │                                ├─ YES ──► Tier 4: classified
-         │         │                                │          buildClassifiedPrompt()
-         │         │                                │          Per-event abstractions only.
-         │         │                                │
-         │         │                                └─ NO ─── ragConfig.enabled?
-         │         │                                          (see RAG branch below)
+         │         ├─ YES ──► Tier 5: deidentified
+         │         │          buildDeidentifiedPrompt()
+         │         │          Aggregated stats only.
+         │         │          maxTokens = 1500
          │         │
-         └─ provider === "local"
+         │         └─ NO
+         │
+         ├─ classification available (events.length > 0)
+         │  AND provider === "anthropic"?
+         │         │
+         │         ├─ YES ──► Tier 4: classified
+         │         │          buildClassifiedPrompt()
+         │         │          Per-event abstractions only.
+         │         │
+         │         └─ NO
+         │
+         ├─ provider === "local"?
+         │         │
+         │         ├─ YES ──► Local: unified
+         │         │          buildUnifiedPrompt()
+         │         │          All available data layers combined.
+         │         │          No privacy escalation — data stays on device.
+         │         │          maxTokens = 1500 if patterns available
+         │         │
+         │         └─ NO
+         │
+         ├─ ragConfig.enabled?
+         │         │
+         │         ├─ YES ── chunks > 2 AND totalTokens > 500?
+         │         │                │
+         │         │         ┌─ YES ┴── NO ───────────┐
+         │         │         │                         │
+         │         │  retrieveRelevantChunks()    standardPrompt()
+         │         │  succeeds?                        │
+         │         │         │                         │
+         │         │  ┌─ YES ┴── NO (error) ──┐       │
+         │         │  │                       │       │
+         │         │  Tier 3: rag       standardPrompt()
+         │         │  buildRAGPrompt()                │
+         │         │  Top-K chunks only.              │
+         │         │                                   │
+         │         └─ NO ─────────────────────────────┘
+         │
+         └─ else (fallback)
                    │
-                   └─────────────────────────────────────────────────┐
-                                                                     │
-                                                          ragConfig.enabled?
-                                                                     │
-                                              ┌──────── YES ─────────┴──── NO ──────────┐
-                                              │                                          │
-                              chunks > 2 AND totalTokens > 500?                         │
-                                              │                                          │
-                             ┌─── YES ────────┴──── NO ───────┐                         │
-                             │                                 │                         │
-                    retrieveRelevantChunks()              standardPrompt()          standardPrompt()
-                    succeeds?                                                            │
-                             │                                                           │
-                    ┌── YES ─┴── NO (error) ──┐                                         │
-                    │                         │                                          │
-              Tier 3: rag             standardPrompt()                                  │
-              buildRAGPrompt()                │                                          │
-              Top-K chunks only.             └──────────────────────────────────────────┘
-                                                                     │
-                                                        collectionMode === "complete"
-                                                        AND compressed available?
-                                                                     │
-                                                  ┌─── YES ──────────┴─── NO ────────┐
-                                                  │                                   │
-                                         Tier 2: compressed                   Tier 1: standard
-                                         buildCompressedPrompt()              buildPrompt()
-                                         Budget-proportional data.            Fixed-cap slicing.
+                   └─ standardPrompt()
+                      compressed data available?
+                             │
+                      ┌─ YES ┴── NO ──────────┐
+                      │                        │
+               Tier 2: compressed       Tier 1: standard
+               buildCompressedPrompt()  buildPrompt()
+               Budget-proportional.     Fixed-cap slicing.
+
+Notes:
+  - Anthropic privacy escalation: Tier 5 > Tier 4 > (RAG or standard).
+    RAG is NOT part of the Anthropic escalation chain — it is a
+    separate opt-in path that applies when neither patterns nor
+    classification are available.
+  - "compressed" is always built when AI is enabled, using the
+    promptBudget setting. standardPrompt() prefers it when available.
+  - Local provider receives ALL data layers in a single unified prompt.
 ```
 
 ---
@@ -262,16 +278,17 @@ enableSanitization      ──► Stage 2: sanitize.ts scrubs secrets
 enableSensitivity       ──► Stage 2: sensitivity.ts domain filter
 Filter = false               ⚠ Private domains may reach AI prompt if disabled
 
-collectionMode          ──► "complete" → CompressedActivity built by compress.ts
-= "complete"                  → buildCompressedPrompt() used (Tier 2)
-                              → lookback extends to full-day window
-= "limited"             ──► Fixed-cap slicing in buildPrompt() (Tier 1)
-                              → per-source hard caps apply
+promptBudget            ──► Controls token budget for compressActivity()
+= 3000 (default)             → CompressedActivity always built when AI enabled
+                              → standardPrompt() uses compressed if available
+                                (Tier 2: buildCompressedPrompt())
+                              → Falls back to buildPrompt() if compressed absent
+                                (Tier 1: fixed-cap slicing)
 
 enableClassification    ──► Stage 4: classify.ts runs
 = false                      → ClassificationResult is undefined
                               → Tier 4 (classified prompt) is unavailable
-                              → Anthropic falls back to RAG or standard
+                              → Anthropic falls back to standard (not RAG)
 
 enablePatterns          ──► Stage 5+6: patterns.ts + knowledge.ts run
 = false                      → PatternAnalysis is undefined
@@ -282,6 +299,9 @@ enablePatterns          ──► Stage 5+6: patterns.ts + knowledge.ts run
 
 enableRAG = false       ──► RAG path skipped in summarize.ts
                              → even if chunks available, standard used
+                             → NOTE: RAG is independent of Anthropic
+                               escalation chain — it applies only when
+                               neither patterns nor classification matched
 
 enableAI = false        ──► summarizeDay() not called
                              → AISummary is null
@@ -289,7 +309,11 @@ enableAI = false        ──► summarizeDay() not called
                                summaries, work patterns, reflection all absent
 
 provider = "anthropic"  ──► Privacy escalation chain active
-                             → deidentified > classified > rag > standard
-provider = "local"      ──► Always uses RAG or standard (no escalation)
-                             → raw sanitized data sent to localhost
+                             → deidentified > classified > standard
+                             → RAG is NOT part of this chain; it is a
+                               separate opt-in path below classified
+provider = "local"      ──► Uses unified prompt with ALL data layers
+                             → No privacy escalation — data stays on device
+                             → buildUnifiedPrompt() merges raw + classified
+                               + patterns into a single prompt
 ```
