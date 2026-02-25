@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt } from "../../../src/summarize/summarize";
-import { ClassificationResult, StructuredEvent, PatternAnalysis } from "../../../src/types";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt, resolvePromptAndTier } from "../../../src/summarize/summarize";
+import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig } from "../../../src/types";
+import type { AICallConfig } from "../../../src/summarize/ai-client";
 
 const DATE = new Date("2025-06-15T00:00:00");
 
@@ -226,5 +227,145 @@ describe("buildDeidentifiedPrompt", () => {
 		const prompt = buildDeidentifiedPrompt(DATE, patterns, "");
 		expect(prompt.toLowerCase()).toContain("cross-pollination");
 		expect(prompt.toLowerCase()).toContain("unformalized");
+	});
+});
+
+// ── resolvePromptAndTier helpers ─────────────────────────
+
+function emptyCategorized(): CategorizedVisits {
+	return {};
+}
+
+function makeMockPatterns(): PatternAnalysis {
+	return {
+		temporalClusters: [{
+			hourStart: 9,
+			hourEnd: 10,
+			activityType: "research",
+			eventCount: 3,
+			topics: ["testing"],
+			entities: [],
+			intensity: 3.0,
+			label: "morning",
+		}],
+		topicCooccurrences: [],
+		entityRelations: [],
+		recurrenceSignals: [],
+		knowledgeDelta: {
+			newTopics: [],
+			recurringTopics: [],
+			novelEntities: [],
+			connections: [],
+		},
+		focusScore: 0.5,
+		topActivityTypes: [],
+		peakHours: [],
+	};
+}
+
+function makeMockClassification(n: number): ClassificationResult {
+	return {
+		events: Array.from({ length: n }, (_, i) => ({
+			timestamp: "",
+			source: "browser" as const,
+			activityType: "browsing" as ActivityType,
+			topics: ["test"],
+			entities: [],
+			intent: "explore" as const,
+			confidence: 0.9,
+			summary: `event ${i}`,
+		})),
+		totalProcessed: n,
+		llmClassified: 0,
+		ruleClassified: n,
+		processingTimeMs: 0,
+	};
+}
+
+// ── resolvePromptAndTier ─────────────────────────────────
+
+describe("resolvePromptAndTier", () => {
+	it("returns tier 4 when patterns + anthropic provider", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockPatterns = makeMockPatterns();
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, mockPatterns, undefined, []
+		);
+		expect(tier).toBe(4);
+	});
+
+	it("returns tier 3 when classification + anthropic provider (no patterns)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockClassification = makeMockClassification(5);
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, mockClassification, undefined, undefined, []
+		);
+		expect(tier).toBe(3);
+	});
+
+	it("returns tier 1 when local provider", () => {
+		const config: AICallConfig = {
+			provider: "local",
+			localEndpoint: "http://localhost:11434",
+			localModel: "llama3",
+		};
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test"
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("returns tier 2 when ragConfig.enabled is true", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const ragConfig: RAGConfig = {
+			enabled: true,
+			embeddingEndpoint: "http://localhost:11434",
+			embeddingModel: "nomic-embed-text",
+			topK: 5,
+			minChunkTokens: 50,
+			maxChunkTokens: 500,
+		};
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			ragConfig
+		);
+		expect(tier).toBe(2);
+	});
+
+	it("returns the prompt string (non-empty)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const { prompt } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test"
+		);
+		expect(typeof prompt).toBe("string");
+		expect(prompt.length).toBeGreaterThan(10);
 	});
 });

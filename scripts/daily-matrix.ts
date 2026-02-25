@@ -36,7 +36,7 @@ import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import { renderMarkdown } from "../src/render/renderer";
-import { buildPrompt, summarizeDay } from "../src/summarize/summarize";
+import { buildPrompt, summarizeDay, resolvePromptAndTier } from "../src/summarize/summarize";
 
 import type {
 	SanitizeConfig,
@@ -192,24 +192,28 @@ async function runPreset(
 	if (!settings.enableAI || settings.aiProvider === "none") {
 		console.log(`[${presetId}] AI: disabled`);
 	} else if (AI_MODE === "mock") {
-		// Build prompt for logging purposes, but return a mock summary
-		const promptText = buildPrompt(
-			date,
-			categorized,
-			sanitized.searches,
-			sanitized.claudeSessions,
-			settings.profile,
-			sanitized.gitCommits
+		// Use resolvePromptAndTier to log the actual prompt + tier that would be sent
+		const aiCallConfig: AICallConfig = {
+			provider: settings.aiProvider as "anthropic" | "local",
+			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "mock-key",
+			anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
+			localEndpoint: settings.localEndpoint,
+			localModel: settings.localModel,
+		};
+		const resolution = resolvePromptAndTier(
+			date, categorized, sanitized.searches, sanitized.claudeSessions,
+			aiCallConfig, settings.profile,
+			undefined, classification, patterns, undefined, sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
 			model: settings.aiModel ?? "mock",
-			tokenCount: estimateTokens(promptText),
-			privacyTier: 1,
-			prompt: promptText,
+			tokenCount: estimateTokens(resolution.prompt),
+			privacyTier: resolution.tier,
+			prompt: resolution.prompt,
 		});
 		aiSummary = getMockSummary(presetId);
-		console.log(`[${presetId}] AI: mock summary generated`);
+		console.log(`[${presetId}] AI: mock (tier ${resolution.tier}, ${estimateTokens(resolution.prompt)} tokens)`);
 	} else {
 		// AI_MODE === "real" — call the real AI provider
 		const aiCallConfig: AICallConfig = {
