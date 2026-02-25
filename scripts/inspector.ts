@@ -261,6 +261,22 @@ const HTML = `<!DOCTYPE html>
   .json-count { color: #666; font-size: 11px; }
   .json-bracket { color: #666; }
   .json-ellipsis { color: #555; font-style: italic; }
+  .mode-toggle { display: flex; gap: 0; border: 1px solid #444; border-radius: 3px; overflow: hidden; }
+  .mode-toggle button { flex: 1; background: #1a1a1a; color: #888; border: none; border-radius: 0; font-size: 11px; padding: 4px 0; cursor: pointer; font-family: inherit; font-weight: 400; transition: none; }
+  .mode-toggle button.active { background: #7b68ee22; color: #7b68ee; }
+  #preset-b-group { display: none; }
+  #preset-b-group.visible { display: block; }
+  .compare-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .compare-col h4 { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 4px; }
+  .diff-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #333; }
+  .diff-section h4 { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; max-width: 600px; }
+  .diff-table th { color: #666; text-align: left; padding: 4px 10px; border-bottom: 1px solid #333; font-weight: 400; }
+  .diff-table td { padding: 3px 10px; border-bottom: 1px solid #1e1e1e; }
+  .diff-table .field { color: #666; }
+  .diff-table .val-a { color: #a5d6a7; }
+  .diff-table .val-b { color: #9b8fef; }
+  .diff-changed td { background: #1c1c2a; }
 <\/style>
 <\/head>
 <body>
@@ -272,8 +288,19 @@ const HTML = `<!DOCTYPE html>
       <input type="date" id="date" />
     <\/div>
     <div>
-      <label>Preset<\/label>
+      <label>Mode<\/label>
+      <div class="mode-toggle">
+        <button id="mode-single" class="active">Single<\/button>
+        <button id="mode-compare">Compare<\/button>
+      <\/div>
+    <\/div>
+    <div>
+      <label>Preset A<\/label>
       <select id="preset"><\/select>
+    <\/div>
+    <div id="preset-b-group">
+      <label>Preset B<\/label>
+      <select id="preset-b"><\/select>
     <\/div>
     <div>
       <label>Data<\/label>
@@ -313,24 +340,52 @@ const STAGES = ["collect","sanitize","sensitivity","categorize","classify","patt
 let gotComplete = false;
 let runController = null;
 let stageDataCache = {};  // name -> data object, for clicking back to view
+let compareMode = false;
+
+function populatePresetDropdown(sel, presets) {
+  const groups = { "no-ai": [], "local": [], "cloud": [] };
+  for (const p of presets) (groups[p.privacyGroup] || []).push(p);
+  const labels = { "no-ai": "No AI", "local": "Local LLM", "cloud": "Cloud" };
+  for (const [groupKey, groupPresets] of Object.entries(groups)) {
+    if (!groupPresets.length) continue;
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = labels[groupKey] + " (most \u2192 least private)";
+    for (const p of groupPresets) {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.id;
+      opt.title = p.description;
+      optgroup.appendChild(opt);
+    }
+    sel.appendChild(optgroup);
+  }
+}
+
+function setMode(mode) {
+  compareMode = mode === "compare";
+  document.getElementById("mode-single").classList.toggle("active", !compareMode);
+  document.getElementById("mode-compare").classList.toggle("active", compareMode);
+  document.getElementById("preset-b-group").classList.toggle("visible", compareMode);
+  document.getElementById("btn-step").disabled = compareMode;
+}
 
 (async function init() {
   document.getElementById("date").value = new Date().toISOString().slice(0, 10);
 
   const res = await fetch("/api/presets");
   const presets = await res.json();
-  const sel = document.getElementById("preset");
-  for (const p of presets) {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.id;
-    opt.title = p.description;
-    sel.appendChild(opt);
-  }
+  const selA = document.getElementById("preset");
+  const selB = document.getElementById("preset-b");
+  populatePresetDropdown(selA, presets);
+  populatePresetDropdown(selB, presets);
+  // Default preset-b to the second option so compare starts with a meaningful diff
+  if (selB.options.length > 1) selB.selectedIndex = 1;
 
   document.getElementById("btn-step").addEventListener("click", () => startRun(true));
-  document.getElementById("btn-run").addEventListener("click", () => startRun(false));
+  document.getElementById("btn-run").addEventListener("click", () => compareMode ? startCompare() : startRun(false));
   document.getElementById("btn-next").addEventListener("click", advanceStep);
+  document.getElementById("mode-single").addEventListener("click", () => setMode("single"));
+  document.getElementById("mode-compare").addEventListener("click", () => setMode("compare"));
 })().catch(function(err) {
   document.getElementById("output").innerHTML =
     '<div class="error-msg">Failed to initialize: ' + String(err) + '<\/div>';
@@ -567,6 +622,148 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+// ── Compare mode ──────────────────────────────────────────
+
+async function runPresetFull(presetId, date, dataMode, aiMode) {
+  const response = await fetch("/api/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preset: presetId, date, dataMode, aiMode, stepMode: false }),
+  });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let markdown = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const evt = JSON.parse(line.slice(6));
+        if (evt.type === "complete") markdown = evt.markdown;
+        else if (evt.type === "stage") updateStageRow(evt.name, evt.status, evt.durationMs, evt.detail);
+        else if (evt.type === "error") throw new Error(evt.message);
+      } catch (_e) { if (_e.message && !_e.message.startsWith("{")) throw _e; }
+    }
+  }
+  return markdown;
+}
+
+async function startCompare() {
+  gotComplete = false;
+  setRunning(true);
+  showNextBtn(false);
+  stageDataCache = {};
+
+  const log = document.getElementById("log");
+  const output = document.getElementById("output");
+  log.innerHTML = "";
+  output.innerHTML = '<p class="idle-msg">Running comparison\u2026<\/p>';
+
+  const presetA = document.getElementById("preset").value;
+  const presetB = document.getElementById("preset-b").value;
+  const date = document.getElementById("date").value;
+  const dataMode = document.querySelector("[name=dataMode]:checked").value;
+  const aiMode = document.querySelector("[name=aiMode]:checked").value;
+
+  try {
+    // Run A first, then B (server cancels previous run on each /api/run)
+    for (const name of STAGES) {
+      const row = makeStageRow(name, "pending");
+      row.id = "stage-" + name;
+      log.appendChild(row);
+    }
+
+    output.innerHTML = '<p class="idle-msg">Running ' + escapeHtml(presetA) + '\u2026<\/p>';
+    const mdA = await runPresetFull(presetA, date, dataMode, aiMode);
+
+    // Reset stage rows for run B
+    log.innerHTML = "";
+    for (const name of STAGES) {
+      const row = makeStageRow(name, "pending");
+      row.id = "stage-" + name;
+      log.appendChild(row);
+    }
+
+    output.innerHTML = '<p class="idle-msg">Running ' + escapeHtml(presetB) + '\u2026<\/p>';
+    const mdB = await runPresetFull(presetB, date, dataMode, aiMode);
+
+    gotComplete = true;
+    renderComparison(presetA, mdA, presetB, mdB);
+  } catch (err) {
+    showError(String(err));
+  } finally {
+    setRunning(false);
+    showNextBtn(false);
+  }
+}
+
+function parseMdStats(md) {
+  if (!md) return {};
+  const m = md.match(/\[!info\]\s+(\d+)\s+visits\s+·\s+(\d+)\s+searches\s+·\s+(\d+)\s+AI prompts\s+·\s+(\d+)\s+commits\s+·\s+(\d+)\s+categories/);
+  if (!m) return {};
+  return { visits: m[1], searches: m[2], aiPrompts: m[3], commits: m[4], categories: m[5] };
+}
+
+function parseMdDetails(md) {
+  if (!md) return {};
+  const m = md.match(/<summary>\s*Prompt sent to ([^\s·]+)\s+·\s+(\d+)\s+tokens\s+·\s+Tier\s+(\d+)/);
+  if (!m) return {};
+  return { model: m[1], tokens: m[2], tier: m[3] };
+}
+
+function buildDiffTable(presetA, mdA, presetB, mdB) {
+  const sA = parseMdStats(mdA);
+  const sB = parseMdStats(mdB);
+  const dA = parseMdDetails(mdA);
+  const dB = parseMdDetails(mdB);
+  const fields = [
+    ["Visits",       sA.visits   || "0",   sB.visits   || "0"],
+    ["Searches",     sA.searches || "0",   sB.searches || "0"],
+    ["AI Prompts",   sA.aiPrompts|| "0",   sB.aiPrompts|| "0"],
+    ["Commits",      sA.commits  || "0",   sB.commits  || "0"],
+    ["Categories",   sA.categories|| "0",  sB.categories|| "0"],
+    ["AI Model",     dA.model    || "\u2014", dB.model  || "\u2014"],
+    ["Tokens",       dA.tokens   || "\u2014", dB.tokens || "\u2014"],
+    ["Privacy Tier", dA.tier     || "\u2014", dB.tier   || "\u2014"],
+  ];
+  let h = '<table class="diff-table">';
+  h += "<tr><th>Field<\/th><th class=\\"val-a\\">" + escapeHtml(presetA) + "<\/th><th class=\\"val-b\\">" + escapeHtml(presetB) + "<\/th><\/tr>";
+  for (const [field, a, b] of fields) {
+    const changed = String(a) !== String(b);
+    h += "<tr" + (changed ? ' class="diff-changed"' : "") + ">";
+    h += "<td class=\\"field\\">" + escapeHtml(field) + "<\/td>";
+    h += "<td class=\\"val-a\\">" + escapeHtml(String(a)) + "<\/td>";
+    h += "<td class=\\"val-b\\">" + escapeHtml(String(b)) + "<\/td>";
+    h += "<\/tr>";
+  }
+  h += "<\/table>";
+  return h;
+}
+
+function renderComparison(presetA, mdA, presetB, mdB) {
+  const output = document.getElementById("output");
+  let h = '<div class="compare-layout">';
+  h += '<div class="compare-col">';
+  h += "<h4>" + escapeHtml(presetA) + "<\/h4>";
+  h += '<div class="markdown-body">' + (mdA ? marked.parse(mdA) : "<em>No output<\/em>") + "<\/div>";
+  h += "<\/div>";
+  h += '<div class="compare-col">';
+  h += "<h4>" + escapeHtml(presetB) + "<\/h4>";
+  h += '<div class="markdown-body">' + (mdB ? marked.parse(mdB) : "<em>No output<\/em>") + "<\/div>";
+  h += "<\/div>";
+  h += "<\/div>";
+  h += '<div class="diff-section">';
+  h += "<h4>Field Diff<\/h4>";
+  h += buildDiffTable(presetA, mdA, presetB, mdB);
+  h += "<\/div>";
+  output.innerHTML = h;
 }
 <\/script>
 <\/body>
@@ -1002,7 +1199,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 	// GET /api/presets — list preset ids and descriptions
 	if (method === "GET" && url === "/api/presets") {
-		const presets = PRESETS.map(p => ({ id: p.id, description: p.description }));
+		const presets = PRESETS.map(p => ({ id: p.id, description: p.description, privacyRank: p.privacyRank, privacyGroup: p.privacyGroup }));
 		res.writeHead(200, {
 			"Content-Type": "application/json",
 			"Access-Control-Allow-Origin": "*",

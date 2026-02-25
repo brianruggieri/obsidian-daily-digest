@@ -24,10 +24,9 @@ export async function collectFixtureData(settings: DailyDigestSettings): Promise
 
 export async function collectRealData(settings: DailyDigestSettings, since?: Date, until?: Date): Promise<CollectedData> {
 	if (!since) {
-		// Default: use lookbackHours from settings (same window as the plugin uses)
+		// Default: last 24 hours from now
 		const now = new Date();
-		const lookbackMs = (settings.lookbackHours ?? 24) * 60 * 60 * 1000;
-		since = new Date(now.getTime() - lookbackMs);
+		since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 	}
 
 	let visits: BrowserVisit[] = [];

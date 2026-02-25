@@ -23,11 +23,18 @@ describe("Structural assertions", () => {
 		expect(result.failures).toHaveLength(0);
 	});
 
+	it("passes when optional focus_score is absent", () => {
+		// focus_score is only written when enablePatterns: true, so its absence is valid
+		const noFocus = VALID_MD.replace("focus_score: 74%\n", "");
+		const result = runStructuralAssertions(noFocus);
+		expect(result.passed).toBe(true);
+	});
+
 	it("fails when frontmatter is missing required field", () => {
-		const bad = VALID_MD.replace("focus_score: 74%\n", "");
+		const bad = VALID_MD.replace("date: 2026-02-21\n", "");
 		const result = runStructuralAssertions(bad);
 		expect(result.passed).toBe(false);
-		expect(result.failures.some((f) => f.includes("focus_score"))).toBe(true);
+		expect(result.failures.some((f) => f.includes("date"))).toBe(true);
 	});
 
 	it("fails when file is too short", () => {
