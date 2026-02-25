@@ -1,5 +1,7 @@
 # Prompt Review Scoring & Metrics Implementation Plan
 
+> **Status:** Scoring logic completed. Stats skill wrapper not yet created.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add per-review prompt quality scoring (0-10) and a historical metrics dashboard to the prompt-review plugin
