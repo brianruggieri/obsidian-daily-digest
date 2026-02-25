@@ -155,6 +155,20 @@ describe("extractUserContent", () => {
 		expect(result.raw).toBe("");
 	});
 
+	it("treats Git Activity as a generated heading (not user content)", () => {
+		const note = [
+			"## 📦 Git Activity",
+			"### my-repo (3 commits)",
+			"- `abc1234` fix auth bug (+10/-2) — 14:30",
+			"",
+			"## 📝 Notes",
+			"> _Add your reflections here_",
+		].join("\n");
+
+		const result = extractUserContent(note);
+		expect(result.content!.customSections).toHaveLength(0);
+	});
+
 	it("handles arbitrary markdown that isn't a daily-digest note", () => {
 		const md = "# Random File\n\nSome content.\n\n## Section\n\nMore content.";
 		const result = extractUserContent(md);
