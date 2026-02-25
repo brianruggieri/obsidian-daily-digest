@@ -361,3 +361,61 @@ describe("sanitizeCollectedData", () => {
 		expect(result.searches[0].query).toContain("[EMAIL]");
 	});
 });
+
+// ── Claude XML Artifact Stripping ────────────────────────
+
+describe("sanitizeClaudeSession – XML artifact stripping", () => {
+	const fullConfig: SanitizeConfig = {
+		enabled: true,
+		level: "standard",
+		excludedDomains: [],
+		redactPaths: true,
+		scrubEmails: true,
+	};
+
+	function makeSession(prompt: string) {
+		return [{ prompt, time: new Date(), project: "test-project" }];
+	}
+
+	it("strips <image>…</image> blocks entirely", () => {
+		const prompt = "Here is my screenshot <image>base64dataabc123==</image> please review it";
+		const result = sanitizeCollectedData([], [], makeSession(prompt), [], fullConfig);
+		expect(result.claudeSessions[0].prompt).not.toContain("<image>");
+		expect(result.claudeSessions[0].prompt).not.toContain("base64dataabc123==");
+		expect(result.claudeSessions[0].prompt).not.toContain("</image>");
+		expect(result.claudeSessions[0].prompt).toContain("Here is my screenshot");
+		expect(result.claudeSessions[0].prompt).toContain("please review it");
+	});
+
+	it("strips multiline <image> blocks", () => {
+		const prompt = "Before\n<image>\n/Users/brian/screenshots/screenshot.png\nsome-base64-data==\n</image>\nAfter";
+		const result = sanitizeCollectedData([], [], makeSession(prompt), [], fullConfig);
+		expect(result.claudeSessions[0].prompt).not.toContain("<image>");
+		expect(result.claudeSessions[0].prompt).not.toContain("</image>");
+		expect(result.claudeSessions[0].prompt).not.toContain("some-base64-data");
+		expect(result.claudeSessions[0].prompt).toContain("Before");
+		expect(result.claudeSessions[0].prompt).toContain("After");
+	});
+
+	it("strips <turn_aborted> tags", () => {
+		const prompt = "Start of session <turn_aborted> rest of session";
+		const result = sanitizeCollectedData([], [], makeSession(prompt), [], fullConfig);
+		expect(result.claudeSessions[0].prompt).not.toContain("<turn_aborted>");
+		expect(result.claudeSessions[0].prompt).toContain("Start of session");
+		expect(result.claudeSessions[0].prompt).toContain("rest of session");
+	});
+
+	it("strips self-closing <turn_aborted/> variant", () => {
+		const prompt = "Before<turn_aborted/>After";
+		const result = sanitizeCollectedData([], [], makeSession(prompt), [], fullConfig);
+		expect(result.claudeSessions[0].prompt).not.toContain("<turn_aborted/>");
+		expect(result.claudeSessions[0].prompt).toContain("Before");
+		expect(result.claudeSessions[0].prompt).toContain("After");
+	});
+
+	it("does not strip unrelated XML-like tags (e.g. <strong>)", () => {
+		const prompt = "This is <strong>important</strong> content";
+		const result = sanitizeCollectedData([], [], makeSession(prompt), [], fullConfig);
+		expect(result.claudeSessions[0].prompt).toContain("<strong>important</strong>");
+	});
+});

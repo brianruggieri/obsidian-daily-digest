@@ -288,13 +288,29 @@ function sanitizeSearchQuery(
 	};
 }
 
+/** Known XML artifact patterns injected by Claude Code UI events */
+const CLAUDE_XML_ARTIFACTS: RegExp[] = [
+	/<image>[\s\S]*?<\/image>/g,  // screenshot blocks (may contain base64 or paths)
+	/<\/image>/g,                  // orphaned closing tag fallback
+	/<turn_aborted\s*\/?>/g,       // turn abort markers (open or self-closing)
+];
+
+function stripClaudeXmlArtifacts(text: string): string {
+	let result = text;
+	for (const pattern of CLAUDE_XML_ARTIFACTS) {
+		result = result.replace(pattern, "");
+	}
+	// Collapse multiple blank lines left by removal
+	return result.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function sanitizeClaudeSession(
 	session: ClaudeSession,
 	config: SanitizeConfig
 ): ClaudeSession {
 	return {
 		...session,
-		prompt: scrubText(session.prompt, config),
+		prompt: scrubText(stripClaudeXmlArtifacts(session.prompt), config),
 	};
 }
 
