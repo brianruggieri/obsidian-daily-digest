@@ -370,4 +370,51 @@ describe("resolvePromptAndTier", () => {
 		expect(typeof prompt).toBe("string");
 		expect(prompt.length).toBeGreaterThan(10);
 	});
+
+	it("local provider always returns tier 1 even with ragConfig enabled", () => {
+		const config: AICallConfig = {
+			provider: "local",
+			localEndpoint: "http://localhost:11434",
+			localModel: "llama3.2",
+		};
+		const ragConfig: RAGConfig = {
+			enabled: true,
+			embeddingEndpoint: "http://localhost:11434",
+			embeddingModel: "nomic-embed-text",
+			topK: 8,
+			minChunkTokens: 50,
+			maxChunkTokens: 500,
+		};
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			ragConfig
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("local provider returns higher maxTokens when patterns present", () => {
+		const config: AICallConfig = {
+			provider: "local",
+			localEndpoint: "http://localhost:11434",
+			localModel: "llama3.2",
+		};
+		const mockPatterns = makeMockPatterns();
+
+		const withPatterns = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, mockPatterns, undefined, []
+		);
+
+		const withoutPatterns = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test"
+		);
+
+		expect(withPatterns.maxTokens).toBeGreaterThan(withoutPatterns.maxTokens);
+	});
 });
