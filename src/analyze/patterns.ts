@@ -549,7 +549,7 @@ export function extractPatterns(
 	const focusScore = computeFocusScore(events);
 
 	// Category diversity score
-	const categoryDiversityScore = computeCategoryDiversityScore(events);
+	const activityConcentrationScore = computeCategoryDiversityScore(events);
 
 	// Activity type distribution
 	const topActivityTypes = computeActivityDistribution(events);
@@ -564,7 +564,7 @@ export function extractPatterns(
 		recurrenceSignals,
 		knowledgeDelta,
 		focusScore,
-		categoryDiversityScore,
+		activityConcentrationScore,
 		topActivityTypes,
 		peakHours,
 	};

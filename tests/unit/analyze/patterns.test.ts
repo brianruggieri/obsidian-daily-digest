@@ -417,13 +417,13 @@ describe("computeKnowledgeDelta", () => {
 
 // ── Category Diversity Score ────────────────────────────
 
-describe("categoryDiversityScore (via extractPatterns)", () => {
+describe("activityConcentrationScore (via extractPatterns)", () => {
 	it("returns 1.0 when all events are the same activity type", () => {
 		const events = Array.from({ length: 10 }, () =>
 			makeEvent({ activityType: "coding" })
 		);
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
-		expect(result.categoryDiversityScore).toBe(1.0);
+		expect(result.activityConcentrationScore).toBe(1.0);
 	});
 
 	it("returns a lower score when events are evenly spread across types", () => {
@@ -434,12 +434,12 @@ describe("categoryDiversityScore (via extractPatterns)", () => {
 			makeEvent({ activityType: "git" }),
 		];
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
-		expect(result.categoryDiversityScore).toBeLessThan(0.5);
+		expect(result.activityConcentrationScore).toBeLessThan(0.5);
 	});
 
 	it("returns 0 for empty events", () => {
 		const result = extractPatterns(makeClassification([]), baseConfig, buildEmptyTopicHistory(), TODAY);
-		expect(result.categoryDiversityScore).toBe(0);
+		expect(result.activityConcentrationScore).toBe(0);
 	});
 });
 

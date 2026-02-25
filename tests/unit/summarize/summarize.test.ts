@@ -125,7 +125,7 @@ describe("buildDeidentifiedPrompt", () => {
 			connections: ["OAuth ↔ PKCE"],
 		},
 		focusScore: 0.7,
-		categoryDiversityScore: 0.5,
+		activityConcentrationScore: 0.5,
 		topActivityTypes: [
 			{ type: "research", count: 10, pct: 50 },
 			{ type: "implementation", count: 6, pct: 30 },
@@ -259,7 +259,7 @@ function makeMockPatterns(): PatternAnalysis {
 			connections: [],
 		},
 		focusScore: 0.5,
-		categoryDiversityScore: 0,
+		activityConcentrationScore: 0,
 		topActivityTypes: [],
 		peakHours: [],
 	};

@@ -15,7 +15,7 @@ function makePatterns(overrides: Partial<PatternAnalysis> = {}): PatternAnalysis
 			connections: [],
 		},
 		focusScore: 0.5,
-		categoryDiversityScore: 0,
+		activityConcentrationScore: 0,
 		topActivityTypes: [
 			{ type: "research", count: 10, pct: 50 },
 			{ type: "implementation", count: 6, pct: 30 },

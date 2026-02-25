@@ -395,10 +395,10 @@ async function main(): Promise<void> {
 
 	if (homogeneity.isHomogeneous) {
 		lines.push(
-			`> ⚠️ **Mock-mode data detected:** All ${homogeneity.aiCount} AI-enabled presets show ` +
+			`> ⚠️ **Homogeneous AI preset outputs detected (possible mock-mode data):** All ${homogeneity.aiCount} AI-enabled presets show ` +
 			`identical Tier ${homogeneity.identicalTier} prompts (${homogeneity.identicalTokens} tokens). ` +
-			`Privacy tier differences are not meaningful in this report. ` +
-			`Re-run \`npm run matrix\` and \`npm run matrix:diff\` to get accurate tier data.`
+			`This pattern often occurs when running in mock mode; privacy tier differences may not be meaningful in this report. ` +
+			`If you expected real data, re-run \`npm run matrix\` and \`npm run matrix:diff\` to get accurate tier data.`
 		);
 		lines.push("");
 	}

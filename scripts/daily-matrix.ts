@@ -224,20 +224,20 @@ async function runPreset(
 			localModel: settings.localModel,
 		};
 
-		const promptText = buildPrompt(
-			date,
-			categorized,
-			sanitized.searches,
-			sanitized.claudeSessions,
-			settings.profile,
-			sanitized.gitCommits
+		// Log the prompt and tier that resolvePromptAndTier selects (non-RAG path).
+		// summarizeDay handles the async RAG path separately, so its logged tier
+		// may differ for RAG-enabled presets, but is accurate for all others.
+		const previewResolution = resolvePromptAndTier(
+			date, categorized, sanitized.searches, sanitized.claudeSessions,
+			aiCallConfig, settings.profile,
+			undefined, classification, patterns, undefined, sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
 			model: aiCallConfig.anthropicModel ?? aiCallConfig.localModel,
-			tokenCount: estimateTokens(promptText),
-			privacyTier: 1,
-			prompt: promptText,
+			tokenCount: estimateTokens(previewResolution.prompt),
+			privacyTier: previewResolution.tier,
+			prompt: previewResolution.prompt,
 		});
 
 		aiSummary = await summarizeDay(

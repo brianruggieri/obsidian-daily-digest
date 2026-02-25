@@ -47,7 +47,7 @@ const patterns: PatternAnalysis = {
 		connections: [],
 	},
 	focusScore: 0.7,
-	categoryDiversityScore: 1.0,
+	activityConcentrationScore: 1.0,
 	topActivityTypes: [{ type: "research", count: 3, pct: 100 }],
 	peakHours: [{ hour: 10, count: 3 }],
 };
