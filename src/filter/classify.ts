@@ -261,7 +261,8 @@ function parseLLMResponse(
 			return [parsed as LLMClassification];
 		}
 		return new Array(batchSize).fill(null);
-	} catch {
+	} catch (e) {
+		log.warn("LLM classification batch failed, falling back to rules:", e);
 		return new Array(batchSize).fill(null);
 	}
 }

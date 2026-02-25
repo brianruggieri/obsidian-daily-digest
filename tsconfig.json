@@ -6,16 +6,13 @@
 		"module": "ESNext",
 		"target": "ES6",
 		"allowJs": true,
-		"noImplicitAny": true,
-		"noImplicitThis": true,
+		"strict": true,
 		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
 		"moduleResolution": "node",
 		"importHelpers": true,
 		"isolatedModules": true,
-		"strictNullChecks": true,
-		"strictBindCallApply": true,
 		"allowSyntheticDefaultImports": true,
-		"useUnknownInCatchVariables": true,
 		"lib": ["DOM", "ES2020"]
 	},
 	"include": ["src/**/*.ts"]

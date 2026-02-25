@@ -29,6 +29,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir, platform } from "os";
 import { join } from "path";
+import { warn } from "../plugin/log";
 import { BrowserInstallConfig, BrowserPathConfig, DetectedProfile, BROWSER_PATH_CONFIGS } from "../types";
 
 // ── Path helpers ─────────────────────────────────────────
@@ -84,7 +85,8 @@ export function chromiumProfileDirs(userDataDir: string): string[] {
 			}
 			return entry === "Default" || /^Profile \d+$/.test(entry);
 		});
-	} catch {
+	} catch (e) {
+		warn(`chromiumProfileDirs: failed to read ${userDataDir}:`, e);
 		return [];
 	}
 }
@@ -123,8 +125,8 @@ export function parseChromiumLocalState(userDataDir: string): Record<string, str
 			}
 		}
 		return result;
-	} catch {
-		// Any error (JSON parse, file read, unexpected structure) → safe fallback
+	} catch (e) {
+		warn(`parseChromiumLocalState: failed to parse ${userDataDir}:`, e);
 		return {};
 	}
 }
