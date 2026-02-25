@@ -177,6 +177,7 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-sonnet-4-6",
 			enableClassification: true,
 			enableRAG: false,
+			enablePatterns: false, // patterns → Tier 4; disable to route classification → Tier 3
 		},
 	},
 	{
@@ -190,6 +191,7 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableRAG: true,
 			enableClassification: false,
+			enablePatterns: false, // patterns → Tier 4; disable to route RAG → Tier 2
 		},
 	},
 	{
@@ -207,6 +209,7 @@ export const PRESETS: Preset[] = [
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
 			] as SensitivityCategory[],
 			sensitivityAction: "redact",
+			enablePatterns: false, // Tier 1 full context with aggressive sanitization
 		},
 	},
 	{
@@ -220,6 +223,7 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableRAG: false,
 			enableClassification: false,
+			enablePatterns: false, // Tier 1 full context
 		},
 	},
 	{
@@ -233,6 +237,7 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-sonnet-4-6",
 			enableRAG: false,
 			enableClassification: false,
+			enablePatterns: false, // Tier 1 full context
 		},
 	},
 ];
