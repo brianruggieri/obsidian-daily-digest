@@ -2,6 +2,7 @@ import { existsSync, readFileSync, copyFileSync, unlinkSync } from "fs";
 import { tmpdir, platform } from "os";
 import { join } from "path";
 import initSqlJs from "sql.js";
+import { warn } from "../plugin/log";
 import { DailyDigestSettings } from "../settings/types";
 import {
 	BrowserVisit,
@@ -59,7 +60,8 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 		} finally {
 			db.close();
 		}
-	} catch {
+	} catch (e) {
+		warn(`querySqlite failed for ${dbPath}:`, e);
 		return [];
 	} finally {
 		try { unlinkSync(tmp); } catch { /* ignore */ }
