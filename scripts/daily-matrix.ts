@@ -96,7 +96,6 @@ async function runPreset(
 	const sanitized = sanitizeCollectedData(
 		raw.visits,
 		raw.searches,
-		raw.shell,
 		raw.claudeSessions,
 		raw.gitCommits,
 		sanitizeConfig
@@ -134,7 +133,6 @@ async function runPreset(
 			classification = await classifyEvents(
 				filteredVisits,
 				sanitized.searches,
-				sanitized.shellCommands,
 				sanitized.claudeSessions,
 				sanitized.gitCommits,
 				categorized,
@@ -148,7 +146,6 @@ async function runPreset(
 			classification = classifyEventsRuleOnly(
 				filteredVisits,
 				sanitized.searches,
-				sanitized.shellCommands,
 				sanitized.claudeSessions,
 				sanitized.gitCommits,
 				categorized
@@ -193,7 +190,6 @@ async function runPreset(
 			date,
 			categorized,
 			sanitized.searches,
-			sanitized.shellCommands,
 			sanitized.claudeSessions,
 			settings.profile,
 			sanitized.gitCommits
@@ -221,7 +217,6 @@ async function runPreset(
 			date,
 			categorized,
 			sanitized.searches,
-			sanitized.shellCommands,
 			sanitized.claudeSessions,
 			settings.profile,
 			sanitized.gitCommits
@@ -238,7 +233,6 @@ async function runPreset(
 			date,
 			categorized,
 			sanitized.searches,
-			sanitized.shellCommands,
 			sanitized.claudeSessions,
 			aiCallConfig,
 			settings.profile,
@@ -256,7 +250,6 @@ async function runPreset(
 		date,
 		filteredVisits,
 		sanitized.searches,
-		sanitized.shellCommands,
 		sanitized.claudeSessions,
 		sanitized.gitCommits,
 		categorized,
