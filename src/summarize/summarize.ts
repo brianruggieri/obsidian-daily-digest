@@ -582,6 +582,86 @@ Only include category_summaries for categories or activity types that had actual
 Write for a person reading their own notes 3 months from now — help them remember what it felt like, what they understood, and where they were in their work.`;
 }
 
+// ── Privacy tier resolution (sync, no network) ──────────
+
+export type PrivacyTier = 1 | 2 | 3 | 4;
+
+export interface PromptResolution {
+	prompt: string;
+	tier: PrivacyTier;
+	maxTokens: number;
+}
+
+/**
+ * Resolve which prompt to build and which privacy tier it corresponds to,
+ * based on available data layers and the AI provider.
+ *
+ * This is the synchronous, non-network portion of the privacy escalation
+ * chain. The async RAG path (tier 2 with actual chunk retrieval) is handled
+ * only inside `summarizeDay`; this function returns tier 2 with a standard
+ * prompt as a placeholder for the tier label when RAG is enabled.
+ *
+ * Privacy escalation for Anthropic:
+ *   Tier 4: De-identified — aggregated patterns only, zero per-event data
+ *   Tier 3: Classified — per-event abstractions, no raw URLs
+ *   Tier 2: RAG — retrieval-selected chunks (async path in summarizeDay)
+ *   Tier 1: Standard — sanitized raw activity data
+ * Local provider always uses the unified prompt (all layers, stays on device).
+ */
+export function resolvePromptAndTier(
+	date: Date,
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	config: AICallConfig,
+	profile: string,
+	ragConfig?: RAGConfig,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+	compressed?: CompressedActivity,
+	gitCommits: GitCommit[] = [],
+	promptsDir?: string
+): PromptResolution {
+	const standardPrompt = () =>
+		compressed
+			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
+			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+
+	if (patterns && config.provider === "anthropic") {
+		return {
+			prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir),
+			tier: 4,
+			maxTokens: 1500,
+		};
+	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
+		return {
+			prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
+			tier: 3,
+			maxTokens: 1000,
+		};
+	} else if (config.provider === "local") {
+		return {
+			prompt: buildUnifiedPrompt(date, profile, {
+				categorized,
+				searches,
+				claudeSessions,
+				gitCommits,
+				compressed,
+				classification: classification?.events.length ? classification : undefined,
+				patterns,
+			}),
+			tier: 1,
+			maxTokens: patterns ? 1500 : 1000,
+		};
+	} else if (ragConfig?.enabled) {
+		// RAG requires async chunk retrieval — return the standard prompt as a
+		// placeholder. The actual RAG prompt is built inside summarizeDay.
+		return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+	} else {
+		return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+	}
+}
+
 // ── Main summarization entry point ──────────────────────
 
 export async function summarizeDay(
@@ -601,58 +681,8 @@ export async function summarizeDay(
 	let prompt: string;
 	let maxTokens = 1000;
 
-	// Helper: build the best available standard/fallback prompt.
-	// In "complete" collection mode, compressed data is available and
-	// produces a budget-aware prompt. Otherwise fall back to the legacy
-	// fixed-cap prompt builder.
-	const standardPrompt = () =>
-		compressed
-			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
-			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
-
-	// Privacy escalation chain for Anthropic:
-	//   1. De-identified (patterns available) — ONLY aggregated statistics, zero per-event data
-	//   2. Classified (classification available) — per-event abstractions, no raw data
-	//   3. RAG / Standard — raw data (sanitized), least private
-	// Local provider always uses full context since data stays on machine.
-
-	if (patterns && config.provider === "anthropic") {
-		// Phase 4: Maximum privacy — aggregated patterns only
-		prompt = buildDeidentifiedPrompt(date, patterns, profile, promptsDir);
-		maxTokens = 1500; // Larger response for meta-insights
-		log.debug(
-			`Daily Digest: Using de-identified prompt for Anthropic ` +
-			`(${patterns.temporalClusters.length} clusters, ` +
-			`focus ${Math.round(patterns.focusScore * 100)}%, ` +
-			`${patterns.recurrenceSignals.length} recurrence signals)`
-		);
-	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
-		// Phase 2: Per-event abstractions — no raw data
-		prompt = buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore);
-		log.debug(
-			`Daily Digest: Using classified prompt for Anthropic ` +
-			`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
-		);
-	} else if (config.provider === "local") {
-		// Local provider: unified prompt with all available data layers.
-		// Privacy escalation is not needed — data stays on device.
-		prompt = buildUnifiedPrompt(date, profile, {
-			categorized,
-			searches,
-			claudeSessions,
-			gitCommits,
-			compressed,
-			classification: classification?.events.length ? classification : undefined,
-			patterns,
-		});
-		if (patterns) maxTokens = 1500;
-		log.debug(
-			`Daily Digest: Using unified prompt for local provider ` +
-			`(raw=${!!(compressed ?? Object.keys(categorized).length)}, ` +
-			`classified=${!!(classification?.events.length)}, ` +
-			`patterns=${!!patterns})`
-		);
-	} else if (ragConfig?.enabled) {
+	if (ragConfig?.enabled) {
+		// Async RAG path — kept here because it requires network calls.
 		const chunks = chunkActivityData(
 			date, categorized, searches, claudeSessions
 		);
@@ -678,17 +708,54 @@ export async function summarizeDay(
 					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
 					e
 				);
-				prompt = standardPrompt();
+				const fallback = resolvePromptAndTier(
+					date, categorized, searches, claudeSessions, config, profile,
+					undefined, classification, patterns, compressed, gitCommits, promptsDir
+				);
+				prompt = fallback.prompt;
+				maxTokens = fallback.maxTokens;
 			}
 		} else {
 			log.debug(
 				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
 				`${totalTokens} tokens — too small)`
 			);
-			prompt = standardPrompt();
+			const fallback = resolvePromptAndTier(
+				date, categorized, searches, claudeSessions, config, profile,
+				undefined, classification, patterns, compressed, gitCommits, promptsDir
+			);
+			prompt = fallback.prompt;
+			maxTokens = fallback.maxTokens;
 		}
 	} else {
-		prompt = standardPrompt();
+		const resolution = resolvePromptAndTier(
+			date, categorized, searches, claudeSessions, config, profile,
+			undefined, classification, patterns, compressed, gitCommits, promptsDir
+		);
+		prompt = resolution.prompt;
+		maxTokens = resolution.maxTokens;
+
+		// Debug logging for non-RAG paths
+		if (patterns && config.provider === "anthropic") {
+			log.debug(
+				`Daily Digest: Using de-identified prompt for Anthropic ` +
+				`(${patterns.temporalClusters.length} clusters, ` +
+				`focus ${Math.round(patterns.focusScore * 100)}%, ` +
+				`${patterns.recurrenceSignals.length} recurrence signals)`
+			);
+		} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
+			log.debug(
+				`Daily Digest: Using classified prompt for Anthropic ` +
+				`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
+			);
+		} else if (config.provider === "local") {
+			log.debug(
+				`Daily Digest: Using unified prompt for local provider ` +
+				`(raw=${!!(compressed ?? Object.keys(categorized).length)}, ` +
+				`classified=${!!(classification?.events.length)}, ` +
+				`patterns=${!!patterns})`
+			);
+		}
 	}
 
 	const raw = await callAI(prompt, config, maxTokens);
