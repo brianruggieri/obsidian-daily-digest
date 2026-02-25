@@ -78,8 +78,15 @@ async function runPreset(
 	const settings = resolvePreset(preset);
 
 	// ── 1. Collect ──────────────────────────────────────
+	// For real data: collect exactly the target calendar day (midnight → midnight).
+	// For fixtures: use synthetic persona data (date-independent).
+	const since = new Date(date);
+	since.setHours(0, 0, 0, 0);
+	const until = new Date(since);
+	until.setDate(until.getDate() + 1);
+
 	const raw = DATA_MODE === "real"
-		? await collectRealData(settings)
+		? await collectRealData(settings, since, until)
 		: await collectFixtureData(settings);
 
 	// ── 2. Sanitize ─────────────────────────────────────
