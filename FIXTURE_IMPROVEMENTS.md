@@ -5,10 +5,10 @@
 This document captures fixture enhancements made to align with real user data (Feb 11-25, 2026) and comprehensive persona research across Obsidian user archetypes.
 
 **Key Finding:** Previous fixtures over-represented generic knowledge work and significantly under-represented AI-assisted development. Real data showed:
-- **Software developers:** 11x heavier on Claude sessions (179 real vs 12 mocked)
+- **Software developers:** 6x heavier on Claude sessions (75 realistic vs 12 mocked)
 - **Git activity:** 4-5x more commits in real workflow
-- **Browser visits:** 3.8x fewer in real workflow
-- **Focus scores:** 2-4% (scattered development work) vs 50% (evenly distributed in generic fixtures)
+- **Browser visits:** 3x fewer in real workflow
+- **Focus scores:** 2-8% (scattered development work) vs 50% (evenly distributed in generic fixtures)
 
 ---
 
@@ -31,11 +31,11 @@ This document captures fixture enhancements made to align with real user data (F
 - Focus range: 2-8% ✅ (reflects scattered context switching)
 
 **Reasoning:**
-Real developer workflows are **Claude-heavy, browser-light**. Most problem-solving happens in Claude Code sessions with rubberducking, pair-programming, and debugging help. Browser visits limited to GitHub PRs, Stack Overflow, and MDN docs. Git shows incremental progress across multiple branches/PRs.
+Real developer workflows are **Claude-heavy, browser-light**. Most problem-solving happens in Claude Code sessions with rubber-ducking, pair-programming, and debugging help. Browser visits limited to GitHub PRs, Stack Overflow, and MDN docs. Git shows incremental progress across multiple branches/PRs.
 
 **Expected output improvements:**
 - AI summaries now detect "multi-agent system development" and "attention fragmentation"
-- Focus score correctly reflects 2-4% (scattered work across contexts)
+- Focus score correctly reflects 2-8% (scattered work across contexts)
 - Commit themes show iterative implementation patterns, not single-day feature completion
 
 ---
@@ -62,7 +62,7 @@ True researchers do **deep, focused paper reading** — not rapid context switch
 **Expected output improvements:**
 - Knowledge sections now correctly identify literature gaps and citation patterns
 - No false "implementation" or "debugging" activity types detected
-- High focus score (65-70%) reflects actual sustained work pattern
+- High focus score (65-75%) reflects actual sustained work pattern
 - Internal linking detection improved (60-80 links expected for knowledge graph building)
 
 ---
