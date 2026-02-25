@@ -13,8 +13,8 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VAULT="$ROOT/screenshots/vault"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+VAULT="$ROOT/tests/screenshots/vault"
 
 echo "Setting up screenshot test vault at $VAULT"
 
@@ -22,9 +22,9 @@ echo "Setting up screenshot test vault at $VAULT"
 mkdir -p "$VAULT/daily" "$VAULT/.obsidian"
 
 # ── Symlink example notes ──────────────────────────────────
-ln -sf "$ROOT/examples/2025-06-18.md"       "$VAULT/daily/2025-06-18.md"
-ln -sf "$ROOT/examples/2025-06-19.md"       "$VAULT/daily/2025-06-19.md"
-ln -sf "$ROOT/examples/2025-06-20-no-ai.md" "$VAULT/daily/2025-06-20.md"
+ln -sf "$ROOT/docs/examples/2025-06-18.md"       "$VAULT/daily/2025-06-18.md"
+ln -sf "$ROOT/docs/examples/2025-06-19.md"       "$VAULT/daily/2025-06-19.md"
+ln -sf "$ROOT/docs/examples/2025-06-20-no-ai.md" "$VAULT/daily/2025-06-20.md"
 
 # ── Obsidian vault configuration ───────────────────────────
 # Enable the daily-digest community plugin

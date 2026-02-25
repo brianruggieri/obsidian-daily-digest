@@ -13,7 +13,8 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const cacheDir = path.resolve(__dirname, "../.obsidian-cache");
+const projectRoot = path.resolve(__dirname, "../..");
+const cacheDir = path.resolve(projectRoot, ".obsidian-cache");
 
 export const config: WebdriverIO.Config = {
 	runner: "local",
@@ -34,7 +35,7 @@ export const config: WebdriverIO.Config = {
 			browserVersion: "latest",
 			"wdio:obsidianOptions": {
 				installerVersion: "earliest",
-				plugins: [path.resolve(__dirname, "..")], // Project root where manifest.json lives
+				plugins: [projectRoot], // Project root where manifest.json + main.js live
 				vault: path.resolve(__dirname, "vault"),
 			},
 		},
