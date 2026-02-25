@@ -708,20 +708,24 @@ export async function summarizeDay(
 					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
 					e
 				);
-				prompt = resolvePromptAndTier(
+				const fallback = resolvePromptAndTier(
 					date, categorized, searches, claudeSessions, config, profile,
 					undefined, classification, patterns, compressed, gitCommits, promptsDir
-				).prompt;
+				);
+				prompt = fallback.prompt;
+				maxTokens = fallback.maxTokens;
 			}
 		} else {
 			log.debug(
 				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
 				`${totalTokens} tokens — too small)`
 			);
-			prompt = resolvePromptAndTier(
+			const fallback = resolvePromptAndTier(
 				date, categorized, searches, claudeSessions, config, profile,
 				undefined, classification, patterns, compressed, gitCommits, promptsDir
-			).prompt;
+			);
+			prompt = fallback.prompt;
+			maxTokens = fallback.maxTokens;
 		}
 	} else {
 		const resolution = resolvePromptAndTier(
