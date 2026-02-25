@@ -361,7 +361,7 @@ export interface PatternAnalysis {
 	recurrenceSignals: RecurrenceSignal[];
 	knowledgeDelta: KnowledgeDelta;
 	focusScore: number;          // 0.0-1.0, higher = more focused day
-	categoryDiversityScore: number; // 0.0-1.0 fraction of events in dominant activity category (higher = more focused)
+	activityConcentrationScore: number; // 0.0-1.0 fraction of events in dominant activity type (1.0 = all one type; 0.25 = evenly spread across 4)
 	topActivityTypes: { type: ActivityType; count: number; pct: number }[];
 	peakHours: { hour: number; count: number }[];
 }
