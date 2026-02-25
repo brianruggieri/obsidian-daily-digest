@@ -450,6 +450,24 @@ function computeFocusScore(events: StructuredEvent[]): number {
 	return Math.max(0, Math.min(1, 1 - (entropy / maxEntropy)));
 }
 
+// ── Category Diversity Score ────────────────────────────
+// Measures how concentrated events are in one activity category.
+// Returns the fraction of events in the single most-common category.
+// 1.0 = all events in one category (highly focused)
+// 0.25 = evenly spread across 4 types
+// Unlike focusScore (topic entropy), this is stable even when developers
+// work across many fine-grained topics within the same activity type.
+
+function computeCategoryDiversityScore(events: StructuredEvent[]): number {
+	if (events.length === 0) return 0;
+	const typeCounts: Record<string, number> = {};
+	for (const ev of events) {
+		typeCounts[ev.activityType] = (typeCounts[ev.activityType] || 0) + 1;
+	}
+	const maxCount = Math.max(...Object.values(typeCounts));
+	return maxCount / events.length;
+}
+
 // ── Peak Hours ─────────────────────────────────────────
 
 function computePeakHours(events: StructuredEvent[]): { hour: number; count: number }[] {
@@ -530,6 +548,9 @@ export function extractPatterns(
 	// Focus score
 	const focusScore = computeFocusScore(events);
 
+	// Category diversity score
+	const categoryDiversityScore = computeCategoryDiversityScore(events);
+
 	// Activity type distribution
 	const topActivityTypes = computeActivityDistribution(events);
 
@@ -543,6 +564,7 @@ export function extractPatterns(
 		recurrenceSignals,
 		knowledgeDelta,
 		focusScore,
+		categoryDiversityScore,
 		topActivityTypes,
 		peakHours,
 	};
