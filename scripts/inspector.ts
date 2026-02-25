@@ -38,6 +38,10 @@ import { renderMarkdown } from "../src/render/renderer";
 import { buildPrompt, summarizeDay } from "../src/summarize/summarize";
 
 import type {
+	BrowserVisit,
+	SearchQuery,
+	ClaudeSession,
+	GitCommit,
 	SanitizeConfig,
 	SensitivityConfig,
 	ClassificationResult,
@@ -47,9 +51,94 @@ import type {
 } from "../src/types";
 import type { AICallConfig } from "../src/summarize/ai-client";
 
+// ── Stage data snapshot helpers ──────────────────────────
+// Build compact summaries of stage output for the inspector UI.
+// We truncate arrays to keep SSE payloads reasonable.
+
+const SAMPLE_LIMIT = 8;
+
+function sampleVisits(visits: BrowserVisit[]) {
+	return visits.slice(0, SAMPLE_LIMIT).map(v => ({
+		title: (v.title || "").slice(0, 80),
+		domain: v.domain ?? "",
+		time: v.time ? v.time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : null,
+	}));
+}
+
+function sampleSearches(searches: SearchQuery[]) {
+	return searches.slice(0, SAMPLE_LIMIT).map(s => ({
+		query: s.query,
+		engine: s.engine,
+		time: s.time ? s.time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) : null,
+	}));
+}
+
+function sampleSessions(sessions: ClaudeSession[]) {
+	return sessions.slice(0, SAMPLE_LIMIT).map(s => ({
+		prompt: s.prompt.slice(0, 100),
+		project: s.project,
+		time: s.time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }),
+	}));
+}
+
+function sampleCommits(commits: GitCommit[]) {
+	return commits.slice(0, SAMPLE_LIMIT).map(c => ({
+		hash: c.hash.slice(0, 7),
+		message: c.message.slice(0, 80),
+		repo: c.repo,
+		stats: c.filesChanged > 0 ? `+${c.insertions}/-${c.deletions}` : "",
+	}));
+}
+
+function summarizeOutput(summary: AISummary | null, promptLog: PromptLog) {
+	if (!summary) return { skipped: true };
+	return {
+		headline: summary.headline,
+		tldr: summary.tldr,
+		themes: summary.themes,
+		notable: summary.notable,
+		category_summaries: summary.category_summaries,
+		work_patterns: summary.work_patterns,
+		questions: summary.questions,
+		promptLog: promptLog.map(e => ({
+			stage: e.stage,
+			model: e.model,
+			tokens: e.tokenCount,
+			tier: e.privacyTier,
+		})),
+	};
+}
+
+function classifyOutput(c: ClassificationResult) {
+	// Tally activity types and top topics
+	const typeCounts: Record<string, number> = {};
+	const topicCounts: Record<string, number> = {};
+	for (const e of c.events) {
+		typeCounts[e.activityType] = (typeCounts[e.activityType] || 0) + 1;
+		for (const t of e.topics) {
+			topicCounts[t] = (topicCounts[t] || 0) + 1;
+		}
+	}
+	const topTopics = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+	return {
+		totalEvents: c.totalProcessed,
+		llmClassified: c.llmClassified,
+		ruleClassified: c.ruleClassified,
+		activityTypes: typeCounts,
+		topTopics: Object.fromEntries(topTopics),
+		sampleEvents: c.events.slice(0, SAMPLE_LIMIT).map(e => ({
+			source: e.source,
+			activityType: e.activityType,
+			intent: e.intent,
+			topics: e.topics,
+			summary: e.summary.slice(0, 80),
+		})),
+	};
+}
+
 // ── Constants ────────────────────────────────────────────
 
-const PORT = 3747;
+const PORT = process.env.INSPECTOR_PORT ? parseInt(process.env.INSPECTOR_PORT, 10) : 3747;
 
 const VALID_DATA_MODES = ["fixtures", "real"] as const;
 const VALID_AI_MODES = ["mock", "real"] as const;
@@ -61,11 +150,31 @@ interface RunState {
 	timeoutId: ReturnType<typeof setTimeout>;
 }
 let currentRun: RunState | null = null;
+let pendingAdvance = false;
 
-function waitForNext(): Promise<void> {
+// Run ID: incremented on each new /api/run, checked by the pipeline to
+// detect that a newer run has started and the current one should bail out.
+let activeRunId = 0;
+
+function waitForNext(runId: number): Promise<void> {
+	// If this run has been superseded, bail immediately.
+	if (runId !== activeRunId) {
+		console.log(`[step] waitForNext → run ${runId} superseded by ${activeRunId}, bailing`);
+		return Promise.reject(new Error("__cancelled__"));
+	}
+	// If a /api/next arrived before waitForNext was called (race between
+	// the client clicking "Next Stage" and the server setting up the wait),
+	// resolve immediately instead of blocking.
+	if (pendingAdvance) {
+		pendingAdvance = false;
+		console.log("[step] waitForNext → consuming pendingAdvance, resolving immediately");
+		return Promise.resolve();
+	}
+	console.log("[step] waitForNext → blocking until /api/next");
 	return new Promise<void>((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
 			currentRun = null;
+			console.log("[step] waitForNext → TIMED OUT after 60s");
 			reject(new Error("Step timeout — run cancelled after 60 seconds of inactivity"));
 		}, 60_000);
 		currentRun = { advance: resolve, timeoutId };
@@ -75,7 +184,10 @@ function waitForNext(): Promise<void> {
 // ── SSE helper ───────────────────────────────────────────
 
 function sseEvent(res: ServerResponse, data: object): void {
-	res.write(`data: ${JSON.stringify(data)}\n\n`);
+	const json = JSON.stringify(data);
+	const preview = json.length > 120 ? json.slice(0, 120) + "…" : json;
+	console.log(`[sse] → ${preview}`);
+	res.write(`data: ${json}\n\n`);
 }
 
 // ── HTML stub ────────────────────────────────────────────
@@ -133,6 +245,22 @@ const HTML = `<!DOCTYPE html>
   .raw-toggle textarea { width: 100%; height: 200px; background: #111; border: 1px solid #333; color: #666; padding: 8px; font-family: inherit; font-size: 11px; margin-top: 6px; resize: vertical; }
   .error-msg { color: #f87171; padding: 12px; background: #2a1515; border-radius: 4px; border: 1px solid #5a2020; max-width: 760px; }
   .idle-msg { color: #555; font-size: 12px; padding: 20px 0; }
+  .stage-output { max-width: 900px; }
+  .stage-output h3 { color: #7b68ee; font-size: 14px; margin-bottom: 12px; text-transform: capitalize; }
+  .stage-row:hover { background: #222; }
+  .stage-row .name { cursor: pointer; }
+  .json-obj { padding-left: 16px; border-left: 1px solid #333; margin: 2px 0; }
+  .json-arr { padding-left: 16px; border-left: 1px solid #2d4a3f; margin: 2px 0; }
+  .json-row { padding: 1px 0; }
+  .json-item { padding: 1px 0; }
+  .json-key { color: #7b68ee; }
+  .json-str { color: #a5d6a7; }
+  .json-num { color: #f0c674; }
+  .json-null { color: #666; font-style: italic; }
+  .json-empty { color: #666; }
+  .json-count { color: #666; font-size: 11px; }
+  .json-bracket { color: #666; }
+  .json-ellipsis { color: #555; font-style: italic; }
 <\/style>
 <\/head>
 <body>
@@ -183,6 +311,8 @@ const HTML = `<!DOCTYPE html>
 <script>
 const STAGES = ["collect","sanitize","sensitivity","categorize","classify","patterns","knowledge","summarize","render"];
 let gotComplete = false;
+let runController = null;
+let stageDataCache = {};  // name -> data object, for clicking back to view
 
 (async function init() {
   document.getElementById("date").value = new Date().toISOString().slice(0, 10);
@@ -216,6 +346,13 @@ function showNextBtn(visible) {
 }
 
 async function startRun(stepMode) {
+  // Abort any in-progress run before starting a new one
+  if (runController) {
+    console.log("[client] Aborting previous run");
+    runController.abort();
+    runController = null;
+  }
+
   gotComplete = false;
   setRunning(true);
   showNextBtn(false);
@@ -224,6 +361,7 @@ async function startRun(stepMode) {
   const output = document.getElementById("output");
   log.innerHTML = "";
   output.innerHTML = '<p class="idle-msg">Running\u2026<\/p>';
+  stageDataCache = {};
 
   for (const name of STAGES) {
     const row = makeStageRow(name, "pending");
@@ -236,11 +374,15 @@ async function startRun(stepMode) {
   const dataMode = document.querySelector('[name=dataMode]:checked').value;
   const aiMode = document.querySelector('[name=aiMode]:checked').value;
 
+  const controller = new AbortController();
+  runController = controller;
+
   try {
     const response = await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ preset, date, dataMode, aiMode, stepMode }),
+      signal: controller.signal,
     });
 
     const reader = response.body.getReader();
@@ -249,34 +391,51 @@ async function startRun(stepMode) {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      if (done) {
+        console.log("[client] SSE stream ended (done=true), remaining buffer:", JSON.stringify(buffer));
+        break;
+      }
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
       const lines = buffer.split("\\n");
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           try {
             handleEvent(JSON.parse(line.slice(6)));
-          } catch (_) {}
+          } catch (parseErr) {
+            console.error("[client] SSE parse error:", parseErr, "line:", line.slice(0, 100));
+          }
         }
       }
     }
   } catch (err) {
+    if (err && err.name === "AbortError") {
+      console.log("[client] Run aborted (new run started)");
+      return; // Don't show error or touch UI — the new run owns the UI now
+    }
     showError(String(err));
   } finally {
-    setRunning(false);
-    showNextBtn(false);
-    if (!gotComplete) {
-      showError("Run ended without a result \u2014 the server may have crashed.");
+    if (runController === controller) {
+      // Only clean up UI if this is still the active run
+      runController = null;
+      setRunning(false);
+      showNextBtn(false);
+      if (!gotComplete) {
+        showError("Run ended without a result \u2014 the server may have crashed.");
+      }
     }
   }
 }
 
 async function advanceStep() {
+  console.log("[client] Next Stage clicked");
   showNextBtn(false);
   try {
-    await fetch("/api/next", { method: "POST" });
+    const resp = await fetch("/api/next", { method: "POST" });
+    console.log("[client] /api/next responded:", resp.status);
   } catch (_err) {
+    console.error("[client] /api/next failed:", _err);
     showNextBtn(true); // restore button if POST failed
   }
 }
@@ -284,13 +443,22 @@ async function advanceStep() {
 function handleEvent(evt) {
   if (evt.type === "stage") {
     updateStageRow(evt.name, evt.status, evt.durationMs, evt.detail);
+  } else if (evt.type === "stageProgress") {
+    // Heartbeat: update elapsed time on the running stage
+    var row = document.getElementById("stage-" + evt.name);
+    if (row) {
+      row.querySelector(".dur").textContent = evt.elapsedSec + "s\u2026";
+    }
+  } else if (evt.type === "stageData") {
+    stageDataCache[evt.name] = evt.data;
+    renderStageData(evt.name, evt.data);
   } else if (evt.type === "waiting") {
     showNextBtn(true);
   } else if (evt.type === "complete") {
     gotComplete = true;
     renderOutput(evt.markdown);
   } else if (evt.type === "error") {
-    gotComplete = true; // error counts as a terminal event
+    gotComplete = true;
     showError(evt.message);
   }
 }
@@ -311,6 +479,12 @@ function makeStageRow(name, status) {
     '<span class="name">' + name + '<\/span>' +
     '<span class="dur"><\/span>' +
     '<span class="detail"><\/span>';
+  row.style.cursor = "pointer";
+  row.addEventListener("click", function() {
+    if (stageDataCache[name]) {
+      renderStageData(name, stageDataCache[name]);
+    }
+  });
   return row;
 }
 
@@ -330,6 +504,48 @@ function updateStageRow(name, status, durationMs, detail) {
   if (detail !== undefined) {
     row.querySelector(".detail").textContent = detail;
   }
+}
+
+function renderStageData(name, data) {
+  const output = document.getElementById("output");
+  var h = '<div class="stage-output">';
+  h += '<h3>' + escapeHtml(name) + ' output<\/h3>';
+  h += renderDataTree(data, 0);
+  h += '<\/div>';
+  output.innerHTML = h;
+}
+
+function renderDataTree(obj, depth) {
+  if (obj === null || obj === undefined) return '<span class="json-null">null<\/span>';
+  if (typeof obj === "string") return '<span class="json-str">"' + escapeHtml(obj).slice(0, 200) + '"<\/span>';
+  if (typeof obj === "number" || typeof obj === "boolean") return '<span class="json-num">' + String(obj) + '<\/span>';
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return '<span class="json-empty">[]<\/span>';
+    var h = '<div class="json-arr">';
+    h += '<span class="json-bracket">[<\/span> <span class="json-count">' + obj.length + ' items<\/span>';
+    for (var i = 0; i < Math.min(obj.length, 20); i++) {
+      h += '<div class="json-item">' + renderDataTree(obj[i], depth + 1) + '<\/div>';
+    }
+    if (obj.length > 20) h += '<div class="json-item json-ellipsis">\u2026 ' + (obj.length - 20) + ' more<\/div>';
+    h += '<span class="json-bracket">]<\/span><\/div>';
+    return h;
+  }
+  if (typeof obj === "object") {
+    var keys = Object.keys(obj);
+    if (keys.length === 0) return '<span class="json-empty">{}<\/span>';
+    var h = '<div class="json-obj">';
+    for (var k = 0; k < keys.length; k++) {
+      var key = keys[k];
+      var val = obj[key];
+      h += '<div class="json-row">';
+      h += '<span class="json-key">' + escapeHtml(key) + '<\/span>: ';
+      h += renderDataTree(val, depth + 1);
+      h += '<\/div>';
+    }
+    h += '<\/div>';
+    return h;
+  }
+  return escapeHtml(String(obj));
 }
 
 function renderOutput(raw) {
@@ -364,7 +580,8 @@ async function runPipeline(
 	dateStr: string,
 	dataMode: "fixtures" | "real",
 	aiMode: "mock" | "real",
-	stepMode: boolean
+	stepMode: boolean,
+	runId: number
 ): Promise<void> {
 	const preset = PRESETS.find((p) => p.id === presetId);
 	if (!preset) {
@@ -375,23 +592,59 @@ async function runPipeline(
 
 	// ── Stage helpers ──────────────────────────────────────
 
+	interface StageResult {
+		detail?: string;
+		/** Structured data snapshot to display in the output panel. */
+		output?: object;
+	}
+
+	const STAGE_TIMEOUT_MS = 180_000; // 3 minutes max per stage
+
 	async function stage(
 		name: string,
-		fn: () => Promise<{ detail?: string }> | { detail?: string }
+		fn: () => Promise<StageResult> | StageResult,
+		opts?: { last?: boolean }
 	): Promise<void> {
+		// Bail if a newer run has started
+		if (runId !== activeRunId) {
+			throw new Error("__cancelled__");
+		}
 		const t = Date.now();
 		sseEvent(res, { type: "stage", name, status: "running" });
-		const result = await fn();
-		sseEvent(res, {
-			type: "stage",
-			name,
-			status: "done",
-			durationMs: Date.now() - t,
-			detail: result.detail ?? "",
-		});
-		if (stepMode) {
-			sseEvent(res, { type: "waiting", completedStage: name });
-			await waitForNext();
+
+		// Heartbeat: send elapsed time every 2s so the UI knows we're alive
+		const heartbeat = setInterval(() => {
+			const elapsed = Math.round((Date.now() - t) / 1000);
+			sseEvent(res, { type: "stageProgress", name, elapsedSec: elapsed });
+		}, 2_000);
+
+		try {
+			const result = await Promise.race([
+				Promise.resolve().then(fn),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error(`Stage "${name}" timed out after ${STAGE_TIMEOUT_MS / 1000}s`)), STAGE_TIMEOUT_MS)
+				),
+			]);
+			const durationMs = Date.now() - t;
+			sseEvent(res, {
+				type: "stage",
+				name,
+				status: "done",
+				durationMs,
+				detail: result.detail ?? "",
+			});
+			// Send the stage output snapshot to the client
+			if (result.output) {
+				sseEvent(res, { type: "stageData", name, data: result.output });
+			}
+			// In step mode, pause after each stage — except the last one,
+			// which should fall through to the complete event immediately.
+			if (stepMode && !opts?.last) {
+				sseEvent(res, { type: "waiting", completedStage: name });
+				await waitForNext(runId);
+			}
+		} finally {
+			clearInterval(heartbeat);
 		}
 	}
 
@@ -413,6 +666,19 @@ async function runPipeline(
 		return {
 			detail: `${raw.visits.length} visits, ${raw.searches.length} searches, ` +
 				`${raw.claudeSessions.length} sessions, ${raw.gitCommits.length} commits`,
+			output: {
+				counts: {
+					visits: raw.visits.length,
+					searches: raw.searches.length,
+					sessions: raw.claudeSessions.length,
+					commits: raw.gitCommits.length,
+				},
+				visits: sampleVisits(raw.visits),
+				searches: sampleSearches(raw.searches),
+				sessions: sampleSessions(raw.claudeSessions),
+				commits: sampleCommits(raw.gitCommits),
+				_truncated: raw.visits.length > SAMPLE_LIMIT || raw.claudeSessions.length > SAMPLE_LIMIT,
+			},
 		};
 	});
 
@@ -436,7 +702,21 @@ async function runPipeline(
 			raw.gitCommits,
 			sanitizeConfig
 		);
-		return { detail: sanitizeConfig.enabled ? `level=${sanitizeConfig.level}` : "disabled" };
+		const detail = sanitizeConfig.enabled ? `level=${sanitizeConfig.level}` : "disabled";
+		return {
+			detail,
+			output: {
+				config: { level: sanitizeConfig.level, redactPaths: sanitizeConfig.redactPaths, scrubEmails: sanitizeConfig.scrubEmails },
+				counts: {
+					visits: sanitized.visits.length,
+					searches: sanitized.searches.length,
+					sessions: sanitized.claudeSessions.length,
+					commits: sanitized.gitCommits.length,
+				},
+				visits: sampleVisits(sanitized.visits),
+				searches: sampleSearches(sanitized.searches),
+			},
+		};
 	});
 
 	// ── 3. Sensitivity filter ────────────────────────────
@@ -453,11 +733,20 @@ async function runPipeline(
 	await stage("sensitivity", () => {
 		const result = filterSensitiveDomains(sanitized.visits, sensitivityConfig);
 		filteredVisits = result.kept;
-		const excluded = sanitized.visits.length - result.kept.length;
+		const excluded = result.filtered;
 		return {
 			detail: sensitivityConfig.enabled
 				? `${excluded} excluded (${sensitivityConfig.action})`
 				: "disabled",
+			output: {
+				action: sensitivityConfig.action,
+				categories: sensitivityConfig.categories,
+				inputCount: sanitized.visits.length,
+				keptCount: filteredVisits.length,
+				excludedCount: excluded,
+				excludedByCategory: result.byCategory,
+				keptSample: sampleVisits(filteredVisits),
+			},
 		};
 	});
 
@@ -466,10 +755,26 @@ async function runPipeline(
 	let categorized!: ReturnType<typeof categorizeVisits>;
 	await stage("categorize", () => {
 		categorized = categorizeVisits(filteredVisits);
-		const cats = Object.entries(categorized)
+		const catEntries = Object.entries(categorized)
 			.filter(([, v]) => Array.isArray(v) && v.length > 0)
-			.map(([k]) => k);
-		return { detail: `${cats.length} categories` };
+			.map(([k, v]) => [k, (v as unknown[]).length] as const);
+		return {
+			detail: `${catEntries.length} categories`,
+			output: {
+				categories: Object.fromEntries(catEntries),
+				topDomains: Object.fromEntries(
+					catEntries.slice(0, 5).map(([cat]) => {
+						const domains: Record<string, number> = {};
+						for (const v of categorized[cat]) {
+							const d = v.domain || "unknown";
+							domains[d] = (domains[d] || 0) + 1;
+						}
+						const sorted = Object.entries(domains).sort((a, b) => b[1] - a[1]).slice(0, 5);
+						return [cat, Object.fromEntries(sorted)];
+					})
+				),
+			},
+		};
 	});
 
 	// ── 5. Classify ──────────────────────────────────────
@@ -492,7 +797,10 @@ async function runPipeline(
 					categorized,
 					classifyConfig
 				);
-				return { detail: `LLM: ${classification.llmClassified} events` };
+				return {
+					detail: `LLM: ${classification.llmClassified} events`,
+					output: classifyOutput(classification),
+				};
 			} else {
 				classification = classifyEventsRuleOnly(
 					filteredVisits,
@@ -501,7 +809,10 @@ async function runPipeline(
 					sanitized.gitCommits,
 					categorized
 				);
-				return { detail: "rule-only" };
+				return {
+					detail: "rule-only",
+					output: classifyOutput(classification),
+				};
 			}
 		});
 	} else {
@@ -522,6 +833,27 @@ async function runPipeline(
 			patterns = extractPatterns(classification!, patternConfig, buildEmptyTopicHistory(), dateStr);
 			return {
 				detail: `focus=${Math.round(patterns.focusScore * 100)}%, clusters=${patterns.temporalClusters.length}`,
+				output: {
+					focusScore: `${Math.round(patterns.focusScore * 100)}%`,
+					topActivityTypes: patterns.topActivityTypes.slice(0, 5),
+					peakHours: patterns.peakHours.slice(0, 5).map(h => ({ hour: `${h.hour}:00`, count: h.count })),
+					temporalClusters: patterns.temporalClusters.map(c => ({
+						hours: `${c.hourStart}:00–${c.hourEnd}:00`,
+						events: c.eventCount,
+						activityType: c.activityType,
+						label: c.label,
+					})),
+					topCooccurrences: patterns.topicCooccurrences.slice(0, 5).map(c => ({
+						topics: [c.topicA, c.topicB],
+						strength: c.strength,
+						sharedEvents: c.sharedEvents,
+					})),
+					entityRelations: patterns.entityRelations.slice(0, 5).map(r => ({
+						entities: [r.entityA, r.entityB],
+						cooccurrences: r.cooccurrences,
+						contexts: r.contexts,
+					})),
+				},
 			};
 		});
 	} else {
@@ -534,7 +866,10 @@ async function runPipeline(
 	if (patterns) {
 		await stage("knowledge", () => {
 			knowledge = generateKnowledgeSections(patterns!);
-			return { detail: "" };
+			return {
+				detail: `${knowledge.tags.length} tags`,
+				output: knowledge,
+			};
 		});
 	} else {
 		skip("knowledge");
@@ -571,7 +906,10 @@ async function runPipeline(
 				prompt: promptText,
 			});
 			aiSummary = getMockSummary(presetId);
-			return { detail: "mock" };
+			return {
+				detail: "mock",
+				output: summarizeOutput(aiSummary, promptLog),
+			};
 		});
 	} else {
 		const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
@@ -599,7 +937,10 @@ async function runPipeline(
 				undefined,
 				sanitized.gitCommits
 			);
-			return { detail: `model=${aiCallConfig.anthropicModel ?? aiCallConfig.localModel}` };
+			return {
+				detail: `model=${aiCallConfig.provider === "local" ? aiCallConfig.localModel : aiCallConfig.anthropicModel}`,
+				output: summarizeOutput(aiSummary, promptLog),
+			};
 		});
 	}
 
@@ -619,8 +960,19 @@ async function runPipeline(
 			knowledge,
 			promptLog
 		);
-		return { detail: `${md.length} chars` };
-	});
+		// Count sections in the markdown
+		const h2Count = (md.match(/^## /gm) || []).length;
+		const lineCount = md.split("\n").length;
+		return {
+			detail: `${md.length} chars`,
+			output: {
+				chars: md.length,
+				lines: lineCount,
+				sections: h2Count,
+				preview: md.slice(0, 500),
+			},
+		};
+	}, { last: true });
 
 	sseEvent(res, { type: "complete", markdown: md });
 }
@@ -662,10 +1014,17 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 	// POST /api/next — advance step-mode to the next stage
 	if (method === "POST" && url === "/api/next") {
 		if (currentRun) {
+			console.log("[step] /api/next → advancing currentRun");
 			const run = currentRun;
 			currentRun = null;
 			clearTimeout(run.timeoutId);
 			run.advance();
+		} else {
+			// No active wait yet — queue the advance so the next waitForNext()
+			// resolves immediately (prevents race when client clicks before the
+			// server has set up the wait for the next stage).
+			console.log("[step] /api/next → no currentRun, setting pendingAdvance");
+			pendingAdvance = true;
 		}
 		res.writeHead(204);
 		res.end();
@@ -681,6 +1040,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 			clearTimeout(run.timeoutId);
 			run.advance();
 		}
+		pendingAdvance = false;
+		const runId = ++activeRunId;
+		console.log(`[run] Starting run ${runId}`);
 
 		res.writeHead(200, {
 			"Content-Type": "text/event-stream",
@@ -740,9 +1102,14 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 		const aiMode = rawAiMode as "mock" | "real";
 
 		try {
-			await runPipeline(res, presetId, dateStr, dataMode, aiMode, stepMode);
+			await runPipeline(res, presetId, dateStr, dataMode, aiMode, stepMode, runId);
 		} catch (err) {
-			sseEvent(res, { type: "error", message: String(err) });
+			const msg = String(err);
+			if (msg.includes("__cancelled__")) {
+				console.log(`[run] Run ${runId} cancelled (superseded)`);
+			} else {
+				sseEvent(res, { type: "error", message: msg });
+			}
 		} finally {
 			res.end();
 		}
