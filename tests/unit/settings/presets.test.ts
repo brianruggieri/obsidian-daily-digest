@@ -31,3 +31,37 @@ describe("Presets", () => {
     expect(resolved.aiProvider).toBe("none");
   });
 });
+
+describe("local LLM presets", () => {
+  it("local-llm-classified resolves correctly", () => {
+    const preset = PRESETS.find(p => p.id === "local-llm-classified")!;
+    expect(preset).toBeDefined();
+    const settings = resolvePreset(preset);
+    expect(settings.aiProvider).toBe("local");
+    expect(settings.enableClassification).toBe(true);
+    expect(settings.enableRAG).toBe(false);
+    expect(settings.enablePatterns).toBe(true);
+  });
+
+  it("local-llm-rag resolves correctly", () => {
+    const preset = PRESETS.find(p => p.id === "local-llm-rag")!;
+    expect(preset).toBeDefined();
+    const settings = resolvePreset(preset);
+    expect(settings.aiProvider).toBe("local");
+    expect(settings.enableRAG).toBe(true);
+    expect(settings.enableClassification).toBe(false);
+    expect(settings.enablePatterns).toBe(true);
+    expect(settings.ragTopK).toBe(8);
+    expect(settings.embeddingModel).toBe("nomic-embed-text");
+  });
+
+  it("local-llm-basic resolves correctly", () => {
+    const preset = PRESETS.find(p => p.id === "local-llm-basic")!;
+    expect(preset).toBeDefined();
+    const settings = resolvePreset(preset);
+    expect(settings.aiProvider).toBe("local");
+    expect(settings.enableRAG).toBe(false);
+    expect(settings.enableClassification).toBe(false);
+    expect(settings.enablePatterns).toBe(true);
+  });
+});

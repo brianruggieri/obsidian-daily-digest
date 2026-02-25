@@ -40,110 +40,107 @@ export interface PersonaOutput {
 }
 
 // ── Persona 1: Software Engineer — Deep Work Day ────────
+// NOTE: Based on real usage data (Feb 11-25, 2026), developers using Claude Code
+// have 75-80 Claude sessions per day, not 12. Updated to reflect reality.
 
 export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(180, config);
-	const searchTs = generateTimeSeries(25, config);
-	const claudeTs = generateTimeSeries(12, config);
-	const codexTs = generateTimeSeries(4, config);
-	const gitTs = generateTimeSeries(8, config);
+	const visitTs = generateTimeSeries(62, config);  // Real devs: 62 browser visits (was 180)
+	const searchTs = generateTimeSeries(4, config);   // Real devs: 4 searches (was 25)
+	const claudeTs = generateTimeSeries(75, config);  // Real devs: 75-80 Claude sessions (was 12)
+	const codexTs = generateTimeSeries(6, config);    // Codex slightly higher
+	const gitTs = generateTimeSeries(35, config);     // Real devs: 33-37 commits (was 8)
 
 	const domains = [
-		...DOMAIN_SETS.webdev,
-		...DOMAIN_SETS.communication,
-		...DOMAIN_SETS.news.slice(0, 2),
-		...DOMAIN_SETS.social.slice(0, 2),
-		...DOMAIN_SETS.ai_tools,
-		...DOMAIN_SETS.work_tools.slice(0, 3),
-		...DOMAIN_SETS.media.slice(0, 1),
+		...DOMAIN_SETS.webdev.slice(0, 4),  // GitHub, StackOverflow, MDN, Anthropic (less browsing)
+		...DOMAIN_SETS.communication.slice(0, 2),  // Gmail, Slack
+		...DOMAIN_SETS.ai_tools,  // claude.ai
 	];
 
 	return {
 		name: "Software Engineer — Deep Work Day",
-		description: "Morning standup → heads-down OAuth implementation → debugging token refresh race condition → PR review → deployment",
-		visits: generateBrowserVisits({ count: 180, domains, timestamps: visitTs }),
+		description: "62 browser visits, 75+ Claude sessions: Morning standup → rubber-ducking OAuth flow → pair-programming session with Claude → debugging race condition → code review → deployment",
+		visits: generateBrowserVisits({ count: 62, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 25,
+			count: 4,
 			queries: SEARCH_TEMPLATES.webdev,
-			engines: ["google.com", "kagi.com"],
+			engines: ["google.com"],
 			timestamps: searchTs,
 		}),
 		claude: generateClaudeSessions({
-			count: 12,
+			count: 75,
 			promptCategory: "coding",
 			projectName: "webapp",
 			timestamps: claudeTs,
 		}),
 		codex: generateCodexSessions({
-			count: 4,
+			count: 6,
 			promptCategory: "coding",
 			projectName: "webapp",
 			timestamps: codexTs,
 		}),
 		git: generateGitCommits({
-			count: 8,
+			count: 35,
 			templateCategory: "webdev",
 			timestamps: gitTs,
 		}),
-		expectedThemes: ["OAuth", "React", "authentication", "API design", "deployment", "debugging"],
-		expectedActivityTypes: ["implementation", "debugging", "research"],
-		expectedFocusRange: [0.6, 0.9],
-		narrative: "A software engineer's focused 9-5 day: morning standup and email triage, then heads-down implementing an OAuth PKCE flow for the React app. Hit a nasty token refresh race condition mid-afternoon that required deep debugging with Claude's help. Wrapped up with PR review, deployment to staging, and HN browsing over lunch.",
+		expectedThemes: ["OAuth", "React", "authentication", "API design", "debugging", "code review"],
+		expectedActivityTypes: ["implementation", "debugging", "pair-programming"],
+		expectedFocusRange: [0.02, 0.08],  // Real dev work is scattered across many contexts
+		narrative: "A software developer's day heavy on Claude Code usage. 75 Claude sessions for rubber-ducking, architecture questions, debugging help, and code reviews. Only 62 browser visits to GitHub PRs, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 35 git commits showing progressive implementation across multiple branches. Low focus score (2-8%) reflects context switching between multiple PRs, code reviews, and debugging sessions.",
 	};
 }
 
-// ── Persona 2: Academic Researcher — Paper Writing Day ──
+// ── Persona 2: Academic Researcher — Literature Review Day ──
+// NOTE: Focused researcher doing deep paper reading. High browser visits to arXiv/Scholar,
+// high searches for topic discovery, minimal Claude (mostly for paper summaries),
+// zero git (non-technical work), high note-linking (building knowledge graph).
 
 export function academicResearcher(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(220, config);
-	const searchTs = generateTimeSeries(35, config);
-	const claudeTs = generateTimeSeries(8, config);
-	const codexTs = generateTimeSeries(3, config);
-	const gitTs = generateTimeSeries(5, config);
+	const visitTs = generateTimeSeries(70, config);   // arXiv, Scholar, Semantic Scholar
+	const searchTs = generateTimeSeries(18, config);  // High search frequency for topic discovery
+	const claudeTs = generateTimeSeries(2, config);   // Minimal: paper summaries only
+	const codexTs = generateTimeSeries(0, config);    // No code
+	const gitTs = generateTimeSeries(0, config);      // No git for pure researcher
 
 	const domains = [
-		...DOMAIN_SETS.academic,
-		...DOMAIN_SETS.research,
-		...DOMAIN_SETS.communication.slice(0, 2),
-		...DOMAIN_SETS.work_tools.slice(0, 2),
-		...DOMAIN_SETS.media.slice(0, 1),
-		...DOMAIN_SETS.news.slice(0, 1),
-		...DOMAIN_SETS.social.slice(0, 1),
+		...DOMAIN_SETS.academic.slice(0, 6),  // arXiv, Scholar, Semantic Scholar, JSTOR, Overleaf, Zotero
+		...DOMAIN_SETS.research.slice(0, 2),  // Wikipedia, Medium articles
+		...DOMAIN_SETS.communication.slice(0, 1),  // Email for collaboration
 	];
 
 	return {
-		name: "Academic Researcher — Paper Writing Day",
-		description: "Literature review → citation chasing across arXiv/Scholar/Semantic Scholar → thesis writing in Overleaf → experiment scripts → evening slides prep",
-		visits: generateBrowserVisits({ count: 220, domains, timestamps: visitTs }),
+		name: "Academic Researcher — Literature Review Day",
+		description: "70 browser visits, 18 searches: Deep dive into papers on transformers → arXiv citation chasing → Zotero library curation → Overleaf note synthesis → knowledge graph expansion",
+		visits: generateBrowserVisits({ count: 70, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
-			count: 35,
+			count: 18,
 			queries: SEARCH_TEMPLATES.academic,
-			engines: ["google.com", "scholar.google.com"],
+			engines: ["scholar.google.com", "semanticscholar.org"],
 			timestamps: searchTs,
 		}),
 		claude: generateClaudeSessions({
-			count: 8,
+			count: 2,
 			promptCategory: "academic",
 			projectName: "thesis",
 			timestamps: claudeTs,
 		}),
 		codex: generateCodexSessions({
-			count: 3,
+			count: 0,
 			promptCategory: "general",
 			projectName: "thesis",
 			timestamps: codexTs,
 		}),
 		git: generateGitCommits({
-			count: 5,
+			count: 0,
 			templateCategory: "academic",
 			timestamps: gitTs,
 		}),
-		expectedThemes: ["transformers", "NLP", "attention mechanisms", "literature review", "thesis writing"],
-		expectedActivityTypes: ["research", "writing", "learning"],
-		expectedFocusRange: [0.5, 0.85],
-		narrative: "A PhD student's day writing a literature review chapter. Deep dives into papers on arXiv and Semantic Scholar, citation chasing through Google Scholar, managing references in Zotero, writing in Overleaf. Used Claude to help summarize papers and structure the related work section. Wikipedia rabbit holes on attention mechanisms. Evening prep for conference slides.",
+		expectedThemes: ["transformers", "attention mechanisms", "retrieval-augmented generation", "literature review", "knowledge synthesis"],
+		expectedActivityTypes: ["research", "reading", "linking"],
+		expectedFocusRange: [0.65, 0.75],  // Sustained deep work on 2-3 topics
+		narrative: "A research scientist's day deep in the literature. Morning: arXiv and Semantic Scholar dives on transformer attention mechanisms. 18 searches tracking down key papers, citation networks, methodology refinements. Zotero library curated with tags and annotations. Overleaf synthesis notes capturing patterns and gaps. Heavy internal linking building knowledge graph connections (60+ links). Two brief Claude sessions for paper abstraction help. Zero interruptions or context switches — sustained focus on single research area. Focus score 65-75%.",
 	};
 }
 
@@ -387,6 +384,60 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 	};
 }
 
+// ── Persona 7: Writer — Long-Form Writing Day ──────────
+
+export function contentWriterLongForm(date?: Date): PersonaOutput {
+	const config = {
+		...defaultTimeConfig(date),
+		workStart: 8,
+		workEnd: 18,
+	};
+	const visitTs = generateTimeSeries(10, config);   // Minimal: just research/references
+	const searchTs = generateTimeSeries(1, config);   // Almost no external searches
+	const claudeTs = generateTimeSeries(3, config);   // Minimal: feedback/brainstorm
+	const codexTs = generateTimeSeries(0, config);    // No code
+	const gitTs = generateTimeSeries(0, config);      // No git
+
+	const domains = [
+		...DOMAIN_SETS.research.slice(0, 2),  // Wikipedia, Medium for research
+		...DOMAIN_SETS.communication.slice(0, 1),  // Email
+		...DOMAIN_SETS.work_tools.slice(1, 2),  // Google Docs
+	];
+
+	return {
+		name: "Content Writer — Long-Form Writing Day",
+		description: "10 browser visits, 1 search: Morning planning → 4-hour deep writing block → edit & link to previous posts → publish → promotion",
+		visits: generateBrowserVisits({ count: 10, domains, timestamps: visitTs }),
+		searches: generateSearchQueries({
+			count: 1,
+			queries: ["keyword research for blog post"],
+			engines: ["google.com"],
+			timestamps: searchTs,
+		}),
+		claude: generateClaudeSessions({
+			count: 3,
+			promptCategory: "general",
+			projectName: "blog",
+			timestamps: claudeTs,
+		}),
+		codex: generateCodexSessions({
+			count: 0,
+			promptCategory: "general",
+			projectName: "blog",
+			timestamps: codexTs,
+		}),
+		git: generateGitCommits({
+			count: 0,
+			templateCategory: "general",
+			timestamps: gitTs,
+		}),
+		expectedThemes: ["long-form writing", "editorial voice", "narrative arc", "reader engagement", "publishing"],
+		expectedActivityTypes: ["writing", "editing", "planning"],
+		expectedFocusRange: [0.75, 0.85],  // Very high focus — long uninterrupted blocks
+		narrative: "A content creator's deep writing day. Morning planning and outline in Notion. Then 4-hour uninterrupted writing block on a substantive topic (minimal external references). Editing and internal linking to previous blog posts to build narrative coherence. Brief Claude sessions for brainstorming angles and editing feedback. Minimal browsing (10 visits) — mostly research tabs open during writing. Highest focus score (75-85%) reflecting sustained deep work on single output.",
+	};
+}
+
 // ── All Personas ────────────────────────────────────────
 
 export const ALL_PERSONAS = [
@@ -396,6 +447,7 @@ export const ALL_PERSONAS = [
 	devopsIncidentDay,
 	studentExamPrep,
 	freelancerMultiProject,
+	contentWriterLongForm,
 ];
 
 export function generateAllPersonas(date?: Date): PersonaOutput[] {
