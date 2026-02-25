@@ -21,6 +21,7 @@ const GENERATED_HEADINGS = new Set([
 	"Searches",
 	"Claude Code / AI Work",
 	"Browser Activity",
+	"Git Activity",
 	"Reflection",
 	"Notes",
 ]);
