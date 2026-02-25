@@ -1,5 +1,7 @@
 # Repo Restructure Implementation Plan
 
+> **Status:** Completed. Implementation merged to main.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Reorganize `src/` from 23 flat files into pipeline-stage directories (`collect/`, `filter/`, `analyze/`, `summarize/`, `render/`, `plugin/`, `settings/`) and split the two monster files (`settings.ts` and `collectors.ts`) for maximum discoverability.

@@ -1,5 +1,7 @@
 # Pipeline Inspector Implementation Plan
 
+> **Status:** Implementation complete. Integration test has a server startup timeout issue tracked separately.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build a local dev server (`scripts/inspector.ts`) with a browser UI to run the 9-stage pipeline against a chosen date/preset and watch each stage fire live, with step-through mode.

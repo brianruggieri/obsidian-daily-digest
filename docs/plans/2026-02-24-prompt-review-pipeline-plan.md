@@ -1,5 +1,7 @@
 # Prompt Review Pipeline Implementation Plan
 
+> **Status:** Core plugin completed at ~/.claude/plugins/prompt-review/. Skill wrappers not yet created.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build a cross-project Claude Code plugin at `~/.claude/plugins/prompt-review/` that reviews and refines prompts through parallel specialist reviewers, with subscription-first execution and `!!!` / `/prompt-review` triggers.

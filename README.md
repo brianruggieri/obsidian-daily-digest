@@ -1,6 +1,6 @@
 # Daily Digest for Obsidian
 
-**Your day, distilled.** Daily Digest reads your browser history, search queries, and Claude Code sessions, then compiles everything into a single, AI-summarized daily note in your Obsidian vault.
+**Your day, distilled.** Daily Digest reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles everything into a single, AI-summarized daily note in your Obsidian vault.
 
 One command. One note. A complete picture of what you did today.
 
@@ -18,7 +18,7 @@ Daily Digest captures all of that and turns it into something you can actually r
 
 Every day (or whenever you want), Daily Digest:
 
-1. **Collects** your browser history, search queries, and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions
+1. **Collects** your browser history, search queries, [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions, [Codex CLI](https://github.com/openai/codex) sessions, and git commits
 2. **Sanitizes** everything — scrubs API keys, tokens, passwords, and sensitive URLs before anything touches your vault
 3. **Categorizes** browser visits into meaningful groups (Dev, Research, Work, News, etc.)
 4. **Summarizes** the whole day with AI — a headline, key themes, notable moments, and reflection questions
@@ -35,6 +35,8 @@ The result is a note that looks like this:
 | **Browser history** | URLs, page titles, timestamps | SQLite databases (read-only copy) |
 | **Search queries** | Queries from Google, Bing, DuckDuckGo, Yahoo, Kagi, Perplexity | Extracted from browser history URLs |
 | **Claude Code sessions** | Your prompts to Claude Code (not responses) | `~/.claude/projects/**/*.jsonl` |
+| **Codex CLI sessions** | Your prompts to Codex CLI (not responses) | `~/.codex/history/*.jsonl` |
+| **Git commits** | Commit messages, timestamps, file change stats | Local `.git` directories under a configurable parent folder |
 
 ### Supported browsers
 
@@ -65,6 +67,8 @@ To collect activity data, the plugin reads files from outside your Obsidian vaul
 |--------|-------------|-----|
 | **Browser history** | Platform-specific SQLite database inside the browser's profile directory (e.g., `~/Library/Application Support/Google/Chrome/…/History`) | To build a record of URLs you visited, including search queries extracted from them |
 | **Claude Code sessions** | `~/.claude/projects/**/*.jsonl` | To include your AI coding prompts, grouped by project |
+| **Codex CLI sessions** | `~/.codex/history/*.jsonl` | To include your Codex CLI prompts |
+| **Git commits** | `.git/` directories under a configurable parent folder | To include commit messages and file change statistics |
 
 ---
 
@@ -349,24 +353,37 @@ npm run test:eval
 
 ```
 src/
-  main.ts           Plugin entry point, commands, vault integration
-  types.ts          TypeScript interfaces and constants
-  settings.ts       Settings UI and configuration
-  collectors.ts     Browser and Claude Code data collection
-  sanitize.ts       Defense-in-depth secret scrubbing
-  sensitivity.ts    419-domain sensitivity filter
-  categorize.ts     Rule-based domain categorization
-  browser-profiles.ts  Multi-browser, multi-profile detection
-  classify.ts       Local LLM event classification
-  patterns.ts       Statistical pattern extraction
-  knowledge.ts      Knowledge section generation
-  privacy.ts        Consent modals and onboarding
-  summarize.ts      AI prompt building and routing
-  ai-client.ts      Anthropic + local model abstraction
-  chunker.ts        RAG chunking pipeline
-  embeddings.ts     Vector embeddings and retrieval
-  renderer.ts       Markdown generation
-  merge.ts          Safe content merging with backups
+  types.ts              TypeScript interfaces and constants
+  plugin/
+    main.ts             Plugin entry point, commands, vault integration
+    privacy.ts          Consent modals and onboarding flow
+  settings/
+    types.ts            Settings interface, defaults, constants
+    ui.ts               Settings tab UI
+  collect/
+    browser.ts          Browser history collection via sql.js
+    browser-profiles.ts Multi-browser, multi-profile detection
+    claude.ts           Claude Code session reading
+    codex.ts            Codex CLI session reading
+    git.ts              Git commit history collection
+  filter/
+    sanitize.ts         Defense-in-depth secret scrubbing
+    sensitivity.ts      419-domain sensitivity filter
+    categorize.ts       Rule-based domain categorization
+    classify.ts         Local LLM event classification
+  analyze/
+    patterns.ts         Statistical pattern extraction
+    knowledge.ts        Knowledge section generation
+  summarize/
+    summarize.ts        AI prompt building and routing
+    prompt-templates.ts Prompt templates
+    ai-client.ts        Anthropic + local model abstraction
+    compress.ts         Token-budget activity compression
+    chunker.ts          RAG chunking pipeline
+    embeddings.ts       Vector embeddings and retrieval
+  render/
+    renderer.ts         Markdown generation
+    merge.ts            Safe content merging with backups
 ```
 
 ---
@@ -381,6 +398,8 @@ Daily Digest is **desktop only** (`isDesktopOnly: true`) — it requires filesys
 | Browser history (Firefox) | ✓ | ✓ | ✓ |
 | Browser history (Safari) | ✓ | — | — |
 | Claude Code sessions | ✓ | ✓ | ✓ |
+| Codex CLI sessions | ✓ | ✓ | ✓ |
+| Git commits | ✓ | ✓ | ✓ |
 
 Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly) — no native binaries, no system dependencies. The wasm binary (~1.2 MB) is bundled inline.
 
@@ -409,11 +428,9 @@ Yes, but be aware that your daily notes (which contain your activity data) will 
 
 Features already shipped are in the current release. The following are planned but **not yet implemented**:
 
-**Phase 3 — Cross-day embeddings** (`embeddings.ts`)
-- `persistDayIndex` — save each day's embedding index to `.daily-digest/embeddings/YYYY-MM-DD.json`
-- `queryAcrossDays` — semantic search across a date range using persisted indices
-
-These stubs exist in the codebase and return gracefully (no-op / empty array). They are intentionally excluded from the current feature set.
+**Cross-day embeddings**
+- Persist each day's embedding index and enable semantic search across a date range
+- Previously stubbed in `embeddings.ts`; stubs have been removed. Will be re-implemented when ready.
 
 **Platform expansion**
 

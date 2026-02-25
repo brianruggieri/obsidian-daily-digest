@@ -24,30 +24,45 @@ Daily Digest is an Obsidian desktop plugin that compiles browser history, search
 
 ```
 src/
-  main.ts           - Plugin entry point, commands, vault integration
-  types.ts          - All TypeScript interfaces and type definitions
-  settings.ts       - Settings UI (largest file ~1,350 lines)
-  collectors.ts     - Data collection from browsers and Claude sessions
-  sanitize.ts       - Secret scrubbing (API keys, tokens, credentials)
-  sensitivity.ts    - 419-domain privacy filter with 11 categories
-  categorize.ts     - Rule-based domain → category mapping
-  browser-profiles.ts - Cross-platform browser profile detection
-  classify.ts       - Optional local LLM event classification
-  patterns.ts       - Statistical pattern extraction (no LLM calls)
-  knowledge.ts      - Knowledge section generation from patterns
-  privacy.ts        - Consent modals and onboarding flow
-  summarize.ts      - AI prompt building and privacy tier routing
-  ai-client.ts      - Anthropic + local model provider abstraction
-  chunker.ts        - RAG chunking pipeline
-  embeddings.ts     - Vector embeddings and similarity search
-  renderer.ts       - Markdown note generation with frontmatter
-  merge.ts          - Safe content merging and timestamped backups
+  types.ts              All TypeScript interfaces and type definitions
+  plugin/
+    main.ts             Plugin entry point, commands, vault integration
+    privacy.ts          Consent modals and onboarding flow
+    log.ts              Logging utilities
+    pipeline-debug.ts   Debug output helpers
+  settings/
+    types.ts            Settings interface, defaults, constants
+    ui.ts               Settings tab UI (~1,000 lines)
+  collect/
+    browser.ts          Browser history collection via sql.js
+    browser-profiles.ts Cross-platform browser profile detection
+    claude.ts           Claude Code session reading
+    codex.ts            Codex CLI session reading
+    git.ts              Git commit history collection
+  filter/
+    sanitize.ts         Secret scrubbing (15+ regex patterns)
+    sensitivity.ts      419-domain privacy filter with 11 categories
+    categorize.ts       Rule-based domain → category mapping
+    classify.ts         Optional local LLM event classification
+  analyze/
+    patterns.ts         Statistical pattern extraction (no LLM calls)
+    knowledge.ts        Knowledge section generation from patterns
+  summarize/
+    summarize.ts        AI prompt building and privacy tier routing
+    prompt-templates.ts Prompt templates loaded from .txt files
+    ai-client.ts        Anthropic + local model provider abstraction
+    compress.ts         Token-budget-aware activity compression
+    chunker.ts          RAG chunking pipeline
+    embeddings.ts       Vector embeddings and similarity search
+  render/
+    renderer.ts         Markdown note generation with frontmatter
+    merge.ts            Safe content merging and timestamped backups
 tests/
-  unit/             - Unit tests (sanitize, categorize, classify, patterns, etc.)
-  integration/      - Full pipeline, privacy escalation, merge safety tests
-  eval/             - LLM-as-judge evaluation tests (require API key or local model)
-  fixtures/         - Test data generators, personas, scenarios
-  mocks/obsidian.ts - Obsidian API mock
+  unit/                 Unit tests mirroring src/ layout
+  integration/          Full pipeline, privacy escalation, merge safety tests
+  eval/                 LLM-as-judge evaluation tests (require API key or local model)
+  fixtures/             Test data generators, personas, scenarios
+  mocks/obsidian.ts     Obsidian API mock
 ```
 
 ## Development Commands
@@ -79,17 +94,18 @@ npm run deploy:dev     # Quick deploy without full rebuild
 - Error handling: try/catch with graceful degradation, never crash the plugin
 - Template strings for multi-line content generation
 
-## Architecture: 9-Stage Processing Pipeline
+## Architecture: 10-Stage Processing Pipeline
 
-1. **Collection** — Read from browser SQLite, Claude JSONL logs, Codex CLI JSONL logs
+1. **Collection** — Read from browser SQLite, Claude JSONL, Codex CLI JSONL, git log
 2. **Sanitization** — Scrub secrets (15+ regex patterns for API keys, tokens, JWTs, etc.)
 3. **Sensitivity Filtering** — Remove/redact visits to private domains (419 built-in + custom)
 4. **Categorization** — Rule-based domain grouping (10 categories)
 5. **Classification** — Optional local LLM structuring (activity types, intents, topics)
 6. **Pattern Extraction** — Statistical analysis: temporal clusters, co-occurrence, focus score
-7. **Summarization** — AI generation via local or cloud provider with privacy tier routing
-8. **Rendering** — Markdown generation with frontmatter, Dataview fields, structured sections
-9. **Merge** — Safe regeneration preserving user-authored content with backups
+7. **Knowledge** — Convert patterns into human-readable text sections
+8. **Summarization** — AI prompt building and privacy tier routing, then LLM call
+9. **Rendering** — Markdown generation with frontmatter, Dataview fields, structured sections
+10. **Merge** — Safe regeneration preserving user-authored content with backups
 
 ## Privacy Architecture (Critical)
 

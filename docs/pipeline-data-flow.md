@@ -8,7 +8,7 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ╔══════════════════════════════════════════════════════════════════╗
 ║  SOURCES                                                         ║
 ║  Browser SQLite ─┐                                               ║
-║  Claude JSONL   ─┤  collectors.ts                                ║
+║  Claude JSONL   ─┤  collect/*.ts                                 ║
 ║  Codex JSONL    ─┤  collectBrowserHistory()                      ║
 ║  Git log        ─┘  readClaudeSessions() / readCodexSessions()   ║
 ╚══════════╤═══════════════════════════════════════════════════════╝
@@ -74,10 +74,12 @@ End-to-end data flow from raw collection through Obsidian note rendering.
 ╔══════════════════════════════════════════════════════════╗│
 ║  STAGE 7 — prompt                    summarize.ts        ║│
 ║  Tier 1: standard — full sanitized data                  ║│
-║  Tier 2: compressed — token-limited                      ║│
-║  Tier 3: rag — top-K embedded chunks only                ║│
-║  Tier 4: classified — abstracted event types             ║│
-║  Tier 5: deidentified — stats only, no raw data          ║│
+║  Tier 2: compressed — token-budget-proportional          ║│
+║  RAG: top-K embedded chunks only (opt-in, not part of    ║│
+║       escalation chain)                                  ║│
+║  Tier 3: classified — abstracted event types only        ║│
+║  Tier 4: deidentified — aggregated statistics only,      ║│
+║          no per-event data                               ║│
 ║                                                          ║│
 ║  prompts/*.txt templates + fillTemplate()                ║│
 ╚══════════╤═══════════════════════════════════════════════╝│

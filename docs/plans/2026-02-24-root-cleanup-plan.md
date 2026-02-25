@@ -1,7 +1,8 @@
 # Root Directory Cleanup Plan
 
+> **Status:** Completed. Implementation merged to main.
+
 **Date:** 2026-02-24
-**Status:** Ready to execute
 **Goal:** Reduce top-level clutter — 40 items → ~25 — by moving loose scripts, test infrastructure, and documentation into their natural homes.
 
 ---
