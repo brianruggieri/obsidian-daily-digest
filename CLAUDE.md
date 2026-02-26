@@ -14,7 +14,7 @@ Daily Digest is an Obsidian desktop plugin that compiles browser history, search
 ## Tech Stack
 
 - TypeScript (strict mode) targeting ES6
-- Obsidian Plugin API (1.12.2), minimum app version 1.11.0
+- Obsidian Plugin API (1.12.2), minimum app version 1.11.4
 - esbuild for bundling (CommonJS output)
 - sql.js (WASM) for reading browser SQLite databases — no native binaries
 - Vitest for testing, ESLint for linting

@@ -10,7 +10,7 @@ One command. One note. A complete picture of what you did today.
 
 ## Why this exists
 
-I kept forgetting what I worked on. Not the big stuff — the small stuff. The Stack Overflow rabbit hole at 2pm. The three search queries that led me to change my entire auth approach. The terminal command I ran that fixed the production bug.
+I kept forgetting what I worked on. Not the big stuff — the small stuff. The Stack Overflow rabbit hole at 2pm. The three search queries that led me to rethink my entire auth approach. The Claude conversation where I figured out the fix. The git commits I couldn't remember making by Friday.
 
 Daily Digest captures all of that and turns it into something you can actually read tomorrow, next week, or six months from now.
 
@@ -362,11 +362,11 @@ npm run deploy:dev       # Quick deploy without full rebuild
 
 ### Testing
 
-The test suite includes 350+ test cases:
+The test suite includes 649 test cases:
 
-- **Unit tests** — sanitization, categorization, classification, pattern extraction, knowledge generation, rendering, summarization, merge safety
-- **Integration tests** — full pipeline runs with 6 realistic personas, privacy escalation chain verification, multi-day topic recurrence
-- **AI evaluation tests** — LLM-as-judge framework for summary quality, privacy auditing, knowledge value, and prompt injection resistance
+- **Unit tests** — sanitization, categorization, classification, pattern extraction, knowledge generation, rendering, summarization, merge safety, browser profiles, secret storage, prompt templates, presets
+- **Integration tests** — full pipeline runs with 6 realistic personas, privacy escalation chain verification, merge safety, multi-day topic recurrence, matrix validation
+- **AI evaluation tests** — LLM-as-judge framework for summary quality, privacy auditing, knowledge value, prompt injection resistance, and fixture validation
 
 To run AI eval tests, copy `.env.example` to `.env` and configure your provider:
 
@@ -487,7 +487,7 @@ What matters is that you understand the code you're submitting and can explain y
 
 This project was developed extensively with AI coding tools, primarily [Claude Code](https://docs.anthropic.com/en/docs/claude-code). AI assisted with implementation, testing, and documentation across the codebase.
 
-All code is human-reviewed, tested (350+ test cases), and maintained by [Brian Ruggieri](https://github.com/brianruggieri). The architecture, product decisions, and quality standards are mine — the AI accelerated getting there.
+All code is human-reviewed, tested (649 test cases), and maintained by [Brian Ruggieri](https://github.com/brianruggieri). The architecture, product decisions, and quality standards are mine — the AI accelerated getting there.
 
 ---
 
