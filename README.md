@@ -278,6 +278,33 @@ WHERE answer_what_token_storage_strategy_is_safest_for_our_spa
 
 Frontmatter includes `focus_score`, `themes`, `categories`, and `tags` for powerful cross-day queries.
 
+### Matrix Validation
+
+Before choosing your provider and privacy tier, **run the matrix validator** to see real-world cost/quality/privacy trade-offs:
+
+```bash
+npm run matrix:validate:phase1      # Free validation (Tier 4 only) — 2 minutes
+npm run matrix:validate:full        # Full matrix (all tiers) — 10 minutes, ~$0.04
+```
+
+This generates metrics for 4 real-world decision scenarios:
+
+| Scenario | Question | Decision |
+|----------|----------|----------|
+| **Cost-Benefit Analysis** | Should we use Claude instead of local LLM? | Recommend Claude or local based on quality gap vs. cost |
+| **Privacy Audit** | Do we comply with privacy requirements? | Pass/fail with leak detection per tier |
+| **Quality Regression** | Has quality dropped since last release? | Approve merge or block on quality loss |
+| **Persona Coverage** | Does each user type get appropriate quality? | Assess quality thresholds per persona segment |
+
+Reports are generated in multiple formats:
+- **JSON** — Machine-parseable for CI/CD automation
+- **Markdown** — Human-readable technical summary
+- **HTML** — Visual dashboard for stakeholders
+
+Use `npm run matrix:cost-analysis` for monthly/annual cost projections, and `npm run matrix:ci-gate` to block merges on privacy/quality failures.
+
+For details, see [Matrix Validation documentation](./docs/matrix-validation/README.md).
+
 ---
 
 ## Configuration
