@@ -3,20 +3,21 @@ Your job is to distill raw activity logs into useful, human-readable intelligenc
 
 Total events collected: {{totalEvents}}
 
-## Browser activity by category:
+<browser_activity>
 {{browserActivity}}
+</browser_activity>
 
-## Search queries:
+<search_queries>
 {{searches}}
+</search_queries>
 
-## Claude Code / AI prompts:
+<ai_sessions>
 {{claudePrompts}}
+</ai_sessions>
 
-## Shell commands (secrets redacted):
-{{shellCommands}}
-
-## Git commits:
+<git_commits>
 {{gitCommits}}
+</git_commits>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {

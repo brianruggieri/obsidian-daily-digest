@@ -1,13 +1,15 @@
 You are summarizing a person's digital activity for {{dateStr}}.
 Your job is to distill classified activity abstractions into useful, human-readable intelligence for a personal knowledge base.{{contextHint}}
 
-## Activity Overview
+<activity_overview>
 Total events: {{totalProcessed}} ({{llmClassified}} LLM-classified, {{ruleClassified}} rule-classified)
 All topics: {{allTopics}}
 All entities: {{allEntities}}
+</activity_overview>
 
-## Activity by Type
+<activity_by_type>
 {{activitySections}}
+</activity_by_type>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {

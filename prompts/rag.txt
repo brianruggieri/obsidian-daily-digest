@@ -3,7 +3,9 @@ Your job is to distill activity logs into useful, human-readable intelligence fo
 
 The following activity blocks were selected as the most relevant from today's data:
 
+<activity_blocks>
 {{chunkTexts}}
+</activity_blocks>
 
 Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 {
