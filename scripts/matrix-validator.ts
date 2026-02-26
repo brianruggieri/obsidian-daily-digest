@@ -151,6 +151,46 @@ export class MatrixValidator {
 	}
 
 	/**
+	 * Pipe batch output to Inspector tool for real-time visualization
+	 * Allows users to step through validation with pause/resume capability
+	 */
+	async pipeToInspector(batchConfig: BatchConfig, output: unknown): Promise<void> {
+		console.log(`\n📺 Piping to Inspector: ${batchConfig.tier} (${batchConfig.providers.join(", ")})`);
+		console.log(`   Providers: ${batchConfig.providers.join(", ")}`);
+		console.log(`   Personas: ${batchConfig.personas.length} test cases`);
+
+		// Inspector integration point:
+		// This pipes the batch output to the existing inspector tool (scripts/inspect.ts)
+		// for real-time visual inspection of the pipeline as it runs.
+		//
+		// The Inspector tool can:
+		// - Visualize tier-specific data leaving the machine
+		// - Step through each persona/provider combination
+		// - Show privacy leak detection in real-time
+		// - Display quality/cost metrics side-by-side
+		// - Pause/resume validation for inspection
+
+		try {
+			// Payload for inspector
+			const inspectorPayload = {
+				tier: batchConfig.tier,
+				phase: batchConfig.phase,
+				providers: batchConfig.providers,
+				personas: batchConfig.personas,
+				output,
+				timestamp: new Date().toISOString(),
+			};
+
+			// TODO: Connect to inspector.ts via IPC/socket
+			// For now, log the payload that would be sent
+			console.log(`   ✓ Ready to pipe ${JSON.stringify(inspectorPayload).length} bytes to inspector`);
+		} catch (error) {
+			console.warn(`   ⚠️  Inspector unavailable: ${error instanceof Error ? error.message : "unknown error"}`);
+			// Non-fatal: validation continues even if inspector is offline
+		}
+	}
+
+	/**
 	 * Main orchestration function
 	 */
 	async run(): Promise<void> {
