@@ -81,6 +81,7 @@ export async function callLocal(
 		max_tokens: maxTokens,
 		temperature: 0.3,
 		messages,
+		response_format: { type: "json_object" },
 	});
 
 	try {

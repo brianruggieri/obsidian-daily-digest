@@ -58,7 +58,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	profile: "",
 	aiProvider: "none",
 	localEndpoint: "http://localhost:11434",
-	localModel: "llama3.2",
+	localModel: "qwen2.5:14b-instruct",
 	aiModel: "claude-haiku-4-5-20251001",
 
 	// Advanced AI
@@ -66,7 +66,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	embeddingModel: "nomic-embed-text",
 	ragTopK: 8,
 	enableClassification: false,
-	classificationModel: "llama3.2",
+	classificationModel: "qwen2.5:7b-instruct",
 	classificationBatchSize: 8,
 	enablePatterns: true,
 	patternCooccurrenceWindow: 30,
