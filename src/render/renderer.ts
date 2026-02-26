@@ -181,6 +181,10 @@ export function renderMarkdown(
 			lines.push(`**Themes:** ${chips}`);
 			lines.push("");
 		}
+		if (aiSummary.work_story) {
+			lines.push(escapeForMarkdown(aiSummary.work_story));
+			lines.push("");
+		}
 		lines.push("---");
 		lines.push("");
 
@@ -469,6 +473,36 @@ export function renderMarkdown(
 	// sections — so readers encounter evidence before synthesized conclusions.
 	if (knowledge && !aiSummary) {
 		renderKnowledgeInsights(lines, knowledge);
+	}
+
+	// ── Learnings ────────────────────────────────
+	if (aiSummary?.learnings?.length) {
+		lines.push("## \u{1F4DA} Learnings");
+		lines.push("");
+		for (const item of aiSummary.learnings) {
+			lines.push(`- ${escapeForMarkdown(item)}`);
+		}
+		lines.push("");
+	}
+
+	// ── Remember ─────────────────────────────────
+	if (aiSummary?.remember?.length) {
+		lines.push("## \u{1F5D2}\uFE0F Remember");
+		lines.push("");
+		for (const item of aiSummary.remember) {
+			lines.push(`- ${escapeForMarkdown(item)}`);
+		}
+		lines.push("");
+	}
+
+	// ── Note Seeds ───────────────────────────────
+	if (aiSummary?.note_seeds?.length) {
+		lines.push("## \u{1F331} Note Seeds");
+		lines.push("");
+		for (const seed of aiSummary.note_seeds) {
+			lines.push(`- [[${escapeForMarkdown(seed)}]]`);
+		}
+		lines.push("");
 	}
 
 	// ── Reflection ───────────────────────────────

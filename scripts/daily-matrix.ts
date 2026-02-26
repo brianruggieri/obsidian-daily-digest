@@ -208,7 +208,9 @@ async function runPreset(
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
-			model: settings.aiModel ?? "mock",
+			model: aiCallConfig.provider === "local"
+				? (aiCallConfig.localModel ?? "local")
+				: (aiCallConfig.anthropicModel ?? "mock"),
 			tokenCount: estimateTokens(resolution.prompt),
 			privacyTier: resolution.tier,
 			prompt: resolution.prompt,
@@ -235,7 +237,9 @@ async function runPreset(
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
-			model: aiCallConfig.anthropicModel ?? aiCallConfig.localModel,
+			model: aiCallConfig.provider === "local"
+				? (aiCallConfig.localModel ?? "local")
+				: (aiCallConfig.anthropicModel ?? "unknown"),
 			tokenCount: estimateTokens(previewResolution.prompt),
 			privacyTier: previewResolution.tier,
 			prompt: previewResolution.prompt,
