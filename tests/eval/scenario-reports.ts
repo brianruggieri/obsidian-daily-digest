@@ -4,6 +4,15 @@
  * Generates specialized reports for real-world decision scenarios
  */
 
+export interface ScenarioResult {
+  provider: string;
+  tier: string;
+  persona: string;
+  quality: number;
+  cost: number;
+  privacy: { compliant: boolean; leaks: number };
+}
+
 export interface ScenarioReport {
   scenario: string;
   decision: string;
@@ -18,7 +27,7 @@ export class ScenarioReporter {
    * Scenario 1: Cost-Benefit Analysis
    * "Should we use Claude instead of local LLM?"
    */
-  generateCostBenefitReport(results: any[]): ScenarioReport {
+  generateCostBenefitReport(results: ScenarioResult[]): ScenarioReport {
     const local = results.find(r => r.provider === "local");
     const claude = results.find(r => r.provider === "anthropic");
 
@@ -26,14 +35,15 @@ export class ScenarioReporter {
       throw new Error("Cost-benefit requires local and claude results");
     }
 
-    const qualityGain = ((claude.quality - local.quality) * 100).toFixed(1);
+    const qualityGainNum = (claude.quality - local.quality) * 100;
+    const qualityGain = qualityGainNum.toFixed(1);
     const costDifference = (claude.cost - local.cost).toFixed(4);
     const costPerQualityPoint = (claude.cost / (claude.quality - local.quality)).toFixed(4);
 
     return {
       scenario: "cost-benefit-analysis",
-      decision: qualityGain > 10 ? "recommend-claude" : "local-sufficient",
-      recommendation: qualityGain > 10
+      decision: qualityGainNum > 10 ? "recommend-claude" : "local-sufficient",
+      recommendation: qualityGainNum > 10
         ? `Claude +${qualityGain}% quality for $${costDifference}/day — recommended for premium tier`
         : `Local LLM sufficient (+${qualityGain}% gap, $0 cost) — recommend for standard tier`,
       metrics: {
@@ -56,7 +66,7 @@ export class ScenarioReporter {
    * Scenario 2: Privacy Audit
    * "Do we comply with privacy requirements for each tier?"
    */
-  generatePrivacyAuditReport(results: any[]): ScenarioReport {
+  generatePrivacyAuditReport(results: ScenarioResult[]): ScenarioReport {
     const tier4 = results.find(r => r.tier === "tier-4-deidentified");
     const tier1 = results.find(r => r.tier === "tier-1-standard");
 
@@ -88,7 +98,7 @@ export class ScenarioReporter {
    * Scenario 3: Quality Regression Detection
    * "Has quality dropped since last release?"
    */
-  generateRegressionReport(currentResults: any[], previousResults?: any[]): ScenarioReport {
+  generateRegressionReport(currentResults: ScenarioResult[], previousResults?: ScenarioResult[]): ScenarioReport {
     const current = currentResults.find(r => r.provider === "anthropic");
 
     if (!current) {
@@ -135,22 +145,22 @@ export class ScenarioReporter {
    * Scenario 4: Persona-Specific Quality
    * "Does each user type get appropriate quality?"
    */
-  generatePersonaQualityReport(results: any[]): ScenarioReport {
-    const personas = {
+  generatePersonaQualityReport(results: ScenarioResult[]): ScenarioReport {
+    const personas: Record<string, ScenarioResult[]> = {
       engineer: results.filter(r => r.persona.includes("Engineer")),
       researcher: results.filter(r => r.persona.includes("Researcher")),
       pm: results.filter(r => r.persona.includes("Manager")),
       student: results.filter(r => r.persona.includes("Student")),
     };
 
-    const avgQuality = (results: any[]) =>
-      results.reduce((sum, r) => sum + (r.quality || 0), 0) / (results.length || 1);
+    const avgQuality = (items: ScenarioResult[]) =>
+      items.reduce((sum, r) => sum + (r.quality || 0), 0) / (items.length || 1);
 
     const metrics: Record<string, string> = {};
     let allMeet = true;
 
-    for (const [persona, results] of Object.entries(personas)) {
-      const avg = avgQuality(results as any[]);
+    for (const [persona, personaResults] of Object.entries(personas)) {
+      const avg = avgQuality(personaResults);
       const threshold = persona === "engineer" ? 0.85 : 0.75;
       metrics[`${persona} Quality`] = `${(avg * 100).toFixed(0)}% ${avg >= threshold ? "✓" : "✗"}`;
       if (avg < threshold) allMeet = false;

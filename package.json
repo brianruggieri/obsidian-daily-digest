@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-daily-digest",
 	"version": "1.0.0",
-	"description": "Compile browser history, search queries, shell commands, and Claude Code sessions into an AI-summarized Obsidian daily note.",
+	"description": "Compile browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits into an AI-summarized Obsidian daily note.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
