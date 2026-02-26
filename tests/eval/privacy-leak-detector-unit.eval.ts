@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PrivacyLeakDetector, LeakReport } from "./privacy-leak-detector";
+import { PrivacyLeakDetector } from "./privacy-leak-detector";
 
 describe("PrivacyLeakDetector", () => {
   it("detects URLs in tier-4 deidentified output", () => {
