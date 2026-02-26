@@ -6,6 +6,7 @@ import {
 	SanitizationLevel,
 	SanitizeConfig,
 } from "../types";
+import { stripAnsi } from "../render/escape";
 
 // ── Expanded Secret Patterns ─────────────────────────────
 // Supersedes the 5 patterns in categorize.ts with broader coverage.
@@ -300,6 +301,8 @@ function stripClaudeXmlArtifacts(text: string): string {
 	for (const pattern of CLAUDE_XML_ARTIFACTS) {
 		result = result.replace(pattern, "");
 	}
+	// Strip ANSI escape codes from terminal output (via centralized utility)
+	result = stripAnsi(result);
 	// Collapse multiple blank lines left by removal
 	return result.replace(/\n{3,}/g, "\n\n").trim();
 }

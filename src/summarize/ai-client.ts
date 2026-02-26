@@ -76,25 +76,34 @@ export async function callLocal(
 
 	messages.push({ role: "user", content: prompt });
 
-	const payload = JSON.stringify({
+	const basePayload = {
 		model,
 		max_tokens: maxTokens,
 		temperature: 0.3,
 		messages,
 		response_format: { type: "json_object" },
-	});
+	};
+
+	const headers = { "Content-Type": "application/json", Accept: "application/json" };
 
 	try {
 		// Use native fetch for localhost to avoid Obsidian requestUrl CORS issues
 		if (isLocalhost) {
-			const resp = await fetch(url, {
+			// Some local OpenAI-compatible servers reject `response_format` with 400.
+			// Try with it first; if the server returns 400, retry without it.
+			let resp = await fetch(url, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json",
-				},
-				body: payload,
+				headers,
+				body: JSON.stringify(basePayload),
 			});
+			if (!resp.ok && resp.status === 400) {
+				const { response_format: _rf, ...payloadWithoutFormat } = basePayload;
+				resp = await fetch(url, {
+					method: "POST",
+					headers,
+					body: JSON.stringify(payloadWithoutFormat),
+				});
+			}
 			if (!resp.ok) return `[AI summary unavailable: HTTP ${resp.status}]`;
 			const data = await resp.json();
 			const text = data?.choices?.[0]?.message?.content;
@@ -105,7 +114,7 @@ export async function callLocal(
 				url,
 				method: "POST",
 				contentType: "application/json",
-				body: payload,
+				body: JSON.stringify(basePayload),
 			});
 			if (response.status === 200) {
 				const data = response.json;
