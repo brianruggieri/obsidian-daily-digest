@@ -11,6 +11,7 @@ import {
 import { AIProvider } from "../settings/types";
 import { KnowledgeSections } from "../analyze/knowledge";
 import { formatDetailsBlock, type PromptLog } from "../../scripts/lib/prompt-logger";
+import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml } from "./escape";
 
 function formatTime(d: Date | null): string {
 	if (!d) return "";
@@ -64,7 +65,7 @@ export function renderMarkdown(
 	lines.push(`generated: ${formatDate(new Date())} ${formatTime(new Date())}`);
 	lines.push(`categories: [${catTags.join(", ")}]`);
 	if (aiSummary?.themes?.length) {
-		lines.push(`themes: [${aiSummary.themes.join(", ")}]`);
+		lines.push(`themes: [${aiSummary.themes.map((t) => escapeForYaml(t)).join(", ")}]`);
 	}
 	// Add prompt IDs to frontmatter for Dataview discoverability
 	const prompts = aiSummary?.prompts ?? [];
@@ -97,11 +98,11 @@ export function renderMarkdown(
 	// ── AI Headline & TL;DR ─────────────────────
 	if (aiSummary) {
 		if (aiSummary.headline) {
-			lines.push(`> [!tip] ${aiSummary.headline}`);
+			lines.push(`> [!tip] ${escapeForMarkdown(aiSummary.headline)}`);
 			lines.push("");
 		}
 		if (aiSummary.tldr) {
-			lines.push(`> [!abstract] ${aiSummary.tldr}`);
+			lines.push(`> [!abstract] ${escapeForMarkdown(aiSummary.tldr)}`);
 			lines.push("");
 		}
 		if (aiSummary.themes?.length) {
@@ -128,7 +129,7 @@ export function renderMarkdown(
 		lines.push("## \u2728 Notable");
 		lines.push("");
 		for (const item of aiSummary.notable) {
-			lines.push(`- ${item}`);
+			lines.push(`- ${escapeForMarkdown(item)}`);
 		}
 		lines.push("");
 	}
@@ -140,7 +141,7 @@ export function renderMarkdown(
 		lines.push("|---|---|");
 		for (const [cat, summary] of Object.entries(catSumsEarly)) {
 			const [_emoji, label] = CATEGORY_LABELS[cat] ?? ["\u{1F310}", cat];
-			lines.push(`| ${label} | ${summary} |`);
+			lines.push(`| ${escapeForTableCell(label)} | ${escapeForTableCell(summary)} |`);
 		}
 		lines.push("");
 	}
@@ -151,7 +152,7 @@ export function renderMarkdown(
 		lines.push("");
 		if (aiSummary.work_patterns?.length) {
 			for (const p of aiSummary.work_patterns) {
-				lines.push(`- ${p}`);
+				lines.push(`- ${escapeForMarkdown(p)}`);
 			}
 			lines.push("");
 		}
@@ -159,7 +160,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F517} Cross-Source Connections");
 			lines.push("");
 			for (const c of aiSummary.cross_source_connections) {
-				lines.push(`> [!note] ${c}`);
+				lines.push(`> [!note] ${escapeForMarkdown(c)}`);
 				lines.push("");
 			}
 		}
@@ -173,7 +174,7 @@ export function renderMarkdown(
 		lines.push("");
 
 		if (aiSummary.focus_narrative) {
-			lines.push(`> ${aiSummary.focus_narrative}`);
+			lines.push(`> ${escapeForMarkdown(aiSummary.focus_narrative)}`);
 			lines.push("");
 		}
 
@@ -181,7 +182,7 @@ export function renderMarkdown(
 			lines.push("### Insights");
 			lines.push("");
 			for (const insight of aiSummary.meta_insights) {
-				lines.push(`- ${insight}`);
+				lines.push(`- ${escapeForMarkdown(insight)}`);
 			}
 			lines.push("");
 		}
@@ -190,7 +191,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F50E} Unusual Signals");
 			lines.push("");
 			for (const signal of aiSummary.quirky_signals) {
-				lines.push(`- ${signal}`);
+				lines.push(`- ${escapeForMarkdown(signal)}`);
 			}
 			lines.push("");
 		}
@@ -205,7 +206,7 @@ export function renderMarkdown(
 		lines.push("");
 
 		// Focus summary
-		lines.push(`> ${knowledge.focusSummary}`);
+		lines.push(`> ${escapeForMarkdown(knowledge.focusSummary)}`);
 		lines.push("");
 
 		// Temporal clusters
@@ -213,7 +214,7 @@ export function renderMarkdown(
 			lines.push("### \u{23F0} Activity Clusters");
 			lines.push("");
 			for (const insight of knowledge.temporalInsights) {
-				lines.push(`- ${insight}`);
+				lines.push(`- ${escapeForMarkdown(insight)}`);
 			}
 			lines.push("");
 		}
@@ -223,7 +224,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F5FA}\u{FE0F} Topic Map");
 			lines.push("");
 			for (const line of knowledge.topicMap) {
-				lines.push(`- ${line}`);
+				lines.push(`- ${escapeForMarkdown(line)}`);
 			}
 			lines.push("");
 		}
@@ -233,7 +234,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F517} Entity Relations");
 			lines.push("");
 			for (const line of knowledge.entityGraph) {
-				lines.push(`- ${line}`);
+				lines.push(`- ${escapeForMarkdown(line)}`);
 			}
 			lines.push("");
 		}
@@ -243,7 +244,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F504} Recurrence Patterns");
 			lines.push("");
 			for (const note of knowledge.recurrenceNotes) {
-				lines.push(`- ${note}`);
+				lines.push(`- ${escapeForMarkdown(note)}`);
 			}
 			lines.push("");
 		}
@@ -253,7 +254,7 @@ export function renderMarkdown(
 			lines.push("### \u{1F4A1} Knowledge Delta");
 			lines.push("");
 			for (const line of knowledge.knowledgeDeltaLines) {
-				lines.push(`- ${line}`);
+				lines.push(`- ${escapeForMarkdown(line)}`);
 			}
 			lines.push("");
 		}
@@ -270,7 +271,7 @@ export function renderMarkdown(
 			const ts = formatTime(s.time);
 			const engine = s.engine.replace(".com", "");
 			const badge = engine ? `\`${engine}\`` : "";
-			lines.push(`- ${badge} **${s.query}**` + (ts ? ` \u2014 ${ts}` : ""));
+			lines.push(`- ${badge} **${escapeForMarkdown(s.query)}**` + (ts ? ` \u2014 ${ts}` : ""));
 		}
 		lines.push("");
 	}
@@ -282,7 +283,7 @@ export function renderMarkdown(
 		for (const e of claudeSessions) {
 			const ts = formatTime(e.time);
 			const project = e.project ? `\`${e.project}\`` : "";
-			const prompt = e.prompt.replace(/\n/g, " ").trim();
+			const prompt = escapeForMarkdown(e.prompt.replace(/\n/g, " ").trim());
 			lines.push(`- ${project} ${prompt}` + (ts ? ` \u2014 ${ts}` : ""));
 		}
 		lines.push("");
@@ -313,7 +314,8 @@ export function renderMarkdown(
 					const ts = formatTime(v.time);
 					let title = (v.title || "").trim() || v.url;
 					if (title.length > 75) title = title.slice(0, 75) + "\u2026";
-					lines.push(`  - [${title}](${v.url})` + (ts ? ` \u2014 ${ts}` : ""));
+					const safeUrl = v.url.replace(/\)/g, "%29");
+					lines.push(`  - [${escapeForLinkText(title)}](${safeUrl})` + (ts ? ` \u2014 ${ts}` : ""));
 				}
 			}
 			lines.push("");
@@ -341,7 +343,7 @@ export function renderMarkdown(
 				const stats = c.filesChanged > 0
 					? ` (+${c.insertions}/-${c.deletions})`
 					: "";
-				lines.push(`- \`${c.hash.slice(0, 7)}\` ${c.message}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
+				lines.push(`- \`${c.hash.slice(0, 7)}\` ${escapeForMarkdown(c.message)}${stats}` + (ts ? ` \u2014 ${ts}` : ""));
 			}
 			lines.push("");
 		}
@@ -352,7 +354,7 @@ export function renderMarkdown(
 		lines.push("## \u{1FA9E} Reflection");
 		lines.push("");
 		for (const p of prompts) {
-			lines.push(`### ${p.question}`);
+			lines.push(`### ${escapeForMarkdown(p.question)}`);
 			lines.push(`answer_${p.id}:: `);
 			lines.push("");
 		}
@@ -362,7 +364,7 @@ export function renderMarkdown(
 		lines.push("");
 		for (const q of aiSummary.questions) {
 			const id = slugifyQuestion(q);
-			lines.push(`### ${q}`);
+			lines.push(`### ${escapeForMarkdown(q)}`);
 			lines.push(`answer_${id}:: `);
 			lines.push("");
 		}

@@ -4,6 +4,19 @@ import { DailyDigestSettings } from "../settings/types";
 import { ClaudeSession } from "../types";
 import { expandHome } from "./browser-profiles";
 
+/**
+ * Patterns that identify Claude Code internal protocol messages rather than
+ * genuine user prompts. These are machine-generated wrappers for slash commands,
+ * local command output, and system caveats — they add noise to the daily note
+ * and contain XML-like tags that Obsidian renders as HTML.
+ */
+const PROTOCOL_TAG_RE = /^<(?:local-command-caveat|local-command-stdout|command-name|command-message|command-args)[>\s/]/;
+
+/** Returns true when the text is a Claude Code protocol/machine message. */
+function isProtocolMessage(text: string): boolean {
+	return PROTOCOL_TAG_RE.test(text.trim());
+}
+
 export function findJsonlFiles(dir: string): string[] {
 	const results: string[] = [];
 	if (!existsSync(dir)) return results;
@@ -83,7 +96,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 						}
 
 						text = text.trim();
-						if (text.length > 5) {
+						if (text.length > 5 && !isProtocolMessage(text)) {
 							entries.push({
 								prompt: text.length > 200 ? text.slice(0, 200) + "\u2026" : text,
 								time: dt || new Date(fileStat.mtimeMs),
