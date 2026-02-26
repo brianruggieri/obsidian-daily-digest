@@ -64,10 +64,10 @@ export function escapeForMarkdown(text: string): string {
 
 /**
  * Escape text for use inside a markdown link title: `[title](url)`.
- * Handles everything in escapeForMarkdown plus `]` which breaks link syntax.
+ * Handles everything in escapeForMarkdown plus `[` and `]` which break link syntax.
  */
 export function escapeForLinkText(text: string): string {
-	return escapeForMarkdown(text).replace(/\]/g, "\\]");
+	return escapeForMarkdown(text).replace(/[[\]]/g, "\\$&");
 }
 
 /**
@@ -84,7 +84,7 @@ export function escapeForTableCell(text: string): string {
  */
 export function escapeForYaml(value: string): string {
 	// Characters that require quoting in YAML values
-	if (/[:{}[\]#&*!|>'"%@`,?]/.test(value) || value.includes("---")) {
+	if (/[:{}[\]#&*!|>'"%@`,?]/.test(value) || value.includes("---") || /[\r\n]/.test(value)) {
 		// Escape internal double quotes, then wrap
 		return `"${value.replace(/"/g, '\\"')}"`;
 	}

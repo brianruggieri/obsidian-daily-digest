@@ -6,6 +6,7 @@ import {
 	SanitizationLevel,
 	SanitizeConfig,
 } from "../types";
+import { stripAnsi } from "../render/escape";
 
 // ── Expanded Secret Patterns ─────────────────────────────
 // Supersedes the 5 patterns in categorize.ts with broader coverage.
@@ -295,20 +296,13 @@ const CLAUDE_XML_ARTIFACTS: RegExp[] = [
 	/<turn_aborted\s*\/?>/g,       // turn abort markers (open or self-closing)
 ];
 
-/**
- * Strip ANSI terminal escape codes (bold, color, cursor movement, etc.)
- * that leak into Claude/Codex session JSONL from terminal tool output.
- */
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1B(?:\[[0-9;]*[A-Za-z]|\][^\x07\x1B]*(?:\x07|\x1B\\)|\([A-B0-2]|[>=N~])/g;
-
 function stripClaudeXmlArtifacts(text: string): string {
 	let result = text;
 	for (const pattern of CLAUDE_XML_ARTIFACTS) {
 		result = result.replace(pattern, "");
 	}
-	// Strip ANSI escape codes from terminal output
-	result = result.replace(ANSI_RE, "");
+	// Strip ANSI escape codes from terminal output (via centralized utility)
+	result = stripAnsi(result);
 	// Collapse multiple blank lines left by removal
 	return result.replace(/\n{3,}/g, "\n\n").trim();
 }

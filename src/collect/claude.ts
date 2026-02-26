@@ -5,12 +5,20 @@ import { ClaudeSession } from "../types";
 import { expandHome } from "./browser-profiles";
 
 /**
- * Patterns that identify Claude Code internal protocol messages rather than
- * genuine user prompts. These are machine-generated wrappers for slash commands,
- * local command output, and system caveats — they add noise to the daily note
- * and contain XML-like tags that Obsidian renders as HTML.
+ * Matches Claude Code internal protocol messages — machine-generated wrappers
+ * for slash commands, local command output, task system events, and system
+ * caveats. These are not user prompts; they add noise to the daily note and
+ * contain XML-like tags that Obsidian renders as HTML.
+ *
+ * Covered tag families:
+ *   - local-command-{caveat,stdout,stdin,stderr}: shell command I/O wrappers
+ *   - command-{name,message,args}: slash command metadata
+ *   - task-{notification,id,result}: internal task scheduling events
+ *   - tool-{use-id,result}: tool call plumbing messages
+ *   - antml:*: Anthropic tool markup namespace tags
  */
-const PROTOCOL_TAG_RE = /^<(?:local-command-caveat|local-command-stdout|command-name|command-message|command-args)[>\s/]/;
+const PROTOCOL_TAG_RE =
+	/^<(?:local-command-(?:caveat|stdout|stdin|stderr)|command-(?:name|message|args)|task-(?:notification|id|result)|tool-(?:use-id|result)|antml:[a-z_-]+)[>\s/]/;
 
 /** Returns true when the text is a Claude Code protocol/machine message. */
 function isProtocolMessage(text: string): boolean {

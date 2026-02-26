@@ -72,7 +72,11 @@ describe("escapeForMarkdown", () => {
 
 describe("escapeForLinkText", () => {
 	it("escapes ] in link text", () => {
-		expect(escapeForLinkText("[2024] Best Practices")).toBe("[2024\\] Best Practices");
+		expect(escapeForLinkText("Best Practices]")).toBe("Best Practices\\]");
+	});
+
+	it("escapes [ in link text", () => {
+		expect(escapeForLinkText("[2024] Best Practices")).toBe("\\[2024\\] Best Practices");
 	});
 
 	it("also escapes HTML in link text", () => {
@@ -113,5 +117,9 @@ describe("escapeForYaml", () => {
 
 	it("quotes values containing ---", () => {
 		expect(escapeForYaml("a---b")).toBe('"a---b"');
+	});
+
+	it("quotes values containing newlines", () => {
+		expect(escapeForYaml("line1\nline2")).toBe('"line1\nline2"');
 	});
 });
