@@ -225,8 +225,9 @@ export class PrivacyLeakDetector {
 	 * Generally permissive - mainly ensures no unfiltered full prompts.
 	 */
 	private validateTier2(_output: string, _report: LeakReport): void {
-		// Tier 2 is relatively permissive - allows RAG chunks
-		// Main concerns already covered by secret detection
+		// Tier 2 is relatively permissive - allows RAG chunks.
+		// No additional validation needed beyond secret detection which is already
+		// handled in the main validate() method via detectSecrets().
 	}
 
 	// ── Tier 1 Validation ────────────────────────────────────
@@ -237,7 +238,8 @@ export class PrivacyLeakDetector {
 	 * Already covered by secret detection above.
 	 */
 	private validateTier1(_output: string, _report: LeakReport): void {
-		// Tier 1 is the most permissive - only secrets are forbidden
-		// Already covered by detectSecrets()
+		// Tier 1 is the most permissive - only secrets are forbidden.
+		// Tier 1 validation relies solely on secret detection, which is already
+		// handled in the main validate() method via detectSecrets().
 	}
 }
