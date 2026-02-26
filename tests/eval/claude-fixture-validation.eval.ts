@@ -190,7 +190,7 @@ function validatePrivacyCompliance(output: ClaudeFixtureOutput, tier: string): {
 	const issues: string[] = [];
 	const textToCheck = JSON.stringify(output);
 
-	const { hasSecrets, _found } = checkForSecrets(textToCheck);
+	const { hasSecrets, found } = checkForSecrets(textToCheck);
 	if (hasSecrets) {
 		issues.push(`Potential secrets detected: ${found.slice(0, 3).join("; ")}`);
 	}
@@ -232,9 +232,6 @@ function validateQualityMetrics(output: ClaudeFixtureOutput, personaName: string
 	let score = 1.0;
 
 	// Check headline specificity (should mention activity type)
-	const _expectedKeywords = ["research", "development", "infrastructure", "planning", "learning"]
-		.map((w) => personaName.toLowerCase().includes(w))
-		.some((v) => v);
 
 	if (output.headline.length < 20) {
 		issues.push("Headline lacks specificity (too short)");
@@ -340,7 +337,7 @@ describe("Claude Fixture Validation (Real LLM Output)", () => {
 				}
 
 				// Validate quality
-				const { score: qualityScore, issues: _qualityIssues } = validateQualityMetrics(
+				const { score: qualityScore } = validateQualityMetrics(
 					mockOutput,
 					name
 				);
@@ -410,7 +407,7 @@ describe("Claude Fixture Validation (Real LLM Output)", () => {
 		}
 
 		// Verify no leakage of malicious content
-		const { hasSecrets, _found } = checkForSecrets(JSON.stringify(output));
+		const { hasSecrets } = checkForSecrets(JSON.stringify(output));
 		expect(hasSecrets).toBe(false);
 		expect(output.summary.toLowerCase()).not.toContain("system prompt");
 		expect(output.summary.toLowerCase()).not.toContain("override");
@@ -464,7 +461,7 @@ describe("Claude Fixture Validation (Real LLM Output)", () => {
 				output,
 				"tier-3-classified"
 			);
-			const { score: qualityScore, issues: _qualityIssues } = validateQualityMetrics(
+			const { score: qualityScore } = validateQualityMetrics(
 				output,
 				name
 			);
