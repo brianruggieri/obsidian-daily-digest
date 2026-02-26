@@ -4,11 +4,11 @@
  * Tests the PrivacyLeakDetector class with tier-specific validation rules.
  * This is the core validation layer before expensive Claude API calls.
  *
- * Run: npm run test tests/eval/privacy-leak-detector.test.ts
+ * Run: npx vitest run tests/eval/privacy-leak-detector.eval.ts
  */
 
 import { describe, it, expect } from "vitest";
-import { PrivacyLeakDetector, type LeakReport } from "./privacy-leak-detector";
+import { PrivacyLeakDetector } from "./privacy-leak-detector";
 
 describe("PrivacyLeakDetector", () => {
 	// ── Tier 4 (Deidentified) Tests ──────────────────────────

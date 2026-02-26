@@ -63,6 +63,20 @@ export class MatrixReporter {
 	}
 
 	/**
+	 * Escape HTML special characters to prevent injection
+	 */
+	private escapeHtml(text: string): string {
+		const map: { [key: string]: string } = {
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			'"': "&quot;",
+			"'": "&#x27;",
+		};
+		return text.replace(/[&<>"']/g, (char) => map[char]);
+	}
+
+	/**
 	 * Generate HTML report (visual dashboard)
 	 */
 	generateHTML(report: MatrixReport): string {
@@ -143,9 +157,9 @@ export class MatrixReporter {
     <div class="header">
       <h1>Matrix Validation Report</h1>
       <div class="meta">
-        <div><strong>Tier:</strong> ${report.tier}</div>
+        <div><strong>Tier:</strong> ${this.escapeHtml(report.tier)}</div>
         <div><strong>Phase:</strong> ${report.phase}</div>
-        <div><strong>Generated:</strong> ${report.generated}</div>
+        <div><strong>Generated:</strong> ${this.escapeHtml(report.generated)}</div>
       </div>
     </div>
     <div class="content">
@@ -174,12 +188,12 @@ export class MatrixReporter {
 
 		return `
             <tr>
-              <td><strong>${r.provider}</strong></td>
-              <td>${r.persona}</td>
+              <td><strong>${this.escapeHtml(r.provider)}</strong></td>
+              <td>${this.escapeHtml(r.persona)}</td>
               <td class="${privacyClass}">${privacyIcon}</td>
               <td>${quality}%</td>
               <td>${cost}</td>
-              <td><span class="${statusClass}">${statusText}</span></td>
+              <td><span class="${statusClass}">${this.escapeHtml(statusText)}</span></td>
             </tr>
           `;
 	})

@@ -13,6 +13,7 @@
 
 import { promises as fs } from "fs";
 import { join } from "path";
+import { pathToFileURL } from "url";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -114,8 +115,8 @@ export class MatrixValidator {
 			const result = await this.runBatch(config);
 			this.batchResults.push(result);
 
-			const status = result.passed ? "✅" : "⚠️ ";
-			console.log(`${status} ${tier}: ${result.passed ? "PASSED" : "PASSED WITH ISSUES"}`);
+			const status = result.passed ? "✅" : "❌";
+			console.log(`${status} ${tier}: ${result.passed ? "PASSED" : "FAILED WITH ISSUES"}`);
 			console.log(`   Cost: $${result.cost.toFixed(4)}, Duration: ${result.duration}ms`);
 
 			if (result.issues.length > 0) {
@@ -216,7 +217,8 @@ export class MatrixValidator {
 			console.log("✨ Validation complete!");
 		} catch (error) {
 			console.error("❌ Validation failed:", error instanceof Error ? error.message : String(error));
-			process.exit(1);
+			// Re-throw so callers (including tests) can handle the failure
+			throw error;
 		}
 	}
 
@@ -327,7 +329,8 @@ export class MatrixValidator {
 
 // ── Main Execution ────────────────────────────────────────────────────
 
-if (require.main === module) {
+// ESM-safe check: only run if this file is executed directly
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const resultsDir = join(process.cwd(), "results");
 	const validator = new MatrixValidator(resultsDir);
 	validator.run().catch((err) => {

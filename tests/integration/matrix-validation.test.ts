@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { MatrixValidator, BatchConfig, BatchResult } from "../../scripts/matrix-validator";
+import { MatrixValidator, BatchConfig } from "../../scripts/matrix-validator";
 
 /**
  * Integration tests for the Matrix Batch Validator orchestration layer.
@@ -33,9 +33,7 @@ afterEach(() => {
 describe("MatrixValidator", () => {
 	describe("Phase 1: Free Validation", () => {
 		it("runs Phase 1 validation without error", async () => {
-			expect(async () => {
-				await validator.validatePhase1();
-			}).not.toThrow();
+			await expect(validator.validatePhase1()).resolves.toBeDefined();
 		});
 
 		it("returns a boolean indicating pass/fail", async () => {
@@ -130,11 +128,11 @@ describe("MatrixValidator", () => {
 			await validator.validatePhase1();
 			await validator.generateReports();
 
-			// Check that results directory was created
+			// Check that results directory was created and contains report file
 			const resultsPath = join(tmpDir, "results");
-			const files = (await import("fs/promises")).readdir(resultsPath).catch(() => []);
-			// Should have at least created a directory
-			expect(resultsPath).toBeDefined();
+			const files = await (await import("fs/promises")).readdir(resultsPath).catch(() => []);
+			expect(files.length).toBeGreaterThan(0);
+			expect(files.some((f) => f.startsWith("matrix-validation-"))).toBe(true);
 		});
 
 		it("includes all batch results in the report", async () => {
@@ -159,9 +157,7 @@ describe("MatrixValidator", () => {
 
 	describe("Orchestration Flow", () => {
 		it("runs complete validation pipeline without error", async () => {
-			expect(async () => {
-				await validator.run();
-			}).not.toThrow();
+			await expect(validator.run()).resolves.toBeUndefined();
 		});
 
 		it("executes phases in correct order (Phase 1 → Phase 2 if passed)", async () => {
