@@ -286,12 +286,12 @@ export class ProviderComparator {
 			if (mockBaseline) {
 				const qualityImprovement = result.qualityScore - mockBaseline.qualityScore;
 				const qualityPercent = Math.round(qualityImprovement * 100);
-				const costPerDay = (result.metrics.estimatedCost * 365).toFixed(4);
+				const costPerYear = (result.metrics.estimatedCost * 365).toFixed(4);
 
 				if (qualityImprovement > 0) {
-					return `Best choice (+${qualityPercent}% quality for $${costPerDay}/year)`;
+					return `Best choice (+${qualityPercent}% quality for $${costPerYear}/year)`;
 				} else {
-					return `Similar quality to mock at $${costPerDay}/year cost`;
+					return `Similar quality to mock at $${costPerYear}/year cost`;
 				}
 			}
 		}

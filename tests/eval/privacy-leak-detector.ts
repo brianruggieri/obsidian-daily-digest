@@ -128,10 +128,9 @@ export class PrivacyLeakDetector {
 			const matches = [...output.matchAll(pattern)];
 			for (const match of matches) {
 				const matchText = match[0];
-				// Skip test/fake data
+				// Skip clearly marked test/fake data
 				if (matchText.toLowerCase().includes("test") ||
-					matchText.toLowerCase().includes("fake") ||
-					matchText.includes("123")) {
+					matchText.toLowerCase().includes("fake")) {
 					continue;
 				}
 				report.secrets_found.push(`${label}: ${matchText.substring(0, 30)}...`);

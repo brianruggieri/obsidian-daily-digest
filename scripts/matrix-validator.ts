@@ -13,6 +13,7 @@
 
 import { promises as fs } from "fs";
 import { join } from "path";
+import { pathToFileURL } from "url";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -114,8 +115,8 @@ export class MatrixValidator {
 			const result = await this.runBatch(config);
 			this.batchResults.push(result);
 
-			const status = result.passed ? "✅" : "⚠️ ";
-			console.log(`${status} ${tier}: ${result.passed ? "PASSED" : "PASSED WITH ISSUES"}`);
+			const status = result.passed ? "✅" : "❌";
+			console.log(`${status} ${tier}: ${result.passed ? "PASSED" : "FAILED WITH ISSUES"}`);
 			console.log(`   Cost: $${result.cost.toFixed(4)}, Duration: ${result.duration}ms`);
 
 			if (result.issues.length > 0) {
@@ -151,6 +152,46 @@ export class MatrixValidator {
 	}
 
 	/**
+	 * Pipe batch output to Inspector tool for real-time visualization
+	 * Allows users to step through validation with pause/resume capability
+	 */
+	async pipeToInspector(batchConfig: BatchConfig, output: unknown): Promise<void> {
+		console.log(`\n📺 Piping to Inspector: ${batchConfig.tier} (${batchConfig.providers.join(", ")})`);
+		console.log(`   Providers: ${batchConfig.providers.join(", ")}`);
+		console.log(`   Personas: ${batchConfig.personas.length} test cases`);
+
+		// Inspector integration point:
+		// This pipes the batch output to the existing inspector tool (scripts/inspect.ts)
+		// for real-time visual inspection of the pipeline as it runs.
+		//
+		// The Inspector tool can:
+		// - Visualize tier-specific data leaving the machine
+		// - Step through each persona/provider combination
+		// - Show privacy leak detection in real-time
+		// - Display quality/cost metrics side-by-side
+		// - Pause/resume validation for inspection
+
+		try {
+			// Payload for inspector
+			const inspectorPayload = {
+				tier: batchConfig.tier,
+				phase: batchConfig.phase,
+				providers: batchConfig.providers,
+				personas: batchConfig.personas,
+				output,
+				timestamp: new Date().toISOString(),
+			};
+
+			// TODO: Connect to inspector.ts via IPC/socket
+			// For now, log the payload that would be sent
+			console.log(`   ✓ Ready to pipe ${JSON.stringify(inspectorPayload).length} bytes to inspector`);
+		} catch (error) {
+			console.warn(`   ⚠️  Inspector unavailable: ${error instanceof Error ? error.message : "unknown error"}`);
+			// Non-fatal: validation continues even if inspector is offline
+		}
+	}
+
+	/**
 	 * Main orchestration function
 	 */
 	async run(): Promise<void> {
@@ -176,7 +217,8 @@ export class MatrixValidator {
 			console.log("✨ Validation complete!");
 		} catch (error) {
 			console.error("❌ Validation failed:", error instanceof Error ? error.message : String(error));
-			process.exit(1);
+			// Re-throw so callers (including tests) can handle the failure
+			throw error;
 		}
 	}
 
@@ -287,7 +329,8 @@ export class MatrixValidator {
 
 // ── Main Execution ────────────────────────────────────────────────────
 
-if (require.main === module) {
+// ESM-safe check: only run if this file is executed directly
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const resultsDir = join(process.cwd(), "results");
 	const validator = new MatrixValidator(resultsDir);
 	validator.run().catch((err) => {

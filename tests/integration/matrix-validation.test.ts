@@ -33,9 +33,7 @@ afterEach(() => {
 describe("MatrixValidator", () => {
 	describe("Phase 1: Free Validation", () => {
 		it("runs Phase 1 validation without error", async () => {
-			expect(async () => {
-				await validator.validatePhase1();
-			}).not.toThrow();
+			await expect(validator.validatePhase1()).resolves.toBeDefined();
 		});
 
 		it("returns a boolean indicating pass/fail", async () => {
@@ -130,10 +128,11 @@ describe("MatrixValidator", () => {
 			await validator.validatePhase1();
 			await validator.generateReports();
 
-			// Check that results directory was created
+			// Check that results directory was created and contains report file
 			const resultsPath = join(tmpDir, "results");
-			// Should have at least created a directory
-			expect(resultsPath).toBeDefined();
+			const files = await (await import("fs/promises")).readdir(resultsPath).catch(() => []);
+			expect(files.length).toBeGreaterThan(0);
+			expect(files.some((f) => f.startsWith("matrix-validation-"))).toBe(true);
 		});
 
 		it("includes all batch results in the report", async () => {
@@ -158,9 +157,7 @@ describe("MatrixValidator", () => {
 
 	describe("Orchestration Flow", () => {
 		it("runs complete validation pipeline without error", async () => {
-			expect(async () => {
-				await validator.run();
-			}).not.toThrow();
+			await expect(validator.run()).resolves.toBeUndefined();
 		});
 
 		it("executes phases in correct order (Phase 1 → Phase 2 if passed)", async () => {
@@ -208,9 +205,9 @@ describe("MatrixValidator", () => {
 		});
 
 		it("creates valid Phase 2 config for each tier", () => {
-			const tiers = ["tier-4-deidentified", "tier-3-classified", "tier-2-rag", "tier-1-standard"];
+			const tiers = ["tier-4-deidentified", "tier-3-classified", "tier-2-rag", "tier-1-standard"] as const;
 			for (const tier of tiers) {
-				const config = validator.createPhase2ConfigForTier(tier as any);
+				const config = validator.createPhase2ConfigForTier(tier);
 				expect(config.phase).toBe(2);
 				expect(config.tier).toBe(tier);
 				expect(config.providers).toContain("mock");

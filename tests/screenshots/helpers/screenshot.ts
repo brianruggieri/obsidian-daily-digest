@@ -145,6 +145,7 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 		const leaf = app.workspace.activeLeaf;
 		if (!leaf?.view) return false;
 
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const file = (leaf.view as any).file;
 		if (!file) return false;
 
@@ -153,11 +154,13 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 		if (!cache?.headings) return false;
 
 		const heading = cache.headings.find(
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(h: any) => h.heading.includes(text)
 		);
 		if (!heading) return false;
 
 		// Use the preview renderer to scroll to the heading's line
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const previewMode = (leaf.view as any).previewMode;
 		if (previewMode?.renderer?.applyScroll) {
 			previewMode.renderer.applyScroll(heading.position.start.line);

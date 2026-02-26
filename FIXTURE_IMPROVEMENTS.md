@@ -24,10 +24,10 @@ This document captures fixture enhancements made to align with real user data (F
 - Focus range: 60-90%
 
 **After (aligned to real data):**
-- Browser visits: 62 ✅ (matches Brian's real 62)
-- Searches: 4 ✅ (matches Brian's real 4)
+- Browser visits: 62 ✅ (matches real-world developer patterns)
+- Searches: 4 ✅ (minimal external queries in focused work)
 - Claude sessions: 75 ✅ (realistic for AI-assisted development)
-- Git commits: 35 ✅ (matches Brian's real 33-37)
+- Git commits: 35 ✅ (matches typical daily commit range of 33-37)
 - Focus range: 2-8% ✅ (reflects scattered context switching)
 
 **Reasoning:**
@@ -250,4 +250,4 @@ Tests can reference old names (`fullStackDeveloper`, `researchKnowledgeWorker`) 
 ---
 
 Generated: 2026-02-25
-Based on real data analysis: Feb 11-25, 2026 (Brian's actual Obsidian usage)
+Based on real data analysis: Feb 11-25, 2026
