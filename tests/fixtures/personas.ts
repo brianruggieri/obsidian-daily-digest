@@ -85,7 +85,7 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 			timestamps: gitTs,
 		}),
 		expectedThemes: ["OAuth", "React", "authentication", "API design", "debugging", "code review"],
-		expectedActivityTypes: ["implementation", "debugging", "pair-programming"],
+		expectedActivityTypes: ["implementation", "debugging", "communication"],
 		expectedFocusRange: [0.02, 0.08],  // Real dev work is scattered across many contexts
 		narrative: "A software developer's day heavy on Claude Code usage. 75 Claude sessions for rubber-ducking, architecture questions, debugging help, and code reviews. Only 62 browser visits to GitHub PRs, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 35 git commits showing progressive implementation across multiple branches. Low focus score (2-8%) reflects context switching between multiple PRs, code reviews, and debugging sessions.",
 	};
@@ -138,7 +138,7 @@ export function academicResearcher(date?: Date): PersonaOutput {
 			timestamps: gitTs,
 		}),
 		expectedThemes: ["transformers", "attention mechanisms", "retrieval-augmented generation", "literature review", "knowledge synthesis"],
-		expectedActivityTypes: ["research", "reading", "linking"],
+		expectedActivityTypes: ["research", "browsing", "learning"],
 		expectedFocusRange: [0.65, 0.75],  // Sustained deep work on 2-3 topics
 		narrative: "A research scientist's day deep in the literature. Morning: arXiv and Semantic Scholar dives on transformer attention mechanisms. 18 searches tracking down key papers, citation networks, methodology refinements. Zotero library curated with tags and annotations. Overleaf synthesis notes capturing patterns and gaps. Heavy internal linking building knowledge graph connections (60+ links). Two brief Claude sessions for paper abstraction help. Zero interruptions or context switches — sustained focus on single research area. Focus score 65-75%.",
 	};
@@ -401,7 +401,7 @@ export function contentWriterLongForm(date?: Date): PersonaOutput {
 	const domains = [
 		...DOMAIN_SETS.research.slice(0, 2),  // Wikipedia, Medium for research
 		...DOMAIN_SETS.communication.slice(0, 1),  // Email
-		...DOMAIN_SETS.work_tools.slice(1, 2),  // Google Docs
+		...DOMAIN_SETS.work_tools.slice(3, 4),  // Google Docs
 	];
 
 	return {
@@ -432,7 +432,7 @@ export function contentWriterLongForm(date?: Date): PersonaOutput {
 			timestamps: gitTs,
 		}),
 		expectedThemes: ["long-form writing", "editorial voice", "narrative arc", "reader engagement", "publishing"],
-		expectedActivityTypes: ["writing", "editing", "planning"],
+		expectedActivityTypes: ["writing", "planning", "admin"],
 		expectedFocusRange: [0.75, 0.85],  // Very high focus — long uninterrupted blocks
 		narrative: "A content creator's deep writing day. Morning planning and outline in Notion. Then 4-hour uninterrupted writing block on a substantive topic (minimal external references). Editing and internal linking to previous blog posts to build narrative coherence. Brief Claude sessions for brainstorming angles and editing feedback. Minimal browsing (10 visits) — mostly research tabs open during writing. Highest focus score (75-85%) reflecting sustained deep work on single output.",
 	};
