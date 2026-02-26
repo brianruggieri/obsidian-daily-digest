@@ -119,9 +119,9 @@ export class PrivacyLeakDetector {
 			// IP addresses (including private ranges for detection)
 			[/\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g, "IP address"],
 			// Password assignments (password/passwd/pwd = "xxx")
-			[/\b(?:password|passwd|pwd)\s*=\s*["\']?[^"\'\s,;]+/gi, "Password assignment"],
+			[/\b(?:password|passwd|pwd)\s*=\s*["']?[^"'\s,;]+/gi, "Password assignment"],
 			// API key assignments (excluding test data)
-			[/\b(?:api_?key|apikey)\s*=\s*["\']?[^"\'\s,;]+/gi, "API key assignment"],
+			[/\b(?:api_?key|apikey)\s*=\s*["']?[^"'\s,;]+/gi, "API key assignment"],
 		];
 
 		for (const [pattern, label] of secretPatterns) {

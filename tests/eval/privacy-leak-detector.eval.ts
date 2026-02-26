@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { PrivacyLeakDetector, type LeakReport } from "./privacy-leak-detector";
+import { PrivacyLeakDetector } from "./privacy-leak-detector";
 
 describe("PrivacyLeakDetector", () => {
 	// ── Tier 4 (Deidentified) Tests ──────────────────────────

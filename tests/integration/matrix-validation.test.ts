@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { MatrixValidator, BatchConfig, BatchResult } from "../../scripts/matrix-validator";
+import { MatrixValidator, BatchConfig } from "../../scripts/matrix-validator";
 
 /**
  * Integration tests for the Matrix Batch Validator orchestration layer.
@@ -132,7 +132,6 @@ describe("MatrixValidator", () => {
 
 			// Check that results directory was created
 			const resultsPath = join(tmpDir, "results");
-			const files = (await import("fs/promises")).readdir(resultsPath).catch(() => []);
 			// Should have at least created a directory
 			expect(resultsPath).toBeDefined();
 		});

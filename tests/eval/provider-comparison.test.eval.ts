@@ -12,7 +12,6 @@ import {
 	ProviderComparator,
 	type ComparisonMetrics,
 	type ComparisonResult,
-	type ProviderType,
 } from "./provider-comparison";
 
 // ── Cost Calculation Tests ──────────────────────────────────────────────
