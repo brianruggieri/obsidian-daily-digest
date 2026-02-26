@@ -54,6 +54,7 @@ import type { AICallConfig } from "../src/summarize/ai-client";
 const AI_MODE = (process.env.AI_MODE ?? "mock") as "real" | "mock";
 const DATA_MODE = (process.env.DATA_MODE ?? "fixtures") as "real" | "fixtures";
 const PRESET_FILTER = process.env.PRESET ?? "all";
+const GROUP_FILTER = process.env.GROUP ?? "";  // "no-ai", "local", "cloud", or "" for all
 const DATE_STR = process.env.DATE ?? new Date().toISOString().slice(0, 10);
 const ASSERT = process.env.MATRIX_ASSERT === "true";
 
@@ -308,13 +309,17 @@ async function main(): Promise<void> {
 	console.log(`  AI mode:   ${AI_MODE}`);
 	console.log(`  Data mode: ${DATA_MODE}`);
 	console.log(`  Preset:    ${PRESET_FILTER}`);
+	console.log(`  Group:     ${GROUP_FILTER || "all"}`);
 	console.log(`  Output:    ${outputDir}`);
 	console.log(`  Assert:    ${ASSERT}`);
 
-	// Filter presets
-	const presetsToRun = PRESET_FILTER === "all"
+	// Filter presets by ID, then by privacy group
+	let presetsToRun = PRESET_FILTER === "all"
 		? PRESETS
 		: PRESETS.filter((p) => p.id === PRESET_FILTER);
+	if (GROUP_FILTER) {
+		presetsToRun = presetsToRun.filter((p) => p.privacyGroup === GROUP_FILTER);
+	}
 
 	if (presetsToRun.length === 0) {
 		console.error(`No presets matched: "${PRESET_FILTER}"`);

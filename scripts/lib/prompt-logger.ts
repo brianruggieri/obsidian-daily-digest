@@ -22,15 +22,15 @@ export function estimateTokens(text: string): number {
 
 export function formatDetailsBlock(entry: PromptLogEntry): string {
   const tierLabel = entry.privacyTier ? ` · Tier ${entry.privacyTier}` : "";
-  const summary = `Prompt sent to ${entry.model} · ${entry.tokenCount} tokens${tierLabel}`;
+  const title = `Prompt sent to ${entry.model} · ${entry.tokenCount} tokens${tierLabel}`;
+  const quotedPrompt = entry.prompt
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
   return [
-    "<details>",
-    `<summary>${summary}</summary>`,
-    "",
-    "```",
-    entry.prompt,
-    "```",
-    "",
-    "</details>",
+    `> [!example]- ${title}`,
+    "> ```",
+    quotedPrompt,
+    "> ```",
   ].join("\n");
 }

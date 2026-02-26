@@ -4,6 +4,27 @@ import { DailyDigestSettings } from "../settings/types";
 import { ClaudeSession } from "../types";
 import { expandHome } from "./browser-profiles";
 
+/**
+ * Matches Claude Code internal protocol messages — machine-generated wrappers
+ * for slash commands, local command output, task system events, and system
+ * caveats. These are not user prompts; they add noise to the daily note and
+ * contain XML-like tags that Obsidian renders as HTML.
+ *
+ * Covered tag families:
+ *   - local-command-{caveat,stdout,stdin,stderr}: shell command I/O wrappers
+ *   - command-{name,message,args}: slash command metadata
+ *   - task-{notification,id,result}: internal task scheduling events
+ *   - tool-{use-id,result}: tool call plumbing messages
+ *   - antml:*: Anthropic tool markup namespace tags
+ */
+const PROTOCOL_TAG_RE =
+	/^<(?:local-command-(?:caveat|stdout|stdin|stderr)|command-(?:name|message|args)|task-(?:notification|id|result)|tool-(?:use-id|result)|antml:[a-z_-]+)[>\s/]/;
+
+/** Returns true when the text is a Claude Code protocol/machine message. */
+function isProtocolMessage(text: string): boolean {
+	return PROTOCOL_TAG_RE.test(text.trim());
+}
+
 export function findJsonlFiles(dir: string): string[] {
 	const results: string[] = [];
 	if (!existsSync(dir)) return results;
@@ -83,7 +104,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 						}
 
 						text = text.trim();
-						if (text.length > 5) {
+						if (text.length > 5 && !isProtocolMessage(text)) {
 							entries.push({
 								prompt: text.length > 200 ? text.slice(0, 200) + "\u2026" : text,
 								time: dt || new Date(fileStat.mtimeMs),

@@ -20,7 +20,7 @@ describe("PromptLogger", () => {
     expect(log[0].stage).toBe("summarize");
   });
 
-  it("formats a details block with token count and model in summary line", () => {
+  it("formats a foldable callout with token count and model in title", () => {
     const log = createPromptLog();
     appendPromptEntry(log, {
       stage: "summarize",
@@ -30,12 +30,22 @@ describe("PromptLogger", () => {
       prompt: "Hello world",
     });
     const block = formatDetailsBlock(log[0]);
-    expect(block).toContain("<details>");
+    expect(block).toContain("> [!example]-");
     expect(block).toContain("claude-haiku-4-5-20251001");
     expect(block).toContain("842 tokens");
     expect(block).toContain("Tier 2");
-    expect(block).toContain("Hello world");
-    expect(block).toContain("</details>");
+    expect(block).toContain("> Hello world");
+    expect(block).toContain("> ```");
+  });
+
+  it("formats multi-line prompts with blockquote prefix on each line", () => {
+    const block = formatDetailsBlock({
+      stage: "summarize",
+      model: "test-model",
+      tokenCount: 100,
+      prompt: "Line one\nLine two\nLine three",
+    });
+    expect(block).toContain("> Line one\n> Line two\n> Line three");
   });
 
   it("estimateTokens returns ~1 token per 4 chars", () => {

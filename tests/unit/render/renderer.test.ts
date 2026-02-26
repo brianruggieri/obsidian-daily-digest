@@ -272,10 +272,10 @@ describe("prompt log injection", () => {
 			log  // new optional parameter
 		);
 
-		expect(md).toContain("<details>");
+		expect(md).toContain("> [!example]-");
 		expect(md).toContain("claude-haiku-4-5-20251001");
-		expect(md).toContain("Test prompt text");
-		expect(md).toContain("</details>");
+		expect(md).toContain("> Test prompt text");
+		expect(md).toContain("> ```");
 	});
 
 	it("renders cleanly with no promptLog (backwards compatible)", () => {

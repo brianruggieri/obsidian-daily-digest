@@ -553,12 +553,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				new Setting(containerEl)
 					.setName("Local model")
 					.setDesc(
-						"Model name to use (e.g. llama3.2, mistral, phi3). " +
+						"Model name to use (e.g. qwen2.5:14b-instruct, llama3.2). " +
 						"Click Detect to query your server for available models."
 					)
 					.addText((text) =>
 						text
-							.setPlaceholder("llama3.2")
+							.setPlaceholder("qwen2.5:14b-instruct")
 							.setValue(this.plugin.settings.localModel)
 							.onChange(async (value) => {
 								this.plugin.settings.localModel = value;
@@ -605,7 +605,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				}).parentElement!.createEl("code", { text: "brew install ollama" });
 				const li2 = ollamaSteps.createEl("li");
 				li2.createEl("span", { text: "Pull a model: " });
-				li2.createEl("code", { text: "ollama pull llama3.2" });
+				li2.createEl("code", { text: "ollama pull qwen2.5:7b-instruct" });
 				const li3 = ollamaSteps.createEl("li");
 				li3.createEl("span", { text: "Start server: " });
 				li3.createEl("code", { text: "ollama serve" });
@@ -616,9 +616,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				const ollamaNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
 				ollamaNote.createEl("p", {
 					text:
-						"Recommended models: llama3.2 (3B, fast), mistral (7B, balanced), " +
-						"phi3 (3.8B, good for summarization). Smaller models are faster " +
-						"but may produce less polished summaries.",
+						"Recommended: qwen2.5:7b-instruct (7B, best JSON output), " +
+						"qwen2.5:14b-instruct (14B, higher quality summaries). " +
+						"The Qwen2.5 family excels at structured JSON output. " +
+						"Smaller models are faster but may produce less polished summaries.",
 				});
 
 				// LM Studio section
@@ -824,8 +825,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.setName("Classification model")
 					.setDesc(
 						"Local model for event classification. Leave blank to use " +
-						"the same model as AI summarization. Smaller models (3B) " +
-						"work well for classification."
+						"the same model as AI summarization. " +
+						"Recommended: qwen2.5:7b-instruct (strong JSON output, lower resource use than 14B)."
 					)
 					.addText((text) =>
 						text
