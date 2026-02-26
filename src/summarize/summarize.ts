@@ -5,6 +5,8 @@ import { CompressedActivity } from "./compress";
 import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
+import { parseProseSections } from "./prose-parser";
+import { PromptStrategy } from "../settings/types";
 import * as log from "../plugin/log";
 
 // ── Prompt builder & summarizer ─────────────────────────
@@ -662,6 +664,112 @@ export function resolvePromptAndTier(
 	}
 }
 
+// ── Prose prompt builder ─────────────────────────────────
+// Builds a prose-format prompt that asks for heading-delimited markdown
+// instead of JSON. Uses the same activity data as the JSON prompts.
+
+function buildProsePrompt(
+	date: Date,
+	profile: string,
+	options: {
+		categorized?: CategorizedVisits;
+		searches?: SearchQuery[];
+		claudeSessions?: ClaudeSession[];
+		gitCommits?: GitCommit[];
+		compressed?: CompressedActivity;
+		classification?: ClassificationResult;
+		patterns?: PatternAnalysis;
+	},
+	promptsDir?: string
+): string {
+	const {
+		categorized, searches, claudeSessions, gitCommits,
+		compressed, classification, patterns,
+	} = options;
+
+	const dateStr = date.toLocaleDateString("en-US", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+	const contextHint = profile ? `\nContext about this person: ${profile}` : "";
+
+	// Assemble activity data from available layers (same layering as unified prompt)
+	const dataSections: string[] = [];
+
+	// Layer 1: Statistical patterns summary
+	if (patterns) {
+		const focusLabel = patterns.focusScore >= 0.7 ? "highly focused"
+			: patterns.focusScore >= 0.5 ? "moderately focused"
+			: patterns.focusScore >= 0.3 ? "varied"
+			: "widely scattered";
+		const activityDist = patterns.topActivityTypes
+			.map((a) => `  ${a.type}: ${a.count} events (${a.pct}%)`)
+			.join("\n");
+		const clusters = patterns.temporalClusters.slice(0, 6)
+			.map((c) => `  ${c.label} (${c.eventCount} events, ${c.intensity.toFixed(1)}/hr)`)
+			.join("\n");
+		dataSections.push(
+			`Focus: ${Math.round(patterns.focusScore * 100)}% (${focusLabel})` +
+			(activityDist ? `\nActivity distribution:\n${activityDist}` : "") +
+			(clusters ? `\nTemporal clusters:\n${clusters}` : "")
+		);
+	}
+
+	// Layer 2: Classified abstractions
+	if (classification && classification.events.length > 0) {
+		const byType: Record<string, StructuredEvent[]> = {};
+		for (const event of classification.events) {
+			if (!byType[event.activityType]) byType[event.activityType] = [];
+			byType[event.activityType].push(event);
+		}
+		const typeSections: string[] = [];
+		for (const [activityType, events] of Object.entries(byType)) {
+			const summaries = events.slice(0, 5).map((ev) => `  - ${ev.summary}`).join("\n");
+			typeSections.push(`${activityType} (${events.length}):\n${summaries}`);
+		}
+		dataSections.push(`Classified activity:\n${typeSections.join("\n")}`);
+	}
+
+	// Layer 3: Raw activity
+	if (compressed) {
+		dataSections.push(
+			`Browser activity:\n${compressed.browserText}\n` +
+			`Searches:\n${compressed.searchText}\n` +
+			`AI sessions:\n${compressed.claudeText}\n` +
+			`Git commits:\n${compressed.gitText}`
+		);
+	} else if (categorized || searches?.length || claudeSessions?.length || gitCommits?.length) {
+		const catLines: string[] = [];
+		if (categorized) {
+			for (const [cat, visits] of Object.entries(categorized)) {
+				const label = CATEGORY_LABELS[cat]?.[1] ?? cat;
+				const domains = [...new Set(visits.map((v) => v.domain || ""))].slice(0, 8);
+				catLines.push(`  [${label}] ${domains.join(", ")}`);
+			}
+		}
+		const searchList = (searches ?? []).slice(0, 20).map((s) => `  - ${s.query}`);
+		const claudeList = (claudeSessions ?? []).slice(0, 10).map((e) => `  - ${e.prompt.slice(0, 120)}`);
+		const gitList = (gitCommits ?? []).slice(0, 20).map((c) => `  - [${c.repo}] ${c.message.slice(0, 80)}`);
+		dataSections.push(
+			`Browser activity:\n${catLines.length ? catLines.join("\n") : "  (none)"}\n` +
+			`Searches:\n${searchList.length ? searchList.join("\n") : "  (none)"}\n` +
+			`AI sessions:\n${claudeList.length ? claudeList.join("\n") : "  (none)"}\n` +
+			`Git commits:\n${gitList.length ? gitList.join("\n") : "  (none)"}`
+		);
+	}
+
+	const activityData = dataSections.join("\n\n");
+
+	const vars: Record<string, string> = {
+		dateStr,
+		contextHint,
+		activityData: activityData || "(no activity data available)",
+	};
+	return fillTemplate(loadPromptTemplate("prose", promptsDir), vars);
+}
+
 // ── Main summarization entry point ──────────────────────
 
 export async function summarizeDay(
@@ -676,8 +784,26 @@ export async function summarizeDay(
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	promptStrategy: PromptStrategy = "monolithic-json"
 ): Promise<AISummary> {
+	// ── Prose strategy: heading-delimited markdown output ──
+	if (promptStrategy === "single-prose") {
+		const prompt = buildProsePrompt(date, profile, {
+			categorized, searches, claudeSessions, gitCommits,
+			compressed, classification, patterns,
+		}, promptsDir);
+
+		log.debug(
+			`Daily Digest: Using single-prose strategy ` +
+			`(~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
+		);
+
+		const raw = await callAI(prompt, config, 1500, undefined, false);
+		return parseProseSections(raw);
+	}
+
+	// ── JSON strategy (monolithic-json): existing behavior ──
 	let prompt: string;
 	let maxTokens = 1000;
 

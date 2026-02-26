@@ -252,7 +252,9 @@ async function runPreset(
 			classification,
 			patterns,
 			undefined,
-			sanitized.gitCommits
+			sanitized.gitCommits,
+			settings.promptsDir,
+			settings.promptStrategy
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}

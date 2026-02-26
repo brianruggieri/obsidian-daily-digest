@@ -4,6 +4,7 @@ import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "..
 export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
+export type PromptStrategy = "monolithic-json" | "single-prose";
 
 export interface DailyDigestSettings {
 	dailyFolder: string;
@@ -48,6 +49,7 @@ export interface DailyDigestSettings {
 	trackRecurrence: boolean;
 	/** Max unique pages shown per domain in the daily note. Default: 5. Range: 1-20. */
 	maxVisitsPerDomain: number;
+	promptStrategy: PromptStrategy;
 	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
@@ -94,6 +96,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
 	maxVisitsPerDomain: 5,
+	promptStrategy: "monolithic-json" as PromptStrategy,
 	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
