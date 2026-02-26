@@ -205,9 +205,9 @@ describe("MatrixValidator", () => {
 		});
 
 		it("creates valid Phase 2 config for each tier", () => {
-			const tiers = ["tier-4-deidentified", "tier-3-classified", "tier-2-rag", "tier-1-standard"];
+			const tiers = ["tier-4-deidentified", "tier-3-classified", "tier-2-rag", "tier-1-standard"] as const;
 			for (const tier of tiers) {
-				const config = validator.createPhase2ConfigForTier(tier as any);
+				const config = validator.createPhase2ConfigForTier(tier);
 				expect(config.phase).toBe(2);
 				expect(config.tier).toBe(tier);
 				expect(config.providers).toContain("mock");
