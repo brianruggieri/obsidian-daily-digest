@@ -331,6 +331,66 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
+	// ── Today I Worked On (commit work units) ────
+	if (knowledge?.commitWorkUnits && knowledge.commitWorkUnits.length > 0) {
+		lines.push("> [!info]- \u{1F528} Today I Worked On");
+		for (const unit of knowledge.commitWorkUnits) {
+			if (unit.isGeneric) continue; // skip low-signal WIP units
+			const commitWord = unit.commits.length === 1 ? "commit" : "commits";
+			const insertions = unit.commits.reduce((sum, c) => sum + c.insertions, 0);
+			const deletions = unit.commits.reduce((sum, c) => sum + c.deletions, 0);
+			const stats = insertions > 0 || deletions > 0
+				? `, ${insertions} insertions`
+				: "";
+			lines.push(`> - **${escapeForMarkdown(unit.label)}** \u2014 ${unit.commits.length} ${commitWord}${stats}`);
+			if (unit.hasWhyInformation && unit.whyClause) {
+				lines.push(`>   *${escapeForMarkdown(unit.whyClause)}*`);
+			} else if (unit.commits.length > 0) {
+				// Show the most descriptive commit message as a sub-line
+				const best = unit.commits.reduce((a, b) =>
+					b.message.length > a.message.length ? b : a
+				);
+				if (best.message && !unit.label.toLowerCase().includes(best.message.slice(0, 20).toLowerCase())) {
+					lines.push(`>   _${escapeForMarkdown(best.message.slice(0, 120))}_`);
+				}
+			}
+		}
+		lines.push("");
+	}
+
+	// ── Today I Asked Claude About (task sessions) ────
+	if (knowledge?.claudeTaskSessions && knowledge.claudeTaskSessions.length > 0) {
+		lines.push("> [!info]- \u{1F916} Today I Asked Claude About");
+		for (const session of knowledge.claudeTaskSessions) {
+			const turnWord = session.turnCount === 1 ? "turn" : "turns";
+			const depthLabel = session.isDeepLearning ? "deep exploration"
+				: session.interactionMode === "exploration" ? "exploration"
+				: "implementation";
+			const topicBadge = session.topicCluster !== "general"
+				? ` \u2014 \`${session.topicCluster}\`` : "";
+			lines.push(
+				`> - **${escapeForMarkdown(session.taskTitle)}**${topicBadge} ` +
+				`_(${session.taskType}, ${session.turnCount} ${turnWord}, ${depthLabel})_`
+			);
+		}
+		lines.push("");
+	}
+
+	// ── Task Sessions (cross-source unified sessions) ────
+	// Only rendered when cross-source fusion has produced results.
+	// The fusion stub in task-sessions.ts returns [] so this section
+	// is currently suppressed. It will activate once fusion is implemented.
+	if (knowledge?.commitWorkUnits || knowledge?.claudeTaskSessions) {
+		// Placeholder: Task Sessions section is reserved for cross-source fusion output.
+		// When unifiedTaskSessions are available they will be rendered here as:
+		//   ## 🔗 Task Sessions
+		//   **HH:MM – HH:MM · <label>**
+		//   _lifecycle stages_
+		//   - Read: <articles>
+		//   - Asked Claude: <prompts>
+		//   - Committed: <commits>
+	}
+
 	// ── Claude Code sessions ─────────────────────
 	if (claudeSessions.length) {
 		lines.push("## \u{1F916} Claude Code / AI Work");

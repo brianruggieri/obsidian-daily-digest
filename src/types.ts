@@ -29,9 +29,11 @@ export interface GitCommit {
 	message: string;       // First line of commit message
 	time: Date | null;     // Author date
 	repo: string;          // Repo directory name (not full path)
-	filesChanged: number;  // From --shortstat
+	filesChanged: number;  // From numstat (total unique files changed)
 	insertions: number;    // Lines added
 	deletions: number;     // Lines removed
+	/** File paths changed in this commit (from --numstat). */
+	filePaths?: string[];
 }
 
 export type CategorizedVisits = Record<string, BrowserVisit[]>;
@@ -370,6 +372,13 @@ export interface PatternAnalysis {
 	activityConcentrationScore: number; // 0.0-1.0 fraction of events in dominant activity type (1.0 = all one type; 0.25 = evenly spread across 4)
 	topActivityTypes: { type: ActivityType; count: number; pct: number }[];
 	peakHours: { hour: number; count: number }[];
+	/** Git commit work units produced by the semantic extraction layer. */
+	commitWorkUnits: CommitWorkUnit[];
+	/** Claude task sessions produced by the semantic extraction layer. */
+	claudeTaskSessions: ClaudeTaskSession[];
+	/** Cross-source unified task sessions (stub: [] until fusion is implemented).
+	 * Optional for backward compatibility with tests that construct PatternAnalysis directly. */
+	unifiedTaskSessions?: UnifiedTaskSession[];
 }
 
 export interface PatternConfig {
@@ -431,4 +440,159 @@ export interface ArticleCluster {
 	engagementScore: number;
 	/** Inferred reading intent based on domain diversity and revisit patterns. */
 	intentSignal: "research" | "reference" | "implementation" | "browsing";
+}
+
+// ── Semantic Extraction Types ────────────────────────────
+
+/**
+ * Vocabulary-based intent type for Claude Code conversations.
+ * Applied to the opener prompt (first user message in a JSONL file).
+ * Moved here from src/filter/classify.ts so all modules can import it
+ * without depending on the classify module.
+ *
+ *   - "implementation"  Add/Build/Create/Implement/Write — acceleration mode
+ *   - "debugging"       Fix/Debug/Why does/not working/error — acceleration
+ *   - "review"          Review/Check/Audit/Is this correct — acceleration
+ *   - "learning"        Explain/Describe/What is/How does — exploration
+ *   - "architecture"    Design/Plan/Should I/What approach — exploration
+ */
+export type ClaudeTaskType =
+	| "implementation"
+	| "debugging"
+	| "review"
+	| "learning"
+	| "architecture";
+
+/**
+ * Developer intent derived from a parsed conventional commit.
+ * Maps directly to the commit type prefix (feat/fix/refactor/…) or
+ * is inferred from keyword patterns and change statistics.
+ */
+export type CommitWorkMode =
+	| "building"       // feat: — adding capability
+	| "debugging"      // fix: — repairing defect
+	| "restructuring"  // refactor: — improving structure
+	| "testing"        // test: — building confidence
+	| "documenting"    // docs: — codifying knowledge
+	| "infrastructure" // chore:/build:/ci: — maintenance metabolism
+	| "optimizing"     // perf: — improving efficiency
+	| "reverting"      // revert: — regression indicator
+	| "tweaking";      // generic/WIP/small — low-signal
+
+/**
+ * A conventional commit message parsed into its component fields.
+ * Non-conventional commits use the keyword fallback paths.
+ */
+export interface ParsedCommit {
+	/** Conventional type: "feat", "fix", "refactor", etc. May be empty string. */
+	type: string;
+	/** Scope field (e.g. "render", "summarize"). null when absent. */
+	scope: string | null;
+	/** True when the commit has a breaking-change marker (!). */
+	breaking: boolean;
+	/** The description portion after the prefix and colon. */
+	description: string;
+	/** The original unmodified commit message. */
+	raw: string;
+}
+
+/**
+ * A coherent grouping of git commits representing one logical work unit —
+ * e.g., "Feature work: hybrid prose prompts" or "obsidian-claude-daily: debugging".
+ *
+ * Produced by `groupCommitsIntoWorkUnits()` in `src/analyze/commits.ts`.
+ */
+export interface CommitWorkUnit {
+	/** Human-readable label derived from scope, repo, or dominant noun phrase. */
+	label: string;
+	/** Developer intent classification for this unit. */
+	workMode: CommitWorkMode;
+	/** All commits belonging to this work unit. */
+	commits: GitCommit[];
+	/** Repos involved (usually one). */
+	repos: string[];
+	/** Earliest and latest commit times in this unit. */
+	timeRange: { start: Date; end: Date };
+	/** True when at least one commit message contains a "why" clause. */
+	hasWhyInformation: boolean;
+	/** Extracted "because X" / "so that Y" text from the commit messages. */
+	whyClause: string | null;
+	/** True when all commits in this unit have generic/WIP/low-signal messages. */
+	isGeneric: boolean;
+}
+
+/**
+ * A single Claude Code conversation grouped into a higher-level task.
+ * Corresponds to one JSONL file (conversation identity boundary).
+ *
+ * Produced by `groupClaudeSessionsIntoTasks()` in `src/analyze/task-sessions.ts`.
+ */
+export interface ClaudeTaskSession {
+	/** Extracted from the opener prompt by `extractTaskTitle()`. */
+	taskTitle: string;
+	/** Verb-pattern-classified intent for the opener prompt. */
+	taskType: ClaudeTaskType;
+	/** Vocabulary-matched topic cluster (e.g. "typescript", "testing"). */
+	topicCluster: string;
+	/** All ClaudeSession turns in this conversation. */
+	prompts: ClaudeSession[];
+	/** First and last prompt timestamps. */
+	timeRange: { start: Date; end: Date };
+	/** Project name from the JSONL path (directory above the file). */
+	project: string;
+	/** The JSONL filename used as the conversation identity key. */
+	conversationFile: string;
+	/** Total user turn count in this conversation. */
+	turnCount: number;
+	/** Whether this is predominantly acceleration (building) or exploration (learning). */
+	interactionMode: "acceleration" | "exploration";
+	/** True when turnCount >= 5 on a learning or architecture task. */
+	isDeepLearning: boolean;
+}
+
+/**
+ * A chain of related search queries within a short time window,
+ * representing a single information-seeking mission.
+ *
+ * Produced by `detectSearchMissions()` in `src/analyze/task-sessions.ts`.
+ */
+export interface SearchMission {
+	/** Label derived from the first (most general) query in the chain. */
+	label: string;
+	/** All queries that form this mission chain. */
+	queries: SearchQuery[];
+	/** Browser visits that occurred within the mission time window. */
+	visits: BrowserVisit[];
+	/** Start of first query to end of last visit in the mission window. */
+	timeRange: { start: Date; end: Date };
+	/** Broder intent type of the opening query. */
+	intentType: "navigational" | "informational" | "transactional";
+}
+
+/**
+ * A cross-source task session: one logical unit of work synthesized from
+ * browser reading, git commits, Claude conversations, and search missions
+ * that overlapped in time and topic.
+ *
+ * Produced by `fuseCrossSourceSessions()` in `src/analyze/task-sessions.ts`.
+ */
+export interface UnifiedTaskSession {
+	/** Human-readable label — most common topic across all contributing sources. */
+	label: string;
+	/** Overall time range spanning all contributing work units. */
+	timeRange: { start: Date; end: Date };
+	/** Article clusters (browser reading) that contributed to this session. */
+	browserClusters: ArticleCluster[];
+	/** Git commit work units that contributed to this session. */
+	commitWorkUnits: CommitWorkUnit[];
+	/** Claude task sessions that contributed to this session. */
+	claudeTaskSessions: ClaudeTaskSession[];
+	/** Search missions that contributed to this session. */
+	searchMissions: SearchMission[];
+	/** Ordered lifecycle stages inferred from source type ordering. */
+	lifecycle: Array<"research" | "implementation" | "debugging" | "commit">;
+	/** Most common topic string across all contributing sources. */
+	primaryTopic: string;
+	/** Outcome inferred from whether commits are present and task type. */
+	outcome: "committed" | "in-progress" | "abandoned" | "learning-only";
 }

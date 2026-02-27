@@ -391,7 +391,8 @@ export default class DailyDigestPlugin extends Plugin {
 				const todayStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
 				try {
 					const patterns: PatternAnalysis = extractPatterns(
-						classification, patternConfig, topicHistory, todayStr
+						classification, patternConfig, topicHistory, todayStr,
+						gitCommits, claudeSessions, searches, visits
 					);
 					extractedPatterns = patterns;
 					knowledgeSections = generateKnowledgeSections(patterns);
@@ -400,7 +401,9 @@ export default class DailyDigestPlugin extends Plugin {
 						`Daily Digest: Extracted ${patterns.temporalClusters.length} clusters, ` +
 						`${patterns.topicCooccurrences.length} co-occurrences, ` +
 						`${patterns.entityRelations.length} entity relations, ` +
-						`focus score ${Math.round(patterns.focusScore * 100)}%`
+						`focus score ${Math.round(patterns.focusScore * 100)}%, ` +
+						`${patterns.commitWorkUnits.length} commit work units, ` +
+						`${patterns.claudeTaskSessions.length} Claude task sessions`
 					);
 
 					// Persist updated topic history
@@ -432,6 +435,7 @@ export default class DailyDigestPlugin extends Plugin {
 			// ── Article Clustering (article-first browsing) ──
 			// Runs after sanitization and categorization, before AI summary.
 			// No LLM calls — pure TF-IDF + engagement scoring.
+			let articleClustersForSemantic: import("../types").ArticleCluster[] = [];
 			try {
 				progressNotice.setMessage("Daily Digest: Clustering articles\u2026");
 				const searchLinks = linkSearchesToVisits(searches, visits);
@@ -440,6 +444,7 @@ export default class DailyDigestPlugin extends Plugin {
 					computeEngagementScore(v, cleanedTitles[i], visits, searchLinks)
 				);
 				const articleClusters = clusterArticles(visits, cleanedTitles, engagementScores);
+				articleClustersForSemantic = articleClusters;
 
 				if (articleClusters.length > 0) {
 					if (knowledgeSections) {
@@ -466,6 +471,64 @@ export default class DailyDigestPlugin extends Plugin {
 				}
 			} catch (e) {
 				log.warn("Daily Digest: Article clustering failed, continuing without:", e);
+			}
+
+			// ── Semantic Extraction (commit work units + Claude task sessions) ──
+			// Runs always — does not require classification to have succeeded.
+			// No LLM calls. Produces commitWorkUnits and claudeTaskSessions for renderer.
+			if (gitCommits.length > 0 || claudeSessions.length > 0) {
+				try {
+					progressNotice.setMessage("Daily Digest: Extracting semantic work units\u2026");
+					const { groupCommitsIntoWorkUnits } = await import("../analyze/commits");
+					const { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } = await import("../analyze/task-sessions");
+
+					const commitWorkUnits = groupCommitsIntoWorkUnits(gitCommits);
+					const claudeTaskSessions = groupClaudeSessionsIntoTasks(claudeSessions);
+					const searchMissions = detectSearchMissions(searches, visits);
+					const unifiedTaskSessions = fuseCrossSourceSessions(
+						articleClustersForSemantic, commitWorkUnits, claudeTaskSessions, searchMissions
+					);
+
+					if (knowledgeSections) {
+						// Attach to existing knowledge sections (pattern extraction ran)
+						if (!knowledgeSections.commitWorkUnits || knowledgeSections.commitWorkUnits.length === 0) {
+							knowledgeSections.commitWorkUnits = commitWorkUnits;
+						}
+						if (!knowledgeSections.claudeTaskSessions || knowledgeSections.claudeTaskSessions.length === 0) {
+							knowledgeSections.claudeTaskSessions = claudeTaskSessions;
+						}
+					} else if (commitWorkUnits.length > 0 || claudeTaskSessions.length > 0) {
+						// Pattern extraction was skipped — create minimal KnowledgeSections
+						knowledgeSections = {
+							focusSummary: "",
+							focusScore: 0,
+							temporalInsights: [],
+							topicMap: [],
+							entityGraph: [],
+							recurrenceNotes: [],
+							knowledgeDeltaLines: [],
+							tags: [],
+							articleClusters: articleClustersForSemantic.length > 0 ? articleClustersForSemantic : undefined,
+							commitWorkUnits,
+							claudeTaskSessions,
+						};
+					}
+
+					if (extractedPatterns) {
+						// Also attach to extractedPatterns for AI summarizer context
+						extractedPatterns.commitWorkUnits = commitWorkUnits;
+						extractedPatterns.claudeTaskSessions = claudeTaskSessions;
+						extractedPatterns.unifiedTaskSessions = unifiedTaskSessions;
+					}
+
+					log.debug(
+						`Daily Digest: Semantic extraction produced ${commitWorkUnits.length} commit work units, ` +
+						`${claudeTaskSessions.length} Claude task sessions, ` +
+						`${searchMissions.length} search missions`
+					);
+				} catch (e) {
+					log.warn("Daily Digest: Semantic extraction failed, continuing without:", e);
+				}
 			}
 
 			// ── AI Summary ───────────────────────

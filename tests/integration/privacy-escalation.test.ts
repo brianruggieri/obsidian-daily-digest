@@ -50,6 +50,8 @@ const patterns: PatternAnalysis = {
 	activityConcentrationScore: 1.0,
 	topActivityTypes: [{ type: "research", count: 3, pct: 100 }],
 	peakHours: [{ hour: 10, count: 3 }],
+	commitWorkUnits: [],
+	claudeTaskSessions: [],
 };
 
 describe("privacy escalation chain", () => {

@@ -135,6 +135,8 @@ describe("buildDeidentifiedPrompt", () => {
 			{ hour: 10, count: 8 },
 			{ hour: 14, count: 6 },
 		],
+		commitWorkUnits: [],
+		claudeTaskSessions: [],
 	};
 
 	it("includes aggregated activity distribution", () => {
@@ -262,6 +264,8 @@ function makeMockPatterns(): PatternAnalysis {
 		activityConcentrationScore: 0,
 		topActivityTypes: [],
 		peakHours: [],
+		commitWorkUnits: [],
+		claudeTaskSessions: [],
 	};
 }
 
