@@ -5,6 +5,7 @@ import {
 	updateTopicHistory,
 	buildEmptyTopicHistory,
 	computeKnowledgeDelta,
+	ENTITY_BEARING_CATEGORIES,
 } from "../../../src/analyze/patterns";
 import {
 	StructuredEvent,
@@ -32,6 +33,10 @@ function makeEvent(overrides: Partial<StructuredEvent>): StructuredEvent {
 		timestamp: localIso(10),
 		source: "browser",
 		activityType: "research",
+		// Default to "research" (a bearing category) so events contribute to
+		// entity/topic extraction unless a test explicitly overrides to a
+		// non-bearing category (e.g. "other", "shopping").
+		category: "research",
 		topics: ["testing"],
 		entities: ["Vitest"],
 		intent: "evaluate",
@@ -169,10 +174,12 @@ describe("topic co-occurrence", () => {
 // ── Entity Relations ────────────────────────────────────
 
 describe("entity relations", () => {
-	it("detects co-occurring entities within events", () => {
+	it("detects co-occurring entities within events (requires >= 3 co-occurrences)", () => {
+		// minCooccurrenceCount = 3: pair must appear in at least 3 distinct events
 		const events = [
-			makeEvent({ entities: ["GitHub", "React"], activityType: "implementation" }),
-			makeEvent({ entities: ["GitHub", "React"], activityType: "debugging" }),
+			makeEvent({ entities: ["GitHub", "React"], activityType: "implementation", category: "dev" }),
+			makeEvent({ entities: ["GitHub", "React"], activityType: "debugging", category: "dev" }),
+			makeEvent({ entities: ["GitHub", "React"], activityType: "implementation", category: "dev" }),
 		];
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
 		expect(result.entityRelations.length).toBeGreaterThan(0);
@@ -180,15 +187,37 @@ describe("entity relations", () => {
 			(r) => (r.entityA === "GitHub" && r.entityB === "React") || (r.entityA === "React" && r.entityB === "GitHub")
 		);
 		expect(ghReact).toBeDefined();
-		expect(ghReact!.cooccurrences).toBe(2);
+		expect(ghReact!.cooccurrences).toBe(3);
 		expect(ghReact!.contexts).toContain("implementation");
 		expect(ghReact!.contexts).toContain("debugging");
 	});
 
+	it("filters out entity pairs with fewer than 3 co-occurrences", () => {
+		// Only 2 co-occurrences — below the minCooccurrenceCount threshold
+		const events = [
+			makeEvent({ entities: ["GitHub", "React"], activityType: "implementation", category: "dev" }),
+			makeEvent({ entities: ["GitHub", "React"], activityType: "debugging", category: "dev" }),
+		];
+		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
+		expect(result.entityRelations).toHaveLength(0);
+	});
+
+	it("filters out entity pairs where all contexts are 'unknown'", () => {
+		// Even with >= 3 co-occurrences, pairs from uncategorized events are excluded
+		const events = [
+			makeEvent({ entities: ["Canyon", "Providence"], activityType: "unknown", category: "other" }),
+			makeEvent({ entities: ["Canyon", "Providence"], activityType: "unknown", category: "other" }),
+			makeEvent({ entities: ["Canyon", "Providence"], activityType: "unknown", category: "other" }),
+		];
+		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
+		// Events in "other" category have entities zeroed by ENTITY_BEARING_CATEGORIES gate
+		expect(result.entityRelations).toHaveLength(0);
+	});
+
 	it("ignores events with fewer than 2 entities", () => {
 		const events = [
-			makeEvent({ entities: ["GitHub"] }),
-			makeEvent({ entities: [] }),
+			makeEvent({ entities: ["GitHub"], category: "dev" }),
+			makeEvent({ entities: [], category: "dev" }),
 		];
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
 		expect(result.entityRelations).toHaveLength(0);
@@ -447,14 +476,17 @@ describe("activityConcentrationScore (via extractPatterns)", () => {
 
 describe("extractPatterns", () => {
 	it("produces all fields for realistic data", () => {
+		// Vercel+Docker co-occur 3 times in dev category to satisfy the
+		// minCooccurrenceCount threshold in extractEntityRelations
 		const events = [
-			makeEvent({ timestamp: localIso(9), activityType: "research", topics: ["OAuth"], entities: ["GitHub"] }),
-			makeEvent({ timestamp: localIso(9, 15), activityType: "research", topics: ["OAuth", "PKCE"], entities: ["GitHub", "Auth0"] }),
-			makeEvent({ timestamp: localIso(9, 30), activityType: "implementation", topics: ["OAuth"], entities: ["React"] }),
-			makeEvent({ timestamp: localIso(10), activityType: "implementation", topics: ["React", "hooks"], entities: ["React"] }),
-			makeEvent({ timestamp: localIso(10, 15), activityType: "debugging", topics: ["React", "testing"], entities: ["Vitest"] }),
-			makeEvent({ timestamp: localIso(14), activityType: "implementation", topics: ["deployment"], entities: ["Vercel"] }),
-			makeEvent({ timestamp: localIso(14, 30), activityType: "implementation", topics: ["deployment"], entities: ["Vercel", "Docker"] }),
+			makeEvent({ timestamp: localIso(9), activityType: "research", topics: ["OAuth"], entities: ["GitHub"], category: "dev" }),
+			makeEvent({ timestamp: localIso(9, 15), activityType: "research", topics: ["OAuth", "PKCE"], entities: ["GitHub", "Auth0"], category: "dev" }),
+			makeEvent({ timestamp: localIso(9, 30), activityType: "implementation", topics: ["OAuth"], entities: ["React"], category: "dev" }),
+			makeEvent({ timestamp: localIso(10), activityType: "implementation", topics: ["React", "hooks"], entities: ["React"], category: "dev" }),
+			makeEvent({ timestamp: localIso(10, 15), activityType: "debugging", topics: ["React", "testing"], entities: ["Vitest"], category: "dev" }),
+			makeEvent({ timestamp: localIso(14), activityType: "implementation", topics: ["deployment"], entities: ["Vercel", "Docker"], category: "dev" }),
+			makeEvent({ timestamp: localIso(14, 30), activityType: "implementation", topics: ["deployment"], entities: ["Vercel", "Docker"], category: "dev" }),
+			makeEvent({ timestamp: localIso(14, 45), activityType: "implementation", topics: ["deployment"], entities: ["Vercel", "Docker"], category: "dev" }),
 		];
 
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
@@ -500,5 +532,74 @@ describe("extractPatterns", () => {
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
 		expect(result.peakHours[0].hour).toBe(10);
 		expect(result.peakHours[0].count).toBe(3);
+	});
+});
+
+// ── Category-Based Entity Gating ────────────────────────
+
+describe("ENTITY_BEARING_CATEGORIES gate", () => {
+	it("ENTITY_BEARING_CATEGORIES contains the expected categories", () => {
+		const expected = ["dev", "work", "research", "education", "ai_tools", "pkm", "writing"];
+		for (const cat of expected) {
+			expect(ENTITY_BEARING_CATEGORIES.has(cat)).toBe(true);
+		}
+	});
+
+	it("ENTITY_BEARING_CATEGORIES does not include noise categories", () => {
+		const noise = ["other", "shopping", "finance", "news", "social", "media", "gaming", "personal"];
+		for (const cat of noise) {
+			expect(ENTITY_BEARING_CATEGORIES.has(cat)).toBe(false);
+		}
+	});
+
+	it("zeroes entities for non-bearing category events so they produce no entity relations", () => {
+		// 81 map visits in category "other" — all with place-name fragment entities
+		// Category gating zeros entities before extractEntityRelations is called
+		const mapEvents = Array.from({ length: 10 }, () =>
+			makeEvent({
+				entities: ["Canyon", "Providence"],
+				activityType: "unknown",
+				category: "other",
+			})
+		);
+		const result = extractPatterns(makeClassification(mapEvents), baseConfig, buildEmptyTopicHistory(), TODAY);
+		// All entities zeroed by gating; no pairs pass through
+		expect(result.entityRelations).toHaveLength(0);
+	});
+
+	it("preserves entity relations for bearing-category events with sufficient co-occurrences", () => {
+		// 5 dev-category events with TypeScript+Obsidian pair (>= 3 required)
+		const devEvents = Array.from({ length: 5 }, () =>
+			makeEvent({
+				entities: ["TypeScript", "Obsidian"],
+				activityType: "implementation",
+				category: "dev",
+			})
+		);
+		const result = extractPatterns(makeClassification(devEvents), baseConfig, buildEmptyTopicHistory(), TODAY);
+		const pair = result.entityRelations.find(
+			(r) =>
+				(r.entityA === "TypeScript" && r.entityB === "Obsidian") ||
+				(r.entityA === "Obsidian" && r.entityB === "TypeScript")
+		);
+		expect(pair).toBeDefined();
+		expect(pair!.cooccurrences).toBe(5);
+	});
+
+	it("preserves temporal clusters for non-bearing category events (only entity gating, not cluster gating)", () => {
+		// Shopping events should still produce temporal clusters
+		const shopEvents = Array.from({ length: 3 }, (_, i) =>
+			makeEvent({
+				timestamp: localIso(14, i * 10),
+				activityType: "browsing",
+				category: "shopping",
+				entities: ["Amazon", "Product"],
+			})
+		);
+		const result = extractPatterns(makeClassification(shopEvents), baseConfig, buildEmptyTopicHistory(), TODAY);
+		// Temporal clusters should still be produced (original events used)
+		expect(result.temporalClusters.length).toBeGreaterThan(0);
+		// But entity relations should be empty (gated out)
+		expect(result.entityRelations).toHaveLength(0);
 	});
 });
