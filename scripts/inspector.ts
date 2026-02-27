@@ -1132,7 +1132,9 @@ async function runPipeline(
 				classification,
 				patterns,
 				undefined,
-				sanitized.gitCommits
+				sanitized.gitCommits,
+				settings.promptsDir,
+				settings.promptStrategy
 			);
 			return {
 				detail: `model=${aiCallConfig.provider === "local" ? aiCallConfig.localModel : aiCallConfig.anthropicModel}`,

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
-export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified";
+export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified" | "prose";
 
 /**
  * Built-in prompt defaults, inlined as string literals so they work in both
@@ -253,6 +253,46 @@ Be insightful and specific. You're analyzing work patterns for someone building 
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Write for a person reading their own notes 3 months from now — help them understand their own cognitive patterns, not just recall events.
 Only include category_summaries for activity types represented in the distribution.
+`,
+
+	prose: `You are writing sections of a daily note for a personal knowledge base. Below is a structured summary of today's activity (already processed by code). Your job is to add the human insight layer — narrative, synthesis, and connections that code can't produce.
+
+Write for someone rereading this note 3 months from now. Be specific and concrete — prefer "debugged the OAuth callback race condition" over "did some dev work."{{contextHint}}
+
+Date: {{dateStr}}
+
+<activity_data>
+{{activityData}}
+</activity_data>
+
+Write each section below using the exact heading format shown. You may vary section depth — write more where it matters, less where it doesn't.
+
+## Headline
+One punchy sentence (max 15 words) capturing the day's essential character.
+
+## Day Story
+2-3 sentences narrating the arc: what was being built or solved, how it evolved, what was discovered. Tell what changed from morning to evening.
+
+## Mindset
+1 sentence characterizing the working mode — exploring, building, debugging, synthesizing, learning? What energy or cognitive style drove the day?
+
+## TLDR
+2-3 sentences for future recall: key accomplishment, main learning, and what this day unlocks or sets up next.
+
+## Learnings
+Bullet list. 2-4 concrete things understood today that can be applied later — skills grasped, patterns recognized, capabilities gained.
+
+## Remember
+Bullet list. 3-5 specific things worth quick future recall: commands that worked, configurations found, resource names, approaches that succeeded or failed.
+
+## Connections
+1-2 sentences linking different activities: searches that led to commits, research that informed implementation, topics that bridged domains.
+
+## Questions
+1-2 genuinely open questions a thoughtful observer would ask. Don't presuppose emotions or outcomes. Focus on "why" behind patterns.
+
+## Note Seeds
+Bullet list. 2-4 topics from today that deserve their own permanent note — concepts that came up repeatedly or represent key learning moments.
 `,
 
 };

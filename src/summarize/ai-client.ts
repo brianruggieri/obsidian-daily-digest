@@ -56,7 +56,8 @@ export async function callLocal(
 	endpoint: string,
 	model: string,
 	maxTokens = 800,
-	systemPrompt?: string
+	systemPrompt?: string,
+	jsonMode = true
 ): Promise<string> {
 	const baseUrl = endpoint.replace(/\/+$/, "");
 	const url = `${baseUrl}/v1/chat/completions`;
@@ -70,19 +71,22 @@ export async function callLocal(
 	messages.push({
 		role: "system",
 		content: systemPrompt ||
-			"You are a concise summarization assistant. " +
-			"Return only valid JSON with no markdown fences or preamble.",
+			(jsonMode
+				? "You are a concise summarization assistant. Return only valid JSON with no markdown fences or preamble."
+				: "You are a concise summarization assistant. Write clear, specific markdown as instructed."),
 	});
 
 	messages.push({ role: "user", content: prompt });
 
-	const basePayload = {
+	const basePayload: Record<string, unknown> = {
 		model,
 		max_tokens: maxTokens,
 		temperature: 0.3,
 		messages,
-		response_format: { type: "json_object" },
 	};
+	if (jsonMode) {
+		basePayload.response_format = { type: "json_object" };
+	}
 
 	const headers = { "Content-Type": "application/json", Accept: "application/json" };
 
@@ -144,13 +148,14 @@ export async function callAI(
 	prompt: string,
 	config: AICallConfig,
 	maxTokens = 800,
-	systemPrompt?: string
+	systemPrompt?: string,
+	jsonMode = true
 ): Promise<string> {
 	if (config.provider === "anthropic") {
 		return callAnthropic(prompt, config.anthropicApiKey, config.anthropicModel, maxTokens, systemPrompt);
 	}
 	if (config.provider === "local") {
-		return callLocal(prompt, config.localEndpoint, config.localModel, maxTokens, systemPrompt);
+		return callLocal(prompt, config.localEndpoint, config.localModel, maxTokens, systemPrompt, jsonMode);
 	}
 	return "[AI summary unavailable: no provider configured]";
 }

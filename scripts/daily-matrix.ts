@@ -201,14 +201,19 @@ async function runPreset(
 			localEndpoint: settings.localEndpoint,
 			localModel: settings.localModel,
 		};
+		const ragConfigPreview = settings.enableRAG
+			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
+			: undefined;
 		const resolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			undefined, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
-			model: settings.aiModel ?? "mock",
+			model: aiCallConfig.provider === "local"
+				? (aiCallConfig.localModel ?? "local")
+				: (aiCallConfig.anthropicModel ?? "mock"),
 			tokenCount: estimateTokens(resolution.prompt),
 			privacyTier: resolution.tier,
 			prompt: resolution.prompt,
@@ -225,17 +230,22 @@ async function runPreset(
 			localModel: settings.localModel,
 		};
 
-		// Log the prompt and tier that resolvePromptAndTier selects (non-RAG path).
-		// summarizeDay handles the async RAG path separately, so its logged tier
-		// may differ for RAG-enabled presets, but is accurate for all others.
+		// Log the prompt and tier that resolvePromptAndTier selects.
+		// For RAG presets, we pass a minimal ragConfig so the tier label (Tier 2) is
+		// correct; the actual RAG chunks are fetched asynchronously inside summarizeDay.
+		const ragConfigPreview = settings.enableRAG
+			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
+			: undefined;
 		const previewResolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			undefined, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
-			model: aiCallConfig.anthropicModel ?? aiCallConfig.localModel,
+			model: aiCallConfig.provider === "local"
+				? (aiCallConfig.localModel ?? "local")
+				: (aiCallConfig.anthropicModel ?? "unknown"),
 			tokenCount: estimateTokens(previewResolution.prompt),
 			privacyTier: previewResolution.tier,
 			prompt: previewResolution.prompt,
@@ -252,7 +262,9 @@ async function runPreset(
 			classification,
 			patterns,
 			undefined,
-			sanitized.gitCommits
+			sanitized.gitCommits,
+			settings.promptsDir,
+			settings.promptStrategy
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}
