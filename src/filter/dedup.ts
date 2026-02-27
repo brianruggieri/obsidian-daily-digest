@@ -1,4 +1,5 @@
 import type { BrowserVisit } from "../types";
+import { cleanTitle } from "../collect/browser";
 
 export interface DedupConfig {
 	/** Max unique pages kept per domain after canonical-key grouping. Default: 5 */
@@ -61,14 +62,15 @@ export function canonicalKey(rawUrl: string): string {
  * Select the most informative representative from a group of near-duplicate visits.
  *
  * Priority:
- * 1. Longest title (proxy for most informative page load — e.g. page with title
- *    vs. blank redirect vs. loading placeholder)
+ * 1. Longest cleaned title (proxy for most informative page load — e.g. page
+ *    with title vs. blank redirect vs. loading placeholder). Uses cleanTitle()
+ *    so that brand suffixes and nav-noise are excluded from the length comparison.
  * 2. Tiebreak: earliest timestamp (first clean load, not a reload)
  */
 function pickBest(group: BrowserVisit[]): BrowserVisit {
 	return group.reduce((best, v) => {
-		const bl = (best.title || "").length;
-		const vl = (v.title || "").length;
+		const bl = cleanTitle(best.title ?? "").length || (best.title || "").length;
+		const vl = cleanTitle(v.title ?? "").length || (v.title || "").length;
 		if (vl > bl) return v;
 		if (vl === bl) {
 			const bt = best.time?.getTime() ?? Infinity;

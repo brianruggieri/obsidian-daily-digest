@@ -10,6 +10,7 @@
  */
 
 import {
+	ArticleCluster,
 	PatternAnalysis,
 	TemporalCluster,
 	RecurrenceSignal,
@@ -26,6 +27,8 @@ export interface KnowledgeSections {
 	recurrenceNotes: string[];
 	knowledgeDeltaLines: string[];
 	tags: string[];
+	/** Article clusters produced by TF-IDF clustering of substantive browser visits. */
+	articleClusters?: ArticleCluster[];
 }
 
 export function generateKnowledgeSections(

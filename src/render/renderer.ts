@@ -293,6 +293,44 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
+	// ── Today I Read About (article clusters) ────
+	if (knowledge?.articleClusters && knowledge.articleClusters.length > 0) {
+		lines.push("> [!info]- \u{1F4D6} Today I Read About");
+		for (const cluster of knowledge.articleClusters) {
+			const startTs = cluster.timeRange.start ? formatTime(cluster.timeRange.start) : "";
+			const endTs = cluster.timeRange.end ? formatTime(cluster.timeRange.end) : "";
+			const timeRange = startTs && endTs && startTs !== endTs ? `${startTs}\u2013${endTs}` : startTs;
+			const intentLabel = cluster.intentSignal === "research" ? "Research session"
+				: cluster.intentSignal === "reference" ? "Reference"
+				: cluster.intentSignal === "implementation" ? "Implementation reference"
+				: "Reading session";
+			const articleCount = cluster.articles.length;
+			const articleWord = articleCount === 1 ? "article" : "articles";
+
+			lines.push(`> `);
+			lines.push(`> ### ${escapeForMarkdown(cluster.label)}`);
+			const meta = [intentLabel, timeRange, `${articleCount} ${articleWord}`]
+				.filter(Boolean)
+				.join(" \u00B7 ");
+			lines.push(`> *${meta}*`);
+
+			// Render each article with domain attribution
+			for (let ai = 0; ai < cluster.articles.length; ai++) {
+				const title = cluster.articles[ai];
+				const visit = cluster.visits[ai];
+				let domain = "";
+				try {
+					domain = new URL(visit.url).hostname.replace(/^www\./, "");
+				} catch {
+					// ignore invalid URLs
+				}
+				const domainLabel = domain ? ` \u2014 ${domain}` : "";
+				lines.push(`> - "${escapeForMarkdown(title)}"${domainLabel}`);
+			}
+		}
+		lines.push("");
+	}
+
 	// ── Claude Code sessions ─────────────────────
 	if (claudeSessions.length) {
 		lines.push("## \u{1F916} Claude Code / AI Work");
