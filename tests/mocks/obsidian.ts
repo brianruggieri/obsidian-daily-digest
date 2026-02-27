@@ -116,12 +116,32 @@ export class TFolder {
 	children: unknown[] = [];
 }
 
-export async function requestUrl(_opts: {
+export async function requestUrl(opts: {
 	url: string;
 	method?: string;
+	contentType?: string;
 	headers?: Record<string, string>;
 	body?: string;
 }): Promise<{ json: unknown; text: string; status: number }> {
+	// When AI_MODE=real, delegate to native fetch so matrix:real actually
+	// hits the Anthropic API instead of returning an empty stub.
+	if (process.env.AI_MODE === "real" && opts.url.startsWith("http")) {
+		const headers: Record<string, string> = { ...opts.headers };
+		if (opts.contentType) headers["Content-Type"] = opts.contentType;
+		const resp = await fetch(opts.url, {
+			method: opts.method ?? "GET",
+			headers,
+			body: opts.body,
+		});
+		const text = await resp.text();
+		let json: unknown;
+		try {
+			json = JSON.parse(text);
+		} catch {
+			json = {};
+		}
+		return { json, text, status: resp.status };
+	}
 	return { json: {}, text: "", status: 200 };
 }
 

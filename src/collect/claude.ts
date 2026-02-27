@@ -236,5 +236,9 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 
 	entries.sort((a, b) => b.time.getTime() - a.time.getTime());
 
-	return deduplicatePrompts(entries).slice(0, CLAUDE_DISPLAY_CAP);
+	// Filter out subagent sessions — these are internal orchestration prompts
+	// (e.g. "Explore the codebase for…"), not meaningful user activity.
+	const filtered = entries.filter((e) => e.project !== "subagents");
+
+	return deduplicatePrompts(filtered).slice(0, CLAUDE_DISPLAY_CAP);
 }

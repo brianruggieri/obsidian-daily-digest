@@ -64,6 +64,18 @@ function parseBulletList(text: string): string[] {
  * Returns a complete AISummary with sensible defaults for any missing fields.
  */
 export function parseProseSections(raw: string): AISummary {
+	// Detect error strings from callAI (e.g. "[AI summary unavailable: HTTP 401]")
+	if (raw.startsWith("[AI summary unavailable:")) {
+		return {
+			headline: "Activity summary unavailable",
+			tldr: raw,
+			themes: [],
+			category_summaries: {},
+			notable: [],
+			questions: [],
+		};
+	}
+
 	// Split on ## headings, capturing the heading text
 	const parts = raw.split(/^##\s+(.+)$/m);
 
