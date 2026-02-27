@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt, resolvePromptAndTier } from "../../../src/summarize/summarize";
-import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig } from "../../../src/types";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePromptAndTier } from "../../../src/summarize/summarize";
+import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
 import type { AICallConfig } from "../../../src/summarize/ai-client";
 
 const DATE = new Date("2025-06-15T00:00:00");
@@ -420,5 +420,181 @@ describe("resolvePromptAndTier", () => {
 		);
 
 		expect(withPatterns.maxTokens).toBeGreaterThan(withoutPatterns.maxTokens);
+	});
+});
+
+// ── buildProsePrompt Layer 0 (Semantic Context) ─────────
+
+describe("buildProsePrompt Layer 0", () => {
+	function makeWorkUnit(overrides: Partial<CommitWorkUnit> = {}): CommitWorkUnit {
+		const now = new Date("2025-06-15T10:00:00");
+		return {
+			label: "hybrid prose prompts",
+			workMode: "building",
+			commits: [{
+				hash: "abc123",
+				message: "feat: add hybrid prose prompt strategy",
+				time: now,
+				repo: "obsidian-claude-daily",
+				filesChanged: 3,
+				insertions: 120,
+				deletions: 10,
+			} as GitCommit],
+			repos: ["obsidian-claude-daily"],
+			timeRange: { start: now, end: now },
+			hasWhyInformation: false,
+			whyClause: null,
+			isGeneric: false,
+			...overrides,
+		};
+	}
+
+	function makeClaudeTaskSession(overrides: Partial<ClaudeTaskSession> = {}): ClaudeTaskSession {
+		const now = new Date("2025-06-15T10:00:00");
+		return {
+			taskTitle: "Implement semantic extraction layer",
+			taskType: "implementation",
+			topicCluster: "typescript",
+			prompts: [],
+			timeRange: { start: now, end: now },
+			project: "obsidian-claude-daily",
+			conversationFile: "abc.jsonl",
+			turnCount: 12,
+			interactionMode: "acceleration",
+			isDeepLearning: false,
+			...overrides,
+		};
+	}
+
+	function makeArticleCluster(overrides: Partial<ArticleCluster> = {}): ArticleCluster {
+		const now = new Date("2025-06-15T10:00:00");
+		return {
+			label: "typescript generics patterns",
+			articles: ["Understanding TypeScript Generics", "Advanced TS Patterns"],
+			visits: [],
+			timeRange: { start: now, end: now },
+			engagementScore: 0.7,
+			intentSignal: "research",
+			...overrides,
+		};
+	}
+
+	function makePatternsWithSemantics(
+		commitWorkUnits: CommitWorkUnit[] = [],
+		claudeTaskSessions: ClaudeTaskSession[] = []
+	): PatternAnalysis {
+		return {
+			...makeMockPatterns(),
+			commitWorkUnits,
+			claudeTaskSessions,
+		};
+	}
+
+	it("renders work sessions from patterns.commitWorkUnits", () => {
+		const patterns = makePatternsWithSemantics([makeWorkUnit()]);
+		const prompt = buildProsePrompt(DATE, "", { patterns });
+		expect(prompt).toContain("Work sessions (from git):");
+		expect(prompt).toContain("hybrid prose prompts");
+		expect(prompt).toContain("[building]");
+	});
+
+	it("filters out generic work units", () => {
+		const patterns = makePatternsWithSemantics([
+			makeWorkUnit({ label: "real work", isGeneric: false }),
+			makeWorkUnit({ label: "wip stuff", isGeneric: true }),
+		]);
+		const prompt = buildProsePrompt(DATE, "", { patterns });
+		expect(prompt).toContain("real work");
+		expect(prompt).not.toContain("wip stuff");
+	});
+
+	it("renders Claude task sessions from patterns.claudeTaskSessions", () => {
+		const patterns = makePatternsWithSemantics([], [makeClaudeTaskSession()]);
+		const prompt = buildProsePrompt(DATE, "", { patterns });
+		expect(prompt).toContain("AI task sessions:");
+		expect(prompt).toContain("Implement semantic extraction layer");
+		expect(prompt).toContain("12 turns");
+		expect(prompt).toContain("implementation");
+	});
+
+	it("uses correct depth labels for Claude sessions", () => {
+		const deep = makeClaudeTaskSession({
+			taskTitle: "Deep learning session",
+			isDeepLearning: true,
+			interactionMode: "exploration",
+		});
+		const explore = makeClaudeTaskSession({
+			taskTitle: "Exploring session",
+			isDeepLearning: false,
+			interactionMode: "exploration",
+		});
+		const impl = makeClaudeTaskSession({
+			taskTitle: "Building session",
+			isDeepLearning: false,
+			interactionMode: "acceleration",
+		});
+
+		const pDeep = makePatternsWithSemantics([], [deep]);
+		expect(buildProsePrompt(DATE, "", { patterns: pDeep })).toContain("deep exploration");
+
+		const pExplore = makePatternsWithSemantics([], [explore]);
+		expect(buildProsePrompt(DATE, "", { patterns: pExplore })).toContain("exploration");
+
+		const pImpl = makePatternsWithSemantics([], [impl]);
+		expect(buildProsePrompt(DATE, "", { patterns: pImpl })).toContain("implementation");
+	});
+
+	it("renders article clusters when passed", () => {
+		const patterns = makePatternsWithSemantics();
+		const clusters = [makeArticleCluster()];
+		const prompt = buildProsePrompt(DATE, "", { patterns, articleClusters: clusters });
+		expect(prompt).toContain("Reading clusters (from browser):");
+		expect(prompt).toContain("typescript generics patterns");
+		expect(prompt).toContain("2 articles");
+		expect(prompt).toContain("intent: research");
+	});
+
+	it("omits Layer 0 when no semantic data exists", () => {
+		const patterns = makePatternsWithSemantics([], []);
+		const prompt = buildProsePrompt(DATE, "", { patterns });
+		expect(prompt).not.toContain("Work sessions (from git):");
+		expect(prompt).not.toContain("AI task sessions:");
+		expect(prompt).not.toContain("Reading clusters (from browser):");
+	});
+
+	it("respects caps: 5 work units, 5 Claude sessions, 4 article clusters", () => {
+		const units = Array.from({ length: 10 }, (_, i) =>
+			makeWorkUnit({ label: `unit-${i}` })
+		);
+		const sessions = Array.from({ length: 10 }, (_, i) =>
+			makeClaudeTaskSession({ taskTitle: `session-${i}` })
+		);
+		const clusters = Array.from({ length: 8 }, (_, i) =>
+			makeArticleCluster({ label: `cluster-${i}` })
+		);
+		const patterns = makePatternsWithSemantics(units, sessions);
+		const prompt = buildProsePrompt(DATE, "", { patterns, articleClusters: clusters });
+
+		// Only first 5 work units
+		expect(prompt).toContain("unit-4");
+		expect(prompt).not.toContain("unit-5");
+
+		// Only first 5 Claude sessions
+		expect(prompt).toContain("session-4");
+		expect(prompt).not.toContain("session-5");
+
+		// Only first 4 article clusters
+		expect(prompt).toContain("cluster-3");
+		expect(prompt).not.toContain("cluster-4");
+	});
+
+	it("Layer 0 appears before Layer 1 (Focus:)", () => {
+		const patterns = makePatternsWithSemantics([makeWorkUnit()]);
+		const prompt = buildProsePrompt(DATE, "", { patterns });
+		const layer0Pos = prompt.indexOf("Work sessions (from git):");
+		const layer1Pos = prompt.indexOf("Focus:");
+		expect(layer0Pos).toBeGreaterThan(-1);
+		expect(layer1Pos).toBeGreaterThan(-1);
+		expect(layer0Pos).toBeLessThan(layer1Pos);
 	});
 });

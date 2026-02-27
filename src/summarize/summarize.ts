@@ -2,7 +2,7 @@ import { CATEGORY_LABELS } from "../filter/categorize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit } from "../types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit, ArticleCluster } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
@@ -668,7 +668,7 @@ export function resolvePromptAndTier(
 // Builds a prose-format prompt that asks for heading-delimited markdown
 // instead of JSON. Uses the same activity data as the JSON prompts.
 
-function buildProsePrompt(
+export function buildProsePrompt(
 	date: Date,
 	profile: string,
 	options: {
@@ -679,12 +679,13 @@ function buildProsePrompt(
 		compressed?: CompressedActivity;
 		classification?: ClassificationResult;
 		patterns?: PatternAnalysis;
+		articleClusters?: ArticleCluster[];
 	},
 	promptsDir?: string
 ): string {
 	const {
 		categorized, searches, claudeSessions, gitCommits,
-		compressed, classification, patterns,
+		compressed, classification, patterns, articleClusters,
 	} = options;
 
 	const dateStr = date.toLocaleDateString("en-US", {
@@ -697,6 +698,45 @@ function buildProsePrompt(
 
 	// Assemble activity data from available layers (same layering as unified prompt)
 	const dataSections: string[] = [];
+
+	// Layer 0: Semantic work sessions (pre-digested by extraction layer)
+	if (patterns) {
+		const semanticLines: string[] = [];
+
+		// Commit work units — skip generic/WIP
+		const units = (patterns.commitWorkUnits ?? []).filter(u => !u.isGeneric);
+		if (units.length > 0) {
+			semanticLines.push("Work sessions (from git):");
+			for (const unit of units.slice(0, 5)) {
+				semanticLines.push(`  - [${unit.workMode}] ${unit.commits.length} commits: "${unit.label}" (${unit.repos.join(", ")})`);
+			}
+		}
+
+		// Claude task sessions
+		const taskSessions = patterns.claudeTaskSessions ?? [];
+		if (taskSessions.length > 0) {
+			semanticLines.push("AI task sessions:");
+			for (const session of taskSessions.slice(0, 5)) {
+				const depthLabel = session.isDeepLearning ? "deep exploration"
+					: session.interactionMode === "exploration" ? "exploration"
+					: "implementation";
+				semanticLines.push(`  - "${session.taskTitle}" (${session.turnCount} turns, ${depthLabel})`);
+			}
+		}
+
+		// Article clusters (from browser reading)
+		const clusters = articleClusters ?? [];
+		if (clusters.length > 0) {
+			semanticLines.push("Reading clusters (from browser):");
+			for (const cluster of clusters.slice(0, 4)) {
+				semanticLines.push(`  - ${cluster.label} (${cluster.articles.length} articles, intent: ${cluster.intentSignal})`);
+			}
+		}
+
+		if (semanticLines.length > 0) {
+			dataSections.push(semanticLines.join("\n"));
+		}
+	}
 
 	// Layer 1: Statistical patterns summary
 	if (patterns) {
@@ -785,13 +825,14 @@ export async function summarizeDay(
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
-	promptStrategy: PromptStrategy = "monolithic-json"
+	promptStrategy: PromptStrategy = "monolithic-json",
+	articleClusters?: ArticleCluster[]
 ): Promise<AISummary> {
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
 		const prompt = buildProsePrompt(date, profile, {
 			categorized, searches, claudeSessions, gitCommits,
-			compressed, classification, patterns,
+			compressed, classification, patterns, articleClusters,
 		}, promptsDir);
 
 		log.debug(

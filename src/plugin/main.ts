@@ -592,7 +592,8 @@ export default class DailyDigestPlugin extends Plugin {
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
-							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy
+							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
+							articleClustersForSemantic
 						);
 						aiNotice.hide();
 					} else {
@@ -608,7 +609,8 @@ export default class DailyDigestPlugin extends Plugin {
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
-						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy
+						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
+						articleClustersForSemantic
 					);
 				}
 			}
