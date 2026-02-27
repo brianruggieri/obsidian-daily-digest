@@ -123,13 +123,34 @@ function extractTemporalClusters(
 	return clusters.sort((a, b) => b.eventCount - a.eventCount);
 }
 
+/**
+ * Filters raw page-title fragment topics from cluster labels.
+ * Removes topics that are clearly derived from raw page titles
+ * rather than semantic concepts:
+ *   - Contains dots (domain separators: "specright.isolvedhire")
+ *   - Multi-word all-capitalized words (company name fragments)
+ *   - Contains URL/slug characters
+ */
+function filterClusterTopics(topics: string[]): string[] {
+	return topics.filter((t) => {
+		// Reject topics containing domain separators
+		if (t.includes(".")) return false;
+		// Reject multi-word topics where all words start with a capital (company name fragments)
+		const words = t.split(/\s+/);
+		if (words.length >= 2 && words.every((w) => /^[A-Z]/.test(w))) return false;
+		// Reject topics with URL/slug characters
+		if (/[/\\?=&]/.test(t)) return false;
+		return true;
+	});
+}
+
 function buildCluster(
 	hourStart: number,
 	hourEnd: number,
 	activityType: ActivityType,
 	events: StructuredEvent[]
 ): TemporalCluster {
-	const allTopics = [...new Set(events.flatMap((e) => e.topics))];
+	const allTopics = filterClusterTopics([...new Set(events.flatMap((e) => e.topics))]);
 	const allEntities = [...new Set(events.flatMap((e) => e.entities))];
 	const duration = hourEnd - hourStart + 1;
 	const intensity = events.length / duration;

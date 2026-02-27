@@ -1,8 +1,11 @@
 /**
  * daily-matrix.ts — Settings Matrix CLI runner
  *
- * Runs one or all presets through the full 9-stage pipeline and writes
+ * Runs one or all presets through the full plugin pipeline and writes
  * rendered markdown notes to ~/obsidian-vaults/daily-digest-test/YYYY-MM-DD/.
+ *
+ * This script mirrors the plugin's pipeline in main.ts stage-for-stage so that
+ * matrix runs produce output identical to what users would see in Obsidian.
  *
  * Invoke via:
  *   npx tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts
@@ -42,11 +45,18 @@ import type { MatrixReport, PresetReport } from "./lib/assertion-runner";
 
 // src/ imports — obsidian is shimmed via tsconfig.scripts.json paths alias
 import { sanitizeCollectedData } from "../src/filter/sanitize";
-import { filterSensitiveDomains } from "../src/filter/sensitivity";
+import { filterSensitiveDomains, filterSensitiveSearches } from "../src/filter/sensitivity";
 import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
+import { clusterArticles } from "../src/analyze/clusters";
+import { linkSearchesToVisits } from "../src/analyze/intent";
+import { computeEngagementScore } from "../src/analyze/engagement";
+import { cleanTitle } from "../src/collect/browser";
+import { groupCommitsIntoWorkUnits } from "../src/analyze/commits";
+import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "../src/analyze/task-sessions";
+import { compressActivity } from "../src/summarize/compress";
 import { renderMarkdown } from "../src/render/renderer";
 import { buildPrompt, summarizeDay, resolvePromptAndTier } from "../src/summarize/summarize";
 
@@ -57,6 +67,7 @@ import type {
 	PatternConfig,
 	PatternAnalysis,
 	AISummary,
+	ArticleCluster,
 } from "../src/types";
 import type { KnowledgeSections } from "../src/analyze/knowledge";
 import type { AICallConfig } from "../src/summarize/ai-client";
@@ -72,7 +83,28 @@ const ASSERT = process.env.MATRIX_ASSERT === "true";
 
 const VAULT_ROOT = join(homedir(), "obsidian-vaults", "daily-digest-test");
 
-// ── Per-preset runner ────────────────────────────────────
+// ── Per-preset runner ────────────────────────────────
+//
+// KEEP IN SYNC WITH src/plugin/main.ts PIPELINE.
+//
+// This function mirrors the plugin's generateNote() method stage-for-stage.
+// Whenever main.ts gains a new pipeline stage, add it here in the same order.
+// Whenever summarizeDay() or resolvePromptAndTier() signatures change, update
+// both call sites below to match.
+// Verify with: npx tsc --project scripts/tsconfig.json --noEmit
+//
+// Current stage map (main.ts → runPreset):
+//   1. Collect                    ✓
+//   2. Sensitivity filter         ✓ (raw data, before sanitize)
+//   3. Sanitize                   ✓
+//   4. Categorize                 ✓
+//   5. Classify (LLM or rule)     ✓
+//   6. Article clustering         ✓
+//   7. Pattern extraction         ✓
+//   8. Knowledge sections         ✓
+//   9. Semantic extraction        ✓
+//  10. AI summary                 ✓
+//  11. Render markdown            ✓────
 
 async function runPreset(
 	presetId: string,
@@ -102,26 +134,8 @@ async function runPreset(
 		? await collectRealData(settings, since, until)
 		: await collectFixtureData(settings);
 
-	// ── 2. Sanitize ─────────────────────────────────────
-	const sanitizeConfig: SanitizeConfig = {
-		enabled: settings.enableSanitization,
-		level: settings.sanitizationLevel,
-		excludedDomains: settings.excludedDomains
-			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
-			: [],
-		redactPaths: settings.redactPaths,
-		scrubEmails: settings.scrubEmails,
-	};
-
-	const sanitized = sanitizeCollectedData(
-		raw.visits,
-		raw.searches,
-		raw.claudeSessions,
-		raw.gitCommits,
-		sanitizeConfig
-	);
-
-	// ── 3. Sensitivity filter ───────────────────────────
+	// ── 2. Sensitivity filter ───────────────────────────
+	// Mirrors main.ts: run on RAW data before sanitization.
 	const sensitivityConfig: SensitivityConfig = {
 		enabled: settings.enableSensitivityFilter,
 		categories: settings.sensitivityCategories,
@@ -131,52 +145,105 @@ async function runPreset(
 		action: settings.sensitivityAction,
 	};
 
-	const sensitivityResult = filterSensitiveDomains(sanitized.visits, sensitivityConfig);
-	const filteredVisits = sensitivityResult.kept;
+	let rawVisits = raw.visits;
+	let rawSearches = raw.searches;
+	if (sensitivityConfig.enabled) {
+		const visitResult = filterSensitiveDomains(rawVisits, sensitivityConfig);
+		rawVisits = visitResult.kept;
+		const searchResult = filterSensitiveSearches(rawSearches, sensitivityConfig);
+		rawSearches = searchResult.kept;
+		const filtered = (raw.visits.length - rawVisits.length) + (raw.searches.length - rawSearches.length);
+		if (filtered > 0) console.log(`[${presetId}] Sensitivity: removed ${filtered} items`);
+	}
+
+	// ── 3. Sanitize ──────────────────────────────────────
+	// Auto-upgrade to aggressive for Anthropic when enabled (mirrors main.ts).
+	const effectiveSanitizationLevel =
+		settings.autoAggressiveSanitization && settings.aiProvider === "anthropic"
+			? "aggressive"
+			: settings.sanitizationLevel;
+	const sanitizeConfig: SanitizeConfig = {
+		enabled: settings.enableSanitization,
+		level: effectiveSanitizationLevel,
+		excludedDomains: settings.excludedDomains
+			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
+			: [],
+		redactPaths: settings.redactPaths,
+		scrubEmails: settings.scrubEmails,
+	};
+
+	const sanitized = sanitizeCollectedData(
+		rawVisits,
+		rawSearches,
+		raw.claudeSessions,
+		raw.gitCommits,
+		sanitizeConfig
+	);
+	const visits = sanitized.visits;
+	const searches = sanitized.searches;
+	const claudeSessions = sanitized.claudeSessions;
+	const gitCommits = sanitized.gitCommits;
 
 	// ── 4. Categorize ────────────────────────────────────
-	const categorized = categorizeVisits(filteredVisits);
+	const categorized = categorizeVisits(visits);
 
 	// ── 5. Classify ──────────────────────────────────────
-	// classifyEvents makes LLM calls — only run when AI_MODE=real.
-	// classifyEventsRuleOnly is always safe (no network calls).
+	// AI_MODE=real: mirrors main.ts — LLM classification only when enableClassification && enableAI.
+	// AI_MODE=mock: uses rule-only as a testing approximation (LLM not available).
 	let classification: ClassificationResult | undefined;
+	const useAI = settings.enableAI && settings.aiProvider !== "none";
 
-	if (settings.enableClassification || settings.enablePatterns) {
-		if (AI_MODE === "real" && settings.enableClassification) {
+	if (AI_MODE === "real") {
+		if (settings.enableClassification && useAI) {
 			const classifyConfig = {
 				enabled: true,
 				endpoint: settings.localEndpoint,
 				model: settings.classificationModel,
 				batchSize: settings.classificationBatchSize,
 			};
-			classification = await classifyEvents(
-				filteredVisits,
-				sanitized.searches,
-				sanitized.claudeSessions,
-				sanitized.gitCommits,
-				categorized,
-				classifyConfig
-			);
-			console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
-		} else {
-			if (settings.enableClassification && AI_MODE === "mock") {
+			try {
+				classification = await classifyEvents(
+					visits, searches, claudeSessions, gitCommits, categorized, classifyConfig
+				);
+				console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
+			} catch (e) {
+				console.warn(`[${presetId}] Classification failed, continuing without:`, e);
+			}
+		}
+	} else {
+		// AI_MODE=mock: rule-only for presets that need classification or patterns
+		if (settings.enableClassification || settings.enablePatterns) {
+			if (settings.enableClassification) {
 				console.log(`[${presetId}] Classification: rule-only (AI_MODE=mock, skipping LLM)`);
 			}
 			classification = classifyEventsRuleOnly(
-				filteredVisits,
-				sanitized.searches,
-				sanitized.claudeSessions,
-				sanitized.gitCommits,
-				categorized
+				visits, searches, claudeSessions, gitCommits, categorized
 			);
 		}
 	}
 
-	// ── 6. Patterns ─────────────────────────────────────
+	// ── 6. Article Clustering ────────────────────────────
+	// Mirrors main.ts: pure TF-IDF + engagement scoring, no LLM calls.
+	let articleClusters: ArticleCluster[] = [];
+	let knowledge: KnowledgeSections | undefined;
+	try {
+		const searchLinks = linkSearchesToVisits(searches, visits);
+		const cleanedTitles = visits.map((v) => cleanTitle(v.title ?? ""));
+		const engagementScores = visits.map((v, i) =>
+			computeEngagementScore(v, cleanedTitles[i], visits, searchLinks)
+		);
+		articleClusters = clusterArticles(visits, cleanedTitles, engagementScores);
+		if (articleClusters.length > 0) {
+			console.log(`[${presetId}] Article clustering: ${articleClusters.length} clusters`);
+		}
+	} catch (e) {
+		console.warn(`[${presetId}] Article clustering failed, continuing without:`, e);
+	}
+
+	// ── 7. Patterns ─────────────────────────────────────
 	let patterns: PatternAnalysis | undefined;
 
-	if (settings.enablePatterns && classification) {
+	if (settings.enablePatterns && classification && classification.events.length > 0) {
 		const patternConfig: PatternConfig = {
 			enabled: true,
 			cooccurrenceWindow: settings.patternCooccurrenceWindow,
@@ -184,25 +251,76 @@ async function runPreset(
 			trackRecurrence: settings.trackRecurrence,
 		};
 		const topicHistory = buildEmptyTopicHistory();
-		patterns = extractPatterns(classification, patternConfig, topicHistory, DATE_STR);
-		console.log(
-			`[${presetId}] Patterns: focus=${Math.round(patterns.focusScore * 100)}%,` +
-			` clusters=${patterns.temporalClusters.length}`
-		);
+		try {
+			patterns = extractPatterns(
+				classification, patternConfig, topicHistory, DATE_STR,
+				gitCommits, claudeSessions, searches, visits, articleClusters
+			);
+			console.log(
+				`[${presetId}] Patterns: focus=${Math.round(patterns.focusScore * 100)}%,` +
+				` clusters=${patterns.temporalClusters.length}`
+			);
+		} catch (e) {
+			console.warn(`[${presetId}] Pattern extraction failed, continuing without:`, e);
+		}
 	}
 
-	// ── 7. Knowledge sections ────────────────────────────
-	const knowledge: KnowledgeSections | undefined = patterns
-		? generateKnowledgeSections(patterns)
-		: undefined;
+	// ── 8. Knowledge sections ────────────────────────────
+	if (patterns) {
+		knowledge = generateKnowledgeSections(patterns);
+	}
+	// Attach article clusters to knowledgeSections even without patterns (mirrors main.ts)
+	if (articleClusters.length > 0) {
+		if (knowledge) {
+			knowledge.articleClusters = articleClusters;
+		} else {
+			knowledge = {
+				focusSummary: "", focusScore: 0,
+				temporalInsights: [], topicMap: [], entityGraph: [],
+				recurrenceNotes: [], knowledgeDeltaLines: [], tags: [],
+				articleClusters,
+			};
+		}
+	}
 
-	// ── 8. AI summary + prompt log ───────────────────────
+	// ── 9. Semantic extraction ───────────────────────────
+	// Mirrors main.ts: commit work units + Claude task sessions, no LLM calls.
+	if (gitCommits.length > 0 || claudeSessions.length > 0) {
+		try {
+			const commitWorkUnits = groupCommitsIntoWorkUnits(gitCommits);
+			const claudeTaskSessions = groupClaudeSessionsIntoTasks(claudeSessions);
+			const searchMissions = detectSearchMissions(searches, visits);
+			fuseCrossSourceSessions(articleClusters, commitWorkUnits, claudeTaskSessions, searchMissions);
+
+			if (knowledge) {
+				if (!knowledge.commitWorkUnits?.length) knowledge.commitWorkUnits = commitWorkUnits;
+				if (!knowledge.claudeTaskSessions?.length) knowledge.claudeTaskSessions = claudeTaskSessions;
+			} else if (commitWorkUnits.length > 0 || claudeTaskSessions.length > 0) {
+				knowledge = {
+					focusSummary: "", focusScore: 0,
+					temporalInsights: [], topicMap: [], entityGraph: [],
+					recurrenceNotes: [], knowledgeDeltaLines: [], tags: [],
+					articleClusters: articleClusters.length > 0 ? articleClusters : undefined,
+					commitWorkUnits, claudeTaskSessions,
+				};
+			}
+			if (patterns) {
+				patterns.commitWorkUnits = commitWorkUnits;
+				patterns.claudeTaskSessions = claudeTaskSessions;
+			}
+			console.log(`[${presetId}] Semantic: ${commitWorkUnits.length} work units, ${claudeTaskSessions.length} task sessions`);
+		} catch (e) {
+			console.warn(`[${presetId}] Semantic extraction failed, continuing without:`, e);
+		}
+	}
+
+	// ── 10. AI summary + prompt log ──────────────────────
 	const promptLog: PromptLog = createPromptLog();
 	let aiSummary: AISummary | null = null;
-	const aiProviderUsed = (settings.enableAI ? settings.aiProvider : "none") as
+	const aiProviderUsed = (useAI ? settings.aiProvider : "none") as
 		"none" | "anthropic" | "local";
 
-	if (!settings.enableAI || settings.aiProvider === "none") {
+	if (!useAI) {
 		console.log(`[${presetId}] AI: disabled`);
 	} else if (AI_MODE === "mock") {
 		// Use resolvePromptAndTier to log the actual prompt + tier that would be sent
@@ -216,10 +334,12 @@ async function runPreset(
 		const ragConfigPreview = settings.enableRAG
 			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
 			: undefined;
+		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
 		const resolution = resolvePromptAndTier(
-			date, categorized, sanitized.searches, sanitized.claudeSessions,
+			date, categorized, searches, claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, compressed, gitCommits,
+			settings.promptsDir, settings.privacyTierOverride
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -242,6 +362,9 @@ async function runPreset(
 			localModel: settings.localModel,
 		};
 
+		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
+		console.log(`[${presetId}] Compressed: ~${compressed.tokenEstimate} tokens (budget: ${settings.promptBudget})`);
+
 		// Log the prompt and tier that resolvePromptAndTier selects.
 		// For RAG presets, we pass a minimal ragConfig so the tier label (Tier 2) is
 		// correct; the actual RAG chunks are fetched asynchronously inside summarizeDay.
@@ -249,9 +372,10 @@ async function runPreset(
 			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
 			: undefined;
 		const previewResolution = resolvePromptAndTier(
-			date, categorized, sanitized.searches, sanitized.claudeSessions,
+			date, categorized, searches, claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, compressed, gitCommits,
+			settings.promptsDir, settings.privacyTierOverride
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -264,30 +388,23 @@ async function runPreset(
 		});
 
 		aiSummary = await summarizeDay(
-			date,
-			categorized,
-			sanitized.searches,
-			sanitized.claudeSessions,
-			aiCallConfig,
-			settings.profile,
-			undefined,
-			classification,
-			patterns,
-			undefined,
-			sanitized.gitCommits,
-			settings.promptsDir,
-			settings.promptStrategy
+			date, categorized, searches, claudeSessions,
+			aiCallConfig, settings.profile,
+			ragConfigPreview, classification, patterns,
+			compressed, gitCommits,
+			settings.promptsDir, settings.promptStrategy,
+			articleClusters, settings.privacyTierOverride
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}
 
-	// ── 9. Render markdown ───────────────────────────────
+	// ── 11. Render markdown ──────────────────────────────
 	const md = renderMarkdown(
 		date,
-		filteredVisits,
-		sanitized.searches,
-		sanitized.claudeSessions,
-		sanitized.gitCommits,
+		visits,
+		searches,
+		claudeSessions,
+		gitCommits,
 		categorized,
 		aiSummary,
 		aiProviderUsed,
@@ -295,12 +412,12 @@ async function runPreset(
 		promptLog
 	);
 
-	// ── 10. Write file ───────────────────────────────────
+	// ── 12. Write file ───────────────────────────────────
 	const filePath = join(outputDir, `${getPresetFilename(preset)}.md`);
 	writeFileSync(filePath, md, "utf-8");
 	console.log(`[${presetId}] Written to ${filePath}`);
 
-	// ── 11. Assertions ───────────────────────────────────
+	// ── 13. Assertions ───────────────────────────────────
 	if (ASSERT) {
 		const durationMs = Date.now() - start;
 		const report = runAssertions(md, presetId, filePath, durationMs, {

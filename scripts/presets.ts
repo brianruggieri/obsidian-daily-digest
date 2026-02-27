@@ -32,6 +32,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 
 	// Data sources — toggles & paths
 	browserConfigs: [],
+	maxVisitsPerDomain: 5,
 	enableBrowser: true,
 	enableClaude: true,
 	claudeSessionsDir: "~/.claude/projects",
@@ -52,7 +53,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	sensitivityCustomDomains: "",
 
 	// AI
-	promptStrategy: "monolithic-json",
+	promptStrategy: "single-prose",
 	promptsDir: "",
 	debugMode: false,
 	enableAI: false,
@@ -77,6 +78,8 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	// Meta
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,
+	privacyTierOverride: null,
+	autoAggressiveSanitization: true,
 };
 
 // Presets are ordered from most private (rank 1) to least private (rank 11).
@@ -150,7 +153,7 @@ export const PRESETS: Preset[] = [
 	},
 	{
 		id: "local-llm-prose",
-		description: "All sources, local model, prose output (no JSON)",
+		description: "All sources, local model, prose output",
 		privacyRank: 6,
 		privacyGroup: "local",
 		settings: {
@@ -158,7 +161,6 @@ export const PRESETS: Preset[] = [
 			aiProvider: "local",
 			enableRAG: false,
 			enableClassification: false,
-			promptStrategy: "single-prose",
 		},
 	},
 
@@ -252,7 +254,6 @@ export const PRESETS: Preset[] = [
 			enableRAG: false,
 			enableClassification: false,
 			enablePatterns: false,
-			promptStrategy: "single-prose",
 		},
 	},
 	{

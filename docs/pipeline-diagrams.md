@@ -93,17 +93,29 @@ Domain names                ✓           ✓           ✓           ✗       
 Search query text           ✓           ✓           ✓           ✗           ✗
 Claude prompt text          ✓           ✓           ✓           ✗           ✗
 Git commit messages         ✓           ✓           ✓           ✗           ✗
-Per-event summaries         ✗           ✗           ✗           ✓           ✗
+Rule-based summary text     ✓ (raw)     ✓ (raw)     ✓ (raw)     ✗ (*)       ✗
+Per-event summaries         ✗           ✗           ✗           ✓ (*)       ✗
 Per-event topics            ✗           ✗           ✗           ✓           ✗
 Per-event entities          ✗           ✗           ✗           ✓           ✗
 Activity type labels        ✗           ✗           ✗           ✓           ✓ (counts)
 Topic frequency dist.       ✗           ✗           ✗           ✗           ✓
-Temporal cluster labels     ✗           ✗           ✗           ✗           ✓
+Temporal cluster labels     ✗           ✗           ✗           ✗           ✓ (**)
 Entity co-occurrences       ✗           ✗           ✗           ✗           ✓
 Focus score                 ✗           ✗           ✗           ✗           ✓
 Recurrence trends           ✗           ✗           ✗           ✗           ✓
 Knowledge delta counts      ✗           ✗           ✗           ✗           ✓
 ```
+
+(*) Tier 3 per-event summaries are semantically abstracted:
+- With LLM classification: AI-generated 1-liners (no raw URLs or titles)
+- With rule-based classification (no local model): category-based descriptions
+  e.g., "Browsing social media", "Searched for fashion", "Committed authentication changes"
+- Raw domain+title strings ("airbnb.com - Your trips - Airbnb") are NOT exposed at Tier 3
+
+(**) Tier 4 temporal cluster topic labels are filtered to remove page-title fragments.
+Only semantic vocabulary labels pass through (e.g., "authentication", "job-search",
+"software development"). Raw company names and page-title word fragments are blocked
+by `filterClusterTopics()` in `patterns.ts`.
 
 **Tier caps (Tier 1/standard):**
 - Browser: top 8 domains per category, top 5 titles each
@@ -338,4 +350,17 @@ provider = "local"      ──► Uses unified prompt with ALL data layers
                              → No privacy escalation — data stays on device
                              → buildUnifiedPrompt() merges raw + classified
                                + patterns into a single prompt
+
+autoAggressiveSanit-    ──► When true AND provider = "anthropic":
+ization = true               → sanitizationLevel is overridden to "aggressive"
+(default: true)              → Strips all URL query strings before cloud calls
+                             → Applies even if sanitizationLevel = "standard"
+
+privacyTierOverride     ──► Bypasses auto-escalation in resolvePromptAndTier()
+= null (default)             → null: auto-select most private available tier
+= 4                          → Always use de-identified (requires patterns)
+= 3                          → Always use classified (requires classification)
+= 2                          → Always use compressed (standard data)
+= 1                          → Always use standard (raw sanitized data)
+                             → Falls back to Tier 1 if required data unavailable
 ```

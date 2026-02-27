@@ -595,6 +595,54 @@ export interface PromptResolution {
 }
 
 /**
+ * Routes to a specific forced tier, falling back to Tier 1 with a warning
+ * if the requested tier's data is unavailable.
+ */
+function buildTierForced(
+	tier: number,
+	date: Date,
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	config: AICallConfig,
+	profile: string,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+	compressed?: CompressedActivity,
+	gitCommits: GitCommit[] = [],
+	promptsDir?: string
+): PromptResolution {
+	const standardPrompt = () =>
+		compressed
+			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
+			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+
+	switch (tier) {
+		case 4:
+			if (patterns) {
+				return { prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir), tier: 4, maxTokens: 1500 };
+			}
+			log.warn("Daily Digest: Tier 4 override requested but no patterns available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+		case 3:
+			if (classification && classification.events.length > 0) {
+				return {
+					prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
+					tier: 3,
+					maxTokens: 1000,
+				};
+			}
+			log.warn("Daily Digest: Tier 3 override requested but no classification available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+		case 2:
+			return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+		case 1:
+		default:
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+	}
+}
+
+/**
  * Resolve which prompt to build and which privacy tier it corresponds to,
  * based on available data layers and the AI provider.
  *
@@ -622,12 +670,21 @@ export function resolvePromptAndTier(
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	privacyTierOverride?: number | null
 ): PromptResolution {
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
 			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+
+	// Explicit tier override bypasses auto-escalation
+	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
+		return buildTierForced(
+			privacyTierOverride, date, categorized, searches, claudeSessions,
+			config, profile, classification, patterns, compressed, gitCommits, promptsDir
+		);
+	}
 
 	if (patterns && config.provider === "anthropic") {
 		return {
@@ -826,7 +883,8 @@ export async function summarizeDay(
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
 	promptStrategy: PromptStrategy = "monolithic-json",
-	articleClusters?: ArticleCluster[]
+	articleClusters?: ArticleCluster[],
+	privacyTierOverride?: number | null
 ): Promise<AISummary> {
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
@@ -889,7 +947,7 @@ export async function summarizeDay(
 			);
 			const fallback = resolvePromptAndTier(
 				date, categorized, searches, claudeSessions, config, profile,
-				undefined, classification, patterns, compressed, gitCommits, promptsDir
+				undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
 			);
 			prompt = fallback.prompt;
 			maxTokens = fallback.maxTokens;
@@ -897,7 +955,7 @@ export async function summarizeDay(
 	} else {
 		const resolution = resolvePromptAndTier(
 			date, categorized, searches, claudeSessions, config, profile,
-			undefined, classification, patterns, compressed, gitCommits, promptsDir
+			undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
 		);
 		prompt = resolution.prompt;
 		maxTokens = resolution.maxTokens;

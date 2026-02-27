@@ -206,9 +206,120 @@ function extractClaudeTopics(text: string): string[] {
 	return words.length > 0 ? [words.join(" ")] : [];
 }
 
+// ── Search Topic Extraction ─────────────────────────────
+
+/**
+ * Vocabulary patterns for classifying search query intent into semantic labels.
+ * First match wins. Falls back to "information" for unrecognized queries.
+ */
+const SEARCH_TOPIC_PATTERNS: [RegExp, string][] = [
+	[/\b(outfits?|styles?|fashion|costumes?|wear|clothing|dress(?:es)?)\b/i, "fashion"],
+	[/\b(maps?|directions?|routes?|navigation|near\s+me|distance)\b/i, "navigation"],
+	[/\b(events?|calendar|conference|meetups?|tickets?|concerts?|talks?|schedule)\b/i, "event-planning"],
+	[/\b(jobs?|career|salary|hire|interview|resume|position|engineer|developer)\b/i, "job-search"],
+	[/\b(weather|forecast|temperature)\b/i, "weather"],
+	[/\b(recipes?|food|restaurants?|cook|meal|ingredient)\b/i, "food"],
+	[/\b(buy|price|reviews?|amazon|deals?|shipping|shops?)\b/i, "shopping"],
+	[/\b(health|symptoms?|medical|medicine|doctor|treatment)\b/i, "health"],
+	[/\b(news|articles?|latest|update|breaking)\b/i, "news"],
+	...CLAUDE_TOPIC_VOCABULARY,
+];
+
+/**
+ * Extracts semantic topic labels from a search query using SEARCH_TOPIC_PATTERNS.
+ * Returns abstracted labels like ["fashion"] rather than raw query terms.
+ * Falls back to ["information"] for unrecognized queries.
+ */
+export function extractSearchTopics(query: string): string[] {
+	for (const [pattern, label] of SEARCH_TOPIC_PATTERNS) {
+		if (pattern.test(query)) return [label];
+	}
+	return ["information"];
+}
+
+// ── Category Topic Labels ───────────────────────────────
+
+/**
+ * Maps browser domain categories to semantic topic labels.
+ * Returns abstracted labels instead of page-title fragments.
+ * Unknown category keys gracefully hit the fallback (empty array).
+ *
+ * Exported so issue #40 (UT1 integration) can extend it with UT1 category keys.
+ */
+export const CATEGORY_TOPIC_LABELS: Record<string, string[]> = {
+	dev: ["software development"],
+	work: ["work productivity"],
+	social: ["social networking"],
+	shopping: ["online shopping"],
+	finance: ["financial management"],
+	research: ["research"],
+	news: ["news and media"],
+	media: ["media consumption"],
+	education: ["education"],
+	ai_tools: ["AI tools"],
+	other: [],
+	// UT1 equivalents (added when issue #40 lands):
+	// "social_networks": ["social networking"],
+	// "jobsearch": ["work productivity"],
+	// "press": ["news and media"],
+};
+
+function getCategoryTopicLabel(category?: string): string[] {
+	return CATEGORY_TOPIC_LABELS[category ?? "other"] ?? [];
+}
+
+// ── Category Summaries ──────────────────────────────────
+
+/**
+ * Maps browser domain categories to human-readable abstract summary strings.
+ * Used by buildRuleBasedSummary() for browser events.
+ *
+ * Exported so issue #40 (UT1 integration) can extend with UT1 category keys.
+ */
+export const CATEGORY_SUMMARIES: Record<string, string> = {
+	dev: "Working in development tools",
+	work: "Managing work documents",
+	social: "Browsing social media",
+	shopping: "Browsing e-commerce content",
+	finance: "Managing financial accounts",
+	research: "Browsing research content",
+	news: "Reading news and articles",
+	media: "Consuming media content",
+	education: "Browsing educational content",
+	ai_tools: "Using AI tools and platforms",
+	other: "General web browsing",
+	// UT1 equivalents (added when issue #40 lands):
+	// "social_networks": "Browsing social media",
+	// "jobsearch": "Managing work documents",
+	// "press": "Reading news and articles",
+};
+
+/**
+ * Builds a semantic abstract summary for a rule-classified event.
+ * Replaces event.text.slice(0, 100) which leaks raw domain+title data.
+ */
+function buildRuleBasedSummary(
+	source: string,
+	activityType: ActivityType,
+	category?: string,
+	topics?: string[]
+): string {
+	const topicStr = topics?.length ? topics.join(", ") : "";
+	if (source === "search") {
+		return topicStr && topicStr !== "information" ? `Searched for ${topicStr}` : "Performed online search";
+	}
+	if (source === "git") {
+		return topicStr ? `Committed ${topicStr} changes` : "Committed code changes";
+	}
+	if (source === "browser") {
+		return CATEGORY_SUMMARIES[category || "other"] || "Browsing web content";
+	}
+	return `${activityType} activity`;
+}
+
 // ── Rule-Based Fallback Classification ──────────────────
 
-const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
+export const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
 	dev: "implementation",
 	work: "admin",
 	research: "research",
@@ -287,22 +398,13 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 
 	if (event.source === "browser") {
 		activityType = CATEGORY_TO_ACTIVITY[event.category || "other"] || "unknown";
-		// Simple topic extraction: first 3 meaningful words
-		const words = event.text
-			.replace(/[^\w\s-]/g, " ")
-			.split(/\s+/)
-			.filter((w) => w.length > 3)
-			.slice(0, 3);
-		topics = words.length > 0 ? [words.join(" ")] : [];
+		// Use category-based labels instead of raw page-title word extraction
+		topics = getCategoryTopicLabel(event.category);
 	} else if (event.source === "search") {
 		activityType = "research";
-		// Simple topic extraction: first 3 meaningful words
-		const words = event.text
-			.replace(/[^\w\s-]/g, " ")
-			.split(/\s+/)
-			.filter((w) => w.length > 3)
-			.slice(0, 3);
-		topics = words.length > 0 ? [words.join(" ")] : [];
+		// Extract query from text: '"query text" (engine)' → 'query text'
+		const query = event.text.replace(/^"(.+)"\s*\(.*\)$/, "$1");
+		topics = extractSearchTopics(query);
 	} else if (event.source === "claude") {
 		// Vocabulary-based classification replaces unconditional "implementation"
 		const taskType = classifyClaudeTaskType(event.text);
@@ -319,21 +421,11 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 		topics = extractClaudeTopics(event.text);
 	} else if (event.source === "git") {
 		activityType = "implementation";
-		// Simple topic extraction: first 3 meaningful words
-		const words = event.text
-			.replace(/[^\w\s-]/g, " ")
-			.split(/\s+/)
-			.filter((w) => w.length > 3)
-			.slice(0, 3);
-		topics = words.length > 0 ? [words.join(" ")] : [];
+		// Extract message from "{repo}: {message} (+N/-N)" and classify via vocabulary
+		const message = event.text.replace(/^\S+:\s+/, "").replace(/\s*\(\+\d+-\/\d+\)\s*$/, "");
+		topics = extractClaudeTopics(message);
 	} else {
-		// Simple topic extraction: first 3 meaningful words
-		const words = event.text
-			.replace(/[^\w\s-]/g, " ")
-			.split(/\s+/)
-			.filter((w) => w.length > 3)
-			.slice(0, 3);
-		topics = words.length > 0 ? [words.join(" ")] : [];
+		topics = [];
 	}
 
 	const intent = inferIntent(event.text, event.source);
@@ -348,7 +440,7 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 		intent,
 		confidence: 0.3,
 		category: event.category,
-		summary: event.text.slice(0, 100),
+		summary: buildRuleBasedSummary(event.source, activityType, event.category, topics),
 	};
 }
 
