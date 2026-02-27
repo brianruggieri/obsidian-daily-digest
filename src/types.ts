@@ -408,3 +408,27 @@ export interface RAGConfig {
 	minChunkTokens: number;
 	maxChunkTokens: number;
 }
+
+// ── Article Clustering Types ─────────────────────────────
+
+/**
+ * A cluster of thematically related browser visits grouped by TF-IDF
+ * cosine similarity within a session time window.
+ *
+ * Produced by `clusterArticles()` in `src/analyze/clusters.ts`.
+ * Added to `KnowledgeSections.articleClusters` for rendering.
+ */
+export interface ArticleCluster {
+	/** Top-3 TF-IDF terms joined by space — the emergent topic label. */
+	label: string;
+	/** Cleaned page titles of articles in this cluster. */
+	articles: string[];
+	/** Source browser visits (superset of articles, filtered to substantive). */
+	visits: BrowserVisit[];
+	/** Time range of the session: first and last visit timestamps. */
+	timeRange: { start: Date; end: Date };
+	/** Average engagement score across visits in this cluster. */
+	engagementScore: number;
+	/** Inferred reading intent based on domain diversity and revisit patterns. */
+	intentSignal: "research" | "reference" | "implementation" | "browsing";
+}

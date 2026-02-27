@@ -22,6 +22,10 @@ import { classifyEvents } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "../analyze/patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "../analyze/knowledge";
+import { linkSearchesToVisits } from "../analyze/intent";
+import { computeEngagementScore } from "../analyze/engagement";
+import { clusterArticles } from "../analyze/clusters";
+import { cleanTitle } from "../collect/browser";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "../render/merge";
 import * as log from "./log";
 
@@ -423,6 +427,45 @@ export default class DailyDigestPlugin extends Plugin {
 				} catch (e) {
 					log.warn("Daily Digest: Pattern extraction failed, continuing without:", e);
 				}
+			}
+
+			// ── Article Clustering (article-first browsing) ──
+			// Runs after sanitization and categorization, before AI summary.
+			// No LLM calls — pure TF-IDF + engagement scoring.
+			try {
+				progressNotice.setMessage("Daily Digest: Clustering articles\u2026");
+				const searchLinks = linkSearchesToVisits(searches, visits);
+				const cleanedTitles = visits.map((v) => cleanTitle(v.title ?? ""));
+				const engagementScores = visits.map((v, i) =>
+					computeEngagementScore(v, cleanedTitles[i], visits, searchLinks)
+				);
+				const articleClusters = clusterArticles(visits, cleanedTitles, engagementScores);
+
+				if (articleClusters.length > 0) {
+					if (knowledgeSections) {
+						knowledgeSections.articleClusters = articleClusters;
+					} else {
+						// Pattern extraction was skipped — create a minimal KnowledgeSections
+						// so article clusters can still reach the renderer.
+						knowledgeSections = {
+							focusSummary: "",
+							focusScore: 0,
+							temporalInsights: [],
+							topicMap: [],
+							entityGraph: [],
+							recurrenceNotes: [],
+							knowledgeDeltaLines: [],
+							tags: [],
+							articleClusters,
+						};
+					}
+					log.debug(
+						`Daily Digest: Article clustering produced ${articleClusters.length} clusters ` +
+						`from ${visits.length} visits`
+					);
+				}
+			} catch (e) {
+				log.warn("Daily Digest: Article clustering failed, continuing without:", e);
 			}
 
 			// ── AI Summary ───────────────────────

@@ -46,7 +46,7 @@ export const ENTITY_EXTRACTION_SKIP_DOMAINS = new Set([
  * git commit imperative verbs, email/notification noise, navigation/UI chrome
  * words, and generic tech acronyms.
  */
-const ENTITY_STOPWORDS = new Set([
+export const ENTITY_STOPWORDS = new Set([
 	// Existing entries
 	"The", "This", "That", "How", "What", "Why", "When",
 	// Common English that pass the length check but carry no specificity

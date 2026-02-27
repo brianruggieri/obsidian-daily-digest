@@ -71,6 +71,82 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 	}
 }
 
+// ── Title Cleaning ────────────────────────────────
+
+/**
+ * Separators used to split a raw page title into article portion and site name.
+ * Matches: " | ", " — ", " – ", " · ", " » ", " - " (with surrounding spaces).
+ */
+const TITLE_SEPARATORS = /\s+[|—–·»]\s+|\s+-\s+/;
+
+/**
+ * Navigation and UI noise titles that carry no knowledge value.
+ * Matched against the article portion after separator splitting.
+ */
+const NAV_NOISE_TITLES = new Set([
+	"Home", "Login", "Sign In", "Dashboard", "Settings", "Profile",
+	"New Tab", "Untitled", "Loading...", "404", "Error", "Page Not Found",
+	"Search Results", "Google", "Bing", "DuckDuckGo",
+]);
+
+/**
+ * Known brand suffixes appended by popular sites that obscure the actual
+ * article title. Stripped before separator splitting so the separator split
+ * operates only on the article content, not the brand name.
+ */
+const BRAND_SUFFIXES = [
+	" | GitHub", " · GitHub", " - GitHub",
+	" - Stack Overflow", " — Stack Overflow",
+	" | MDN Web Docs", " | TypeScript",
+	" | Google", " - Google Search",
+	" | YouTube", " - YouTube",
+	" | Reddit",
+	" | Obsidian",
+	" | Wikipedia", " - Wikipedia",
+];
+
+/**
+ * Extract the article portion of a raw browser page title.
+ *
+ * Steps:
+ * 1. Strip known brand suffixes (e.g. " | GitHub").
+ * 2. Split on title separators (|, —, –, ·, ») and take the left portion.
+ * 3. Reject nav-noise titles (Home, Login, Dashboard, …) and very short results.
+ *
+ * Returns "" when the title carries no knowledge value so callers can skip it.
+ *
+ * @example
+ * cleanTitle("TypeScript: Handbook - Generics | TypeScript") → "TypeScript: Handbook - Generics"
+ * cleanTitle("How to deep copy array — Stack Overflow") → "How to deep copy array"
+ * cleanTitle("Home") → ""
+ */
+export function cleanTitle(rawTitle: string): string {
+	if (!rawTitle) return "";
+
+	let title = rawTitle;
+
+	// Strip known brand suffixes first (more reliable than splitting)
+	for (const suffix of BRAND_SUFFIXES) {
+		if (title.endsWith(suffix)) {
+			title = title.slice(0, title.length - suffix.length).trim();
+			break;
+		}
+	}
+
+	// Split on separators and select the most meaningful segment.
+	// Using the longest non-trivial segment handles Stack Overflow's
+	// "lang-tag - article title" format where the left portion is the short tag.
+	const parts = title.split(TITLE_SEPARATORS).map((p) => p.trim());
+	const article = parts.reduce((best, candidate) =>
+		candidate.length > best.length ? candidate : best,
+	"");
+
+	// Reject nav-noise titles and very short results
+	if (NAV_NOISE_TITLES.has(article) || article.length < 5) return "";
+
+	return article;
+}
+
 // ── Browser URL Utilities ────────────────────────
 
 /**
