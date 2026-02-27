@@ -38,6 +38,7 @@ export function readCodexSessions(settings: DailyDigestSettings, since: Date): C
 
 			const rawContent = readFileSync(filePath, "utf-8");
 			const lines = rawContent.split("\n");
+			const fileName = basename(filePath);
 
 			// First pass: extract project name from session_meta
 			let projectName = basename(join(filePath, ".."));
@@ -57,7 +58,9 @@ export function readCodexSessions(settings: DailyDigestSettings, since: Date): C
 				}
 			}
 
-			// Second pass: extract user prompts from response_item entries
+			// Second pass: collect qualifying prompts from response_item entries
+			const fileMessages: Array<{ text: string; dt: Date }> = [];
+
 			for (const line of lines) {
 				if (!line.trim()) continue;
 				try {
@@ -86,16 +89,26 @@ export function readCodexSessions(settings: DailyDigestSettings, since: Date): C
 						// Skip injected context blocks
 						if (CODEX_INJECTED_PREFIXES.some((p) => trimmed.startsWith(p))) continue;
 
-						entries.push({
-							// Truncate Codex prompts to 200 chars, consistent with Claude sessions
-						prompt: trimmed.length > 200 ? trimmed.slice(0, 200) + "\u2026" : trimmed,
-							time: dt || new Date(fileStat.mtimeMs),
-							project: projectName,
-						});
+						fileMessages.push({ text: trimmed, dt: dt || new Date(fileStat.mtimeMs) });
 					}
 				} catch {
 					// skip unparseable lines
 				}
+			}
+
+			// Emit sessions with conversation identity metadata
+			const turnCount = fileMessages.length;
+			for (let i = 0; i < fileMessages.length; i++) {
+				const { text, dt } = fileMessages[i];
+				entries.push({
+					// Truncate Codex prompts to 200 chars, consistent with Claude sessions
+					prompt: text.length > 200 ? text.slice(0, 200) + "\u2026" : text,
+					time: dt,
+					project: projectName,
+					isConversationOpener: i === 0,
+					conversationFile: fileName,
+					conversationTurnCount: turnCount,
+				});
 			}
 		} catch {
 			// skip unreadable files

@@ -71,11 +71,17 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 				prompt: "Here's my AWS key AKIAIOSFODNN7EXAMPLE and secret. Fix the S3 upload function.",
 				time: BASE_DATE,
 				project: "aws-project",
+				isConversationOpener: true,
+				conversationFile: "session1.jsonl",
+				conversationTurnCount: 1,
 			},
 			{
 				prompt: "The file at /Users/testuser/Documents/tax-returns/2024.pdf needs processing. Also email me at testuser@personal-email.com",
 				time: BASE_DATE,
 				project: "personal",
+				isConversationOpener: true,
+				conversationFile: "session2.jsonl",
+				conversationTurnCount: 1,
 			},
 		],
 		expectedRedactions: [
@@ -178,7 +184,7 @@ export function createMalformedDataScenario(): PersonaOutput {
 			{ query: "valid search query", time: BASE_DATE, engine: "google.com" },
 		],
 		claude: [
-			{ prompt: "help", time: BASE_DATE, project: "" },
+			{ prompt: "help", time: BASE_DATE, project: "", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 },
 		],
 		git: [],
 		expectedThemes: [],

@@ -374,7 +374,7 @@ describe("sanitizeClaudeSession – XML artifact stripping", () => {
 	};
 
 	function makeSession(prompt: string) {
-		return [{ prompt, time: new Date(), project: "test-project" }];
+		return [{ prompt, time: new Date(), project: "test-project", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 }];
 	}
 
 	it("strips <image>…</image> blocks entirely", () => {
