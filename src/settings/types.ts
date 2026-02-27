@@ -46,6 +46,8 @@ export interface DailyDigestSettings {
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
 	trackRecurrence: boolean;
+	/** Max unique pages shown per domain in the daily note. Default: 5. Range: 1-20. */
+	maxVisitsPerDomain: number;
 	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
@@ -91,6 +93,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
+	maxVisitsPerDomain: 5,
 	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
