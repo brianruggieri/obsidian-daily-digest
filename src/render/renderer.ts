@@ -30,6 +30,73 @@ function longDate(d: Date): string {
 	return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+/**
+ * Renders the Knowledge Insights section into the provided lines array.
+ * Extracted as a helper so the block can be positioned differently depending
+ * on whether an AI summary is present (AI-on: before raw data; no-AI: after).
+ */
+function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections): void {
+	lines.push("## \u{1F9E0} Knowledge Insights");
+	lines.push("");
+
+	// Focus summary
+	lines.push(`> ${escapeForMarkdown(knowledge.focusSummary)}`);
+	lines.push("");
+
+	// Temporal clusters
+	if (knowledge.temporalInsights.length > 0) {
+		lines.push("### \u{23F0} Activity Clusters");
+		lines.push("");
+		for (const insight of knowledge.temporalInsights) {
+			lines.push(`- ${escapeForMarkdown(insight)}`);
+		}
+		lines.push("");
+	}
+
+	// Topic map
+	if (knowledge.topicMap.length > 0) {
+		lines.push("### \u{1F5FA}\u{FE0F} Topic Map");
+		lines.push("");
+		for (const line of knowledge.topicMap) {
+			lines.push(`- ${escapeForMarkdown(line)}`);
+		}
+		lines.push("");
+	}
+
+	// Entity graph
+	if (knowledge.entityGraph.length > 0) {
+		lines.push("### \u{1F517} Entity Relations");
+		lines.push("");
+		for (const line of knowledge.entityGraph) {
+			lines.push(`- ${escapeForMarkdown(line)}`);
+		}
+		lines.push("");
+	}
+
+	// Recurrence signals
+	if (knowledge.recurrenceNotes.length > 0) {
+		lines.push("### \u{1F504} Recurrence Patterns");
+		lines.push("");
+		for (const note of knowledge.recurrenceNotes) {
+			lines.push(`- ${escapeForMarkdown(note)}`);
+		}
+		lines.push("");
+	}
+
+	// Knowledge delta
+	if (knowledge.knowledgeDeltaLines.length > 0) {
+		lines.push("### \u{1F4A1} Knowledge Delta");
+		lines.push("");
+		for (const line of knowledge.knowledgeDeltaLines) {
+			lines.push(`- ${escapeForMarkdown(line)}`);
+		}
+		lines.push("");
+	}
+
+	lines.push("---");
+	lines.push("");
+}
+
 export function renderMarkdown(
 	date: Date,
 	visits: BrowserVisit[],
@@ -95,14 +162,17 @@ export function renderMarkdown(
 	);
 	lines.push("");
 
-	// ── AI Headline & TL;DR ─────────────────────
+	// ── AI Headline ──────────────────────────────
 	if (aiSummary) {
 		if (aiSummary.headline) {
 			lines.push(`> [!tip] ${escapeForMarkdown(aiSummary.headline)}`);
 			lines.push("");
 		}
-		if (aiSummary.tldr) {
-			lines.push(`> [!abstract] ${escapeForMarkdown(aiSummary.tldr)}`);
+		// TL;DR callout removed — work_story (prose narrative) is the primary
+		// high-level summary.  If work_story is absent, fall back to rendering
+		// tldr as a plain paragraph so the day still has a human-readable lead.
+		if (!aiSummary.work_story && aiSummary.tldr) {
+			lines.push(escapeForMarkdown(aiSummary.tldr));
 			lines.push("");
 		}
 		if (aiSummary.themes?.length) {
@@ -147,23 +217,24 @@ export function renderMarkdown(
 	}
 
 	// ── Work Patterns (C2) ───────────────────────
+	// Rendered as a collapsed callout so verbose bullet lists don't dominate
+	// the initial view — the reader can expand on demand.
 	if (aiSummary?.work_patterns?.length || aiSummary?.cross_source_connections?.length) {
-		lines.push("## \u26A1 Work Patterns");
-		lines.push("");
+		lines.push(`> [!info]- \u26A1 Work Patterns`);
 		if (aiSummary.work_patterns?.length) {
 			for (const p of aiSummary.work_patterns) {
-				lines.push(`- ${escapeForMarkdown(p)}`);
+				lines.push(`> - ${escapeForMarkdown(p)}`);
 			}
-			lines.push("");
 		}
 		if (aiSummary.cross_source_connections?.length) {
-			lines.push("### \u{1F517} Cross-Source Connections");
-			lines.push("");
+			lines.push(`> `);
+			lines.push(`> **\u{1F517} Cross-Source Connections**`);
+			lines.push(`> `);
 			for (const c of aiSummary.cross_source_connections) {
-				lines.push(`> [!note] ${escapeForMarkdown(c)}`);
-				lines.push("");
+				lines.push(`> - ${escapeForMarkdown(c)}`);
 			}
 		}
+		lines.push("");
 		lines.push("---");
 		lines.push("");
 	}
@@ -200,67 +271,12 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
-	// ── Knowledge Insights (Phase 3) ────────────
-	if (knowledge) {
-		lines.push("## \u{1F9E0} Knowledge Insights");
-		lines.push("");
-
-		// Focus summary
-		lines.push(`> ${escapeForMarkdown(knowledge.focusSummary)}`);
-		lines.push("");
-
-		// Temporal clusters
-		if (knowledge.temporalInsights.length > 0) {
-			lines.push("### \u{23F0} Activity Clusters");
-			lines.push("");
-			for (const insight of knowledge.temporalInsights) {
-				lines.push(`- ${escapeForMarkdown(insight)}`);
-			}
-			lines.push("");
-		}
-
-		// Topic map
-		if (knowledge.topicMap.length > 0) {
-			lines.push("### \u{1F5FA}\u{FE0F} Topic Map");
-			lines.push("");
-			for (const line of knowledge.topicMap) {
-				lines.push(`- ${escapeForMarkdown(line)}`);
-			}
-			lines.push("");
-		}
-
-		// Entity graph
-		if (knowledge.entityGraph.length > 0) {
-			lines.push("### \u{1F517} Entity Relations");
-			lines.push("");
-			for (const line of knowledge.entityGraph) {
-				lines.push(`- ${escapeForMarkdown(line)}`);
-			}
-			lines.push("");
-		}
-
-		// Recurrence signals
-		if (knowledge.recurrenceNotes.length > 0) {
-			lines.push("### \u{1F504} Recurrence Patterns");
-			lines.push("");
-			for (const note of knowledge.recurrenceNotes) {
-				lines.push(`- ${escapeForMarkdown(note)}`);
-			}
-			lines.push("");
-		}
-
-		// Knowledge delta
-		if (knowledge.knowledgeDeltaLines.length > 0) {
-			lines.push("### \u{1F4A1} Knowledge Delta");
-			lines.push("");
-			for (const line of knowledge.knowledgeDeltaLines) {
-				lines.push(`- ${escapeForMarkdown(line)}`);
-			}
-			lines.push("");
-		}
-
-		lines.push("---");
-		lines.push("");
+	// ── Knowledge Insights (AI-on mode position) ─
+	// In AI-on mode, Knowledge Insights renders here — after Cognitive Patterns
+	// but before the raw data sections.  In no-AI mode, it renders after Git
+	// Activity so the reader sees raw data before synthesized conclusions.
+	if (knowledge && aiSummary) {
+		renderKnowledgeInsights(lines, knowledge);
 	}
 
 	// ── Searches ─────────────────────────────────
@@ -347,6 +363,13 @@ export function renderMarkdown(
 			}
 			lines.push("");
 		}
+	}
+
+	// ── Knowledge Insights (no-AI mode position) ─
+	// In no-AI mode, render Knowledge Insights here — after all raw data
+	// sections — so readers encounter evidence before synthesized conclusions.
+	if (knowledge && !aiSummary) {
+		renderKnowledgeInsights(lines, knowledge);
 	}
 
 	// ── Reflection ───────────────────────────────

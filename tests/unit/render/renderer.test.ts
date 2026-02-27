@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderMarkdown } from "../../../src/render/renderer";
-import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../../src/types";
+import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, GitCommit } from "../../../src/types";
 import { KnowledgeSections } from "../../../src/analyze/knowledge";
 import { createPromptLog, appendPromptEntry } from "../../../scripts/lib/prompt-logger";
 
@@ -58,6 +58,7 @@ describe("renderMarkdown", () => {
 	it("includes AI headline and tldr", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
 		expect(md).toContain("> [!tip] Productive day focused on React auth");
+		// sampleAISummary has no work_story, so tldr renders as a plain paragraph fallback
 		expect(md).toContain("Spent the day debugging");
 	});
 
@@ -318,10 +319,12 @@ describe("C2 callout format", () => {
 		expect(md).toContain("Built a pipeline inspector");
 	});
 
-	it("renders tldr as [!abstract] callout", () => {
+	it("does not render tldr as a [!abstract] callout — TL;DR callout has been removed", () => {
+		// mockAISummary has no work_story, so tldr renders as a plain paragraph
 		const md = renderMarkdown(testDate, [], [], [], [], {}, mockAISummary, "anthropic");
-		expect(md).toContain("> [!abstract]");
-		expect(md).toContain("Spent the day");
+		expect(md).not.toContain("> [!abstract]");
+		// tldr content still appears as plain text since work_story is absent
+		expect(md).toContain("Spent the day building a CLI tool");
 	});
 
 	it("renders category_summaries as markdown table", () => {
@@ -335,9 +338,9 @@ describe("C2 callout format", () => {
 		expect(md).toContain("Deep focus block on TypeScript implementation");
 	});
 
-	it("renders cross_source_connections as [!note] callouts", () => {
+	it("renders cross_source_connections inside the Work Patterns collapsed callout", () => {
 		const md = renderMarkdown(testDate, [], [], [], [], {}, mockAISummary, "anthropic");
-		expect(md).toContain("> [!note]");
+		expect(md).toContain("Cross-Source Connections");
 		expect(md).toContain("Searched for esbuild docs");
 	});
 
@@ -352,5 +355,84 @@ describe("C2 callout format", () => {
 		};
 		const md = renderMarkdown(testDate, [], [], [], [], {}, summaryNoPatterns, "anthropic");
 		expect(md).not.toContain("Work Patterns");
+	});
+});
+
+// ── Note Layout Reorder ──────────────────────────────────
+
+const sampleGitCommits: GitCommit[] = [
+	{
+		hash: "abc1234def5",
+		message: "feat: add login page",
+		repo: "webapp",
+		time: new Date("2025-06-15T14:00:00"),
+		filesChanged: 3,
+		insertions: 80,
+		deletions: 5,
+	},
+];
+
+const knowledgeForLayout: KnowledgeSections = {
+	focusSummary: "Highly focused day (focus score: 80%).",
+	focusScore: 0.80,
+	temporalInsights: ["coding 09:00-11:00 — deep focus"],
+	topicMap: ["███ Auth ↔ React (5 co-occurrences)"],
+	entityGraph: [],
+	recurrenceNotes: [],
+	knowledgeDeltaLines: [],
+	tags: ["topic/auth"],
+};
+
+describe("note layout reorder", () => {
+	it("no-AI mode: Knowledge Insights renders after Git Activity", () => {
+		const md = renderMarkdown(
+			DATE,
+			sampleVisits,
+			sampleSearches,
+			sampleClaude,
+			sampleGitCommits,
+			sampleCategorized,
+			null,
+			"none",
+			knowledgeForLayout,
+		);
+		const gitActivityIdx = md.indexOf("Git Activity");
+		const knowledgeInsightsIdx = md.indexOf("Knowledge Insights");
+		expect(knowledgeInsightsIdx).toBeGreaterThan(-1);
+		expect(gitActivityIdx).toBeGreaterThan(-1);
+		expect(knowledgeInsightsIdx).toBeGreaterThan(gitActivityIdx);
+	});
+
+	it("AI-on mode: TL;DR callout is not rendered when work_story is present", () => {
+		const summaryWithWorkStory: AISummary = {
+			...sampleAISummary,
+			work_story: "Spent the morning deep in OAuth flows, finishing the PKCE implementation.",
+		};
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summaryWithWorkStory, "anthropic");
+		expect(md).not.toContain("> [!abstract]");
+		// tldr content must NOT appear because work_story is present
+		expect(md).not.toContain("Spent the day debugging and implementing");
+	});
+
+	it("AI-on mode: TL;DR renders as plain paragraph when work_story is absent", () => {
+		const summaryNoWorkStory: AISummary = {
+			...sampleAISummary,
+			work_story: undefined,
+			tldr: "Wrapped up the OAuth implementation.",
+		};
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summaryNoWorkStory, "anthropic");
+		expect(md).not.toContain("> [!abstract]");
+		expect(md).toContain("Wrapped up the OAuth implementation.");
+	});
+
+	it("Work Patterns is rendered as a collapsed callout, not a ##-heading section", () => {
+		const summaryWithPatterns: AISummary = {
+			...sampleAISummary,
+			work_patterns: ["3-hour deep focus block on auth"],
+		};
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summaryWithPatterns, "anthropic");
+		expect(md).not.toContain("## \u26A1 Work Patterns");
+		expect(md).toContain("> [!info]- \u26A1 Work Patterns");
+		expect(md).toContain("> - 3-hour deep focus block on auth");
 	});
 });
