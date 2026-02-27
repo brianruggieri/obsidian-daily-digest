@@ -314,4 +314,56 @@ describe("tag generation", () => {
 		}));
 		expect(sections.tags).toContain("pattern/new-exploration");
 	});
+
+	it("caps tags at 20 even with many clusters and entities", () => {
+		// Generate enough temporal clusters and entity relations to exceed 20 raw tags
+		const manyClusters = Array.from({ length: 15 }, (_, i) => ({
+			hourStart: i,
+			hourEnd: i + 1,
+			activityType: "research" as const,
+			eventCount: 5,
+			topics: [`topic-${i}-a`, `topic-${i}-b`],
+			entities: [],
+			intensity: 3 + i * 0.1,
+			label: `cluster-${i}`,
+		}));
+		const manyRelations = Array.from({ length: 5 }, (_, i) => ({
+			entityA: `EntityA-${i}`,
+			entityB: `EntityB-${i}`,
+			cooccurrences: 3 + i,
+			contexts: ["implementation"],
+		}));
+		const sections = generateKnowledgeSections(makePatterns({
+			temporalClusters: manyClusters,
+			entityRelations: manyRelations,
+			recurrenceSignals: [
+				{ topic: "Rust", frequency: 1, trend: "new" as const, dayCount: 1 },
+				{ topic: "React", frequency: 3, trend: "returning" as const, dayCount: 3 },
+			],
+			focusScore: 0.8,
+		}));
+		expect(sections.tags.length).toBeLessThanOrEqual(20);
+		expect(sections.tags.length).toBeGreaterThan(0);
+	});
+
+	it("filters out tags below minimum score threshold", () => {
+		// A single cluster with near-zero intensity relative to a dominant one
+		const sections = generateKnowledgeSections(makePatterns({
+			temporalClusters: [
+				{
+					hourStart: 10, hourEnd: 12, activityType: "research",
+					eventCount: 20, topics: ["Main Topic"], entities: [],
+					intensity: 10, label: "dominant",
+				},
+				{
+					hourStart: 22, hourEnd: 23, activityType: "browsing",
+					eventCount: 1, topics: ["Noise Topic"], entities: [],
+					intensity: 0.5, label: "noise",
+				},
+			],
+		}));
+		// The noise topic (intensity 0.5 / max 10 = 0.05) should be filtered
+		expect(sections.tags).not.toContain("topic/noise-topic");
+		expect(sections.tags.some((t) => t.startsWith("topic/main"))).toBe(true);
+	});
 });
