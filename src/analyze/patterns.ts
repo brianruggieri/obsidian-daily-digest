@@ -13,6 +13,11 @@
 
 import {
 	ActivityType,
+	ClaudeSession,
+	GitCommit,
+	ArticleCluster,
+	SearchQuery,
+	BrowserVisit,
 	StructuredEvent,
 	ClassificationResult,
 	TemporalCluster,
@@ -23,6 +28,8 @@ import {
 	PatternAnalysis,
 	PatternConfig,
 } from "../types";
+import { groupCommitsIntoWorkUnits } from "./commits";
+import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "./task-sessions";
 
 // ── Temporal Clustering ────────────────────────────────
 
@@ -533,7 +540,12 @@ export function extractPatterns(
 	classification: ClassificationResult,
 	config: PatternConfig,
 	topicHistory: TopicHistory,
-	todayDate: string
+	todayDate: string,
+	rawGitCommits: GitCommit[] = [],
+	rawClaudeSessions: ClaudeSession[] = [],
+	rawSearches: SearchQuery[] = [],
+	rawVisits: BrowserVisit[] = [],
+	articleClusters: ArticleCluster[] = [],
 ): PatternAnalysis {
 	const events = classification.events;
 
@@ -589,6 +601,24 @@ export function extractPatterns(
 	// Peak hours
 	const peakHours = computePeakHours(events);
 
+	// ── Semantic Extraction Layer ─────────────────────────
+	// Group git commits into work units (90-min session gap + scope clustering)
+	const commitWorkUnits = groupCommitsIntoWorkUnits(rawGitCommits);
+
+	// Group Claude sessions into task sessions (by JSONL file)
+	const claudeTaskSessions = groupClaudeSessionsIntoTasks(rawClaudeSessions);
+
+	// Detect search missions from query chains
+	const searchMissions = detectSearchMissions(rawSearches, rawVisits);
+
+	// Cross-source fusion (stub: returns [] — see task-sessions.ts TODO)
+	const unifiedTaskSessions = fuseCrossSourceSessions(
+		articleClusters,
+		commitWorkUnits,
+		claudeTaskSessions,
+		searchMissions,
+	);
+
 	return {
 		temporalClusters,
 		topicCooccurrences,
@@ -599,5 +629,8 @@ export function extractPatterns(
 		activityConcentrationScore,
 		topActivityTypes,
 		peakHours,
+		commitWorkUnits,
+		claudeTaskSessions,
+		unifiedTaskSessions,
 	};
 }

@@ -25,6 +25,8 @@ function makePatterns(overrides: Partial<PatternAnalysis> = {}): PatternAnalysis
 			{ hour: 10, count: 8 },
 			{ hour: 14, count: 6 },
 		],
+		commitWorkUnits: [],
+		claudeTaskSessions: [],
 		...overrides,
 	};
 }

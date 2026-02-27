@@ -11,6 +11,8 @@
 
 import {
 	ArticleCluster,
+	ClaudeTaskSession,
+	CommitWorkUnit,
 	PatternAnalysis,
 	TemporalCluster,
 	RecurrenceSignal,
@@ -29,6 +31,10 @@ export interface KnowledgeSections {
 	tags: string[];
 	/** Article clusters produced by TF-IDF clustering of substantive browser visits. */
 	articleClusters?: ArticleCluster[];
+	/** Commit work units produced by the semantic extraction layer. */
+	commitWorkUnits?: CommitWorkUnit[];
+	/** Claude task sessions produced by the semantic extraction layer. */
+	claudeTaskSessions?: ClaudeTaskSession[];
 }
 
 export function generateKnowledgeSections(
@@ -43,6 +49,8 @@ export function generateKnowledgeSections(
 		recurrenceNotes: buildRecurrenceNotes(patterns.recurrenceSignals),
 		knowledgeDeltaLines: buildKnowledgeDeltaLines(patterns),
 		tags: generateTags(patterns),
+		commitWorkUnits: patterns.commitWorkUnits,
+		claudeTaskSessions: patterns.claudeTaskSessions,
 	};
 }
 

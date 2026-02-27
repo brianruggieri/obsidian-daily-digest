@@ -10,8 +10,18 @@ import { expandHome } from "./browser-profiles";
 // ── Git History ──────────────────────────────────────────
 
 /**
- * Parse raw `git log --pretty=format:"%H|%s|%aI" --shortstat` output
+ * Parse raw `git log --pretty=format:"%H|%D|%s|%aI" --numstat` output
  * into GitCommit objects. Exported for testing.
+ *
+ * Output format per commit:
+ *   <hash>|<refs>|<subject>|<authorDateISO>
+ *   <blank line>
+ *   <insertions>\t<deletions>\t<filepath>
+ *   <insertions>\t<deletions>\t<filepath>
+ *   ...
+ *   <blank line separating commits>
+ *
+ * Special numstat lines for binary files use "-" for both counts.
  */
 export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
 	const commits: GitCommit[] = [];
@@ -22,13 +32,20 @@ export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
 		const line = lines[i].trim();
 		if (!line) { i++; continue; }
 
-		// Expect format: hash|subject|authorDateISO
+		// Expect format: hash|refs|subject|authorDateISO
+		// The %D (refs/decorators) field may be empty, so we handle it carefully.
 		const parts = line.split("|");
 		if (parts.length < 3) { i++; continue; }
 
 		const hash = parts[0];
-		const rawMessage = parts.slice(1, -1).join("|"); // Handle | in messages
+
+		// Last part is the ISO date, second-to-last is the subject,
+		// everything between hash and subject is the %D decorator (may be empty).
 		const dateStr = parts[parts.length - 1];
+		// Subject is everything between the decorator and the date
+		// Parts: [hash, decorator, ...subject_parts, date]
+		// Since subject can contain "|" we join all parts except first and last
+		const rawMessage = parts.slice(2, -1).join("|");
 
 		let time: Date | null = null;
 		try {
@@ -38,23 +55,43 @@ export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
 			// skip
 		}
 
+		// Skip the blank line that git inserts between the pretty format and numstat
+		i++;
+		if (i < lines.length && lines[i].trim() === "") i++;
+
+		// Collect numstat lines (tab-separated: insertions\tdeletions\tfilepath)
 		let filesChanged = 0;
 		let insertions = 0;
 		let deletions = 0;
+		const filePaths: string[] = [];
 
-		// Next line might be a shortstat line
-		if (i + 1 < lines.length) {
-			const statLine = lines[i + 1].trim();
-			const filesMatch = statLine.match(/(\d+) files? changed/);
-			const insMatch = statLine.match(/(\d+) insertions?\(\+\)/);
-			const delMatch = statLine.match(/(\d+) deletions?\(-\)/);
+		while (i < lines.length) {
+			const numstatLine = lines[i];
+			// A blank line signals end of numstat for this commit
+			if (!numstatLine.trim()) { i++; break; }
+			// Stop if we hit the next commit header (no tab = header line)
+			if (!numstatLine.includes("\t")) break;
 
-			if (filesMatch || insMatch || delMatch) {
-				filesChanged = filesMatch ? parseInt(filesMatch[1]) : 0;
-				insertions = insMatch ? parseInt(insMatch[1]) : 0;
-				deletions = delMatch ? parseInt(delMatch[1]) : 0;
-				i++; // consume the stat line
+			const tabParts = numstatLine.split("\t");
+			if (tabParts.length >= 3) {
+				const insStr = tabParts[0].trim();
+				const delStr = tabParts[1].trim();
+				const filePath = tabParts.slice(2).join("\t").trim();
+
+				// Binary files show "-" for both counts
+				if (insStr !== "-" && delStr !== "-") {
+					const ins = parseInt(insStr, 10);
+					const del = parseInt(delStr, 10);
+					if (!isNaN(ins)) insertions += ins;
+					if (!isNaN(del)) deletions += del;
+				}
+
+				if (filePath) {
+					filePaths.push(filePath);
+					filesChanged++;
+				}
 			}
+			i++;
 		}
 
 		commits.push({
@@ -65,9 +102,8 @@ export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
 			filesChanged,
 			insertions,
 			deletions,
+			filePaths: filePaths.length > 0 ? filePaths : undefined,
 		});
-
-		i++;
 	}
 
 	return commits;
@@ -120,6 +156,7 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 			if (!email) continue;
 
 			// Get commits since the target date for this author
+			// --numstat outputs: header line, blank line, then tab-separated file stats
 			const gitLog = execFileSync(
 				"git",
 				[
@@ -127,8 +164,8 @@ export function readGitHistory(settings: DailyDigestSettings, since: Date): GitC
 					`--since=${sinceISO}`,
 					`--author=${email}`,
 					"--all",
-					"--pretty=format:%H|%s|%aI",
-					"--shortstat",
+					"--pretty=format:%H|%D|%s|%aI",
+					"--numstat",
 				],
 				{
 					cwd: repoPath,

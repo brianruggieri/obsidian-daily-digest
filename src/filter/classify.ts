@@ -1,5 +1,6 @@
 import {
 	ActivityType,
+	ClaudeTaskType,
 	IntentType,
 	StructuredEvent,
 	ClassificationResult,
@@ -10,6 +11,9 @@ import {
 	GitCommit,
 	CategorizedVisits,
 } from "../types";
+
+// Re-export ClaudeTaskType so existing imports of it from classify.ts keep working.
+export type { ClaudeTaskType };
 import { callLocal } from "../summarize/ai-client";
 import { categorizeDomain } from "./categorize";
 import * as log from "../plugin/log";
@@ -137,22 +141,6 @@ function normalizeGitCommits(commits: GitCommit[]): RawEvent[] {
 }
 
 // ── Claude Task Classification ──────────────────────────
-
-/**
- * Vocabulary-based intent type for Claude Code conversations.
- * Applied to the opener prompt (first user message in a JSONL file).
- *   - "implementation"  Add/Build/Create/Implement/Write — acceleration mode
- *   - "debugging"       Fix/Debug/Why does/not working/error — acceleration
- *   - "review"          Review/Check/Audit/Is this correct — acceleration
- *   - "learning"        Explain/Describe/What is/How does — exploration
- *   - "architecture"    Design/Plan/Should I/What approach — exploration
- */
-export type ClaudeTaskType =
-	| "implementation"
-	| "debugging"
-	| "review"
-	| "learning"
-	| "architecture";
 
 /**
  * Ordered decision tree: first matching pattern wins.

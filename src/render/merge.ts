@@ -14,11 +14,17 @@
 
 // ── Known generated section headings ─────────────────────
 // Any `## ` heading NOT in this set is treated as user-added content.
+// Emoji-stripping in stripEmoji() removes leading emoji before matching,
+// so these entries are stored without their emoji prefixes.
 const GENERATED_HEADINGS = new Set([
 	"Notable",
 	"Cognitive Patterns",
 	"Knowledge Insights",
 	"Searches",
+	"Today I Read About",
+	"Today I Worked On",
+	"Today I Asked Claude About",
+	"Task Sessions",
 	"Claude Code / AI Work",
 	"Browser Activity",
 	"Git Activity",
