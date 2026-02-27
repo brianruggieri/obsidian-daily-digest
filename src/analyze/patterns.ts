@@ -214,6 +214,18 @@ function extractTopicCooccurrences(
 
 // ── Entity Relations ───────────────────────────────────
 
+/**
+ * Categories whose events contribute entities and topics to the knowledge graph.
+ * Events in all other categories (other, shopping, finance, news, social, media,
+ * gaming, personal) still flow through temporal/focus/distribution analysis but
+ * have their entities and topics zeroed before being passed here.
+ */
+export const ENTITY_BEARING_CATEGORIES = new Set([
+	"dev", "work", "research", "education", "ai_tools", "pkm", "writing",
+]);
+
+const MIN_COOCCURRENCE_COUNT = 3;
+
 function extractEntityRelations(events: StructuredEvent[]): EntityRelation[] {
 	// Count entity co-occurrences within individual events
 	const pairCounts: Map<string, { count: number; contexts: Set<string> }> = new Map();
@@ -240,6 +252,15 @@ function extractEntityRelations(events: StructuredEvent[]): EntityRelation[] {
 	}
 
 	return Array.from(pairCounts.entries())
+		.filter(([, val]) => {
+			// Require at least MIN_COOCCURRENCE_COUNT co-occurrences across distinct events
+			if (val.count < MIN_COOCCURRENCE_COUNT) return false;
+			// Filter out pairs where all contexts are "unknown" — these come from
+			// uncategorized browser events with no knowledge value
+			const contextList = [...val.contexts];
+			if (contextList.every((c) => c === "unknown")) return false;
+			return true;
+		})
 		.map(([key, val]) => {
 			const [entityA, entityB] = key.split("|||");
 			return {
@@ -516,21 +537,32 @@ export function extractPatterns(
 ): PatternAnalysis {
 	const events = classification.events;
 
-	// Temporal clusters
+	// Derive a filtered event set for entity/topic graph analysis only.
+	// Events in non-bearing categories (maps, shopping, news, etc.) still
+	// contribute to temporal clusters, focus score, and activity distribution,
+	// but their entities and topics are zeroed so they don't corrupt the
+	// knowledge graph with place-name fragments or product titles.
+	const eventsForEntityExtraction = events.map((e) =>
+		ENTITY_BEARING_CATEGORIES.has(e.category ?? "other")
+			? e
+			: { ...e, entities: [], topics: [] }
+	);
+
+	// Temporal clusters — use full events (maps/shopping browsing is valid for focus score)
 	const temporalClusters = extractTemporalClusters(events, config.minClusterSize);
 
-	// Topic co-occurrences
+	// Topic co-occurrences — use category-gated events only
 	const topicCooccurrences = extractTopicCooccurrences(
-		events,
+		eventsForEntityExtraction,
 		config.cooccurrenceWindow
 	);
 
-	// Entity relations
-	const entityRelations = extractEntityRelations(events);
+	// Entity relations — use category-gated events only
+	const entityRelations = extractEntityRelations(eventsForEntityExtraction);
 
-	// All unique topics and entities today
-	const allTopics = [...new Set(events.flatMap((e) => e.topics))];
-	const allEntities = [...new Set(events.flatMap((e) => e.entities))];
+	// All unique topics and entities today (from gated events for knowledge delta)
+	const allTopics = [...new Set(eventsForEntityExtraction.flatMap((e) => e.topics))];
+	const allEntities = [...new Set(eventsForEntityExtraction.flatMap((e) => e.entities))];
 
 	// Recurrence signals (requires persisted history)
 	const recurrenceSignals = config.trackRecurrence

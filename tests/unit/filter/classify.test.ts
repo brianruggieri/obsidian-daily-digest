@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyEventsRuleOnly } from "../../../src/filter/classify";
+import { classifyEventsRuleOnly, extractEntities, ENTITY_EXTRACTION_SKIP_DOMAINS } from "../../../src/filter/classify";
 import { BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits } from "../../../src/types";
 
 const NOW = new Date("2025-06-15T10:00:00");
@@ -133,5 +133,84 @@ describe("classifyEventsRuleOnly", () => {
 		const result = classifyEventsRuleOnly(visits, [], [], [], {});
 		expect(result.events).toHaveLength(1);
 		expect(result.events[0].timestamp).toBe("");
+	});
+});
+
+// ── extractEntities — domain skip and stopword filtering ────────────────────
+
+describe("extractEntities — domain skip", () => {
+	it("returns [] for domains in ENTITY_EXTRACTION_SKIP_DOMAINS (maps.google.com)", () => {
+		const result = extractEntities("Providence Canyon State Park - Google Maps", "maps.google.com");
+		expect(result).toEqual([]);
+	});
+
+	it("returns [] for domains in ENTITY_EXTRACTION_SKIP_DOMAINS (google.com)", () => {
+		const result = extractEntities("My Google Account", "google.com");
+		expect(result).toEqual([]);
+	});
+
+	it("returns [] for airbnb.com", () => {
+		const result = extractEntities("Cozy Studio Near Downtown — Airbnb", "airbnb.com");
+		expect(result).toEqual([]);
+	});
+
+	it("returns [] for amazon.com", () => {
+		const result = extractEntities("Sony WH-1000XM5 Headphones - Amazon.com", "amazon.com");
+		expect(result).toEqual([]);
+	});
+
+	it("ENTITY_EXTRACTION_SKIP_DOMAINS contains expected entries", () => {
+		expect(ENTITY_EXTRACTION_SKIP_DOMAINS.has("google.com")).toBe(true);
+		expect(ENTITY_EXTRACTION_SKIP_DOMAINS.has("maps.google.com")).toBe(true);
+		expect(ENTITY_EXTRACTION_SKIP_DOMAINS.has("airbnb.com")).toBe(true);
+		expect(ENTITY_EXTRACTION_SKIP_DOMAINS.has("amazon.com")).toBe(true);
+		expect(ENTITY_EXTRACTION_SKIP_DOMAINS.has("mail.google.com")).toBe(true);
+	});
+
+	it("does not skip non-blocked domains", () => {
+		const result = extractEntities("TypeScript Handbook - GitHub Pages", "github.com");
+		// github.com is not in the skip list — entities should be extracted
+		expect(result.length).toBeGreaterThan(0);
+	});
+});
+
+describe("extractEntities — stopword filtering", () => {
+	it("returns [] when all capitalized words are stopwords (git verbs)", () => {
+		// "Fix" and "HTML" are both in ENTITY_STOPWORDS
+		const result = extractEntities("Fix HTML rendering in renderer", undefined);
+		// "renderer" is lowercase so no capitalized words escape; domain entity absent
+		expect(result).toEqual([]);
+	});
+
+	it("returns only non-stopword entities from mixed text", () => {
+		// "TypeScript" and "Vitest" are not stopwords; "Test" and "CSS" are
+		const result = extractEntities("TypeScript Vitest test coverage", undefined);
+		expect(result).toContain("TypeScript");
+		expect(result).toContain("Vitest");
+		expect(result).not.toContain("Test");
+	});
+
+	it("filters out git commit imperative verbs (Merge, Bump, Revert)", () => {
+		expect(extractEntities("Merge pull request from main", undefined)).not.toContain("Merge");
+		expect(extractEntities("Bump version to 2.0", undefined)).not.toContain("Bump");
+		expect(extractEntities("Revert bad commit", undefined)).not.toContain("Revert");
+	});
+
+	it("filters out email/notification noise words", () => {
+		expect(extractEntities("Inbox Unread Reply Thread", undefined)).not.toContain("Inbox");
+		expect(extractEntities("Notification Alert from system", undefined)).not.toContain("Notification");
+	});
+
+	it("filters out generic tech acronyms", () => {
+		expect(extractEntities("HTML CSS API URL guide", undefined)).toEqual([]);
+	});
+
+	it("filters out navigation/UI chrome words", () => {
+		expect(extractEntities("Dashboard Overview Settings Profile", undefined)).toEqual([]);
+	});
+
+	it("still extracts kebab-case tool names regardless of stopwords", () => {
+		const result = extractEntities("using llama-cpp for inference", undefined);
+		expect(result).toContain("llama-cpp");
 	});
 });

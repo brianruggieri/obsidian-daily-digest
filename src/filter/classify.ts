@@ -14,6 +14,60 @@ import { callLocal } from "../summarize/ai-client";
 import { categorizeDomain } from "./categorize";
 import * as log from "../plugin/log";
 
+// ── Entity Extraction Constants ─────────────────────────
+
+/**
+ * Domains for which entity extraction produces only noise (maps, travel,
+ * booking, email, shopping). Any browser event whose metadata.domain matches
+ * one of these values will return [] from extractEntities immediately.
+ */
+export const ENTITY_EXTRACTION_SKIP_DOMAINS = new Set([
+	"google.com",           // maps, search results, account pages
+	"maps.google.com",
+	"maps.apple.com",
+	"airbnb.com",           // trip/reservation titles are always noisy
+	"booking.com",
+	"vrbo.com",
+	"expedia.com",
+	"tripadvisor.com",
+	"mail.google.com",      // email subject lines
+	"outlook.live.com",
+	"outlook.office.com",
+	"mail.yahoo.com",
+	"amazon.com",           // product titles are noun soup
+	"adobe.com",            // Creative Cloud titles add no signal
+	"app.hubspot.com",      // CRM record pages
+	"app.salesforce.com",
+]);
+
+/**
+ * Words that pass the length > 2 and capitalized-word checks in extractEntities
+ * but carry no domain-specific knowledge value. Includes common English words,
+ * git commit imperative verbs, email/notification noise, navigation/UI chrome
+ * words, and generic tech acronyms.
+ */
+const ENTITY_STOPWORDS = new Set([
+	// Existing entries
+	"The", "This", "That", "How", "What", "Why", "When",
+	// Common English that pass the length check but carry no specificity
+	"From", "With", "Here", "There", "Your", "About", "After", "Before",
+	"Into", "Over", "Just", "Also", "More", "Some", "Such", "Each",
+	// Git commit imperative verbs
+	"Fix", "Add", "Remove", "Update", "Refactor", "Revert", "Merge", "Bump",
+	"Move", "Rename", "Delete", "Change", "Enable", "Disable", "Clean",
+	"Init", "Create", "Build", "Test", "Deploy", "Release", "Improve",
+	"Handle", "Pull", "Push", "Commit", "Branch", "Issue", "Draft",
+	"Review", "Resolve", "Conflict", "Sync",
+	// Email/notification noise
+	"Inbox", "Unread", "Reply", "Forward", "Sent", "Subject", "Thread",
+	"Notification", "Alert",
+	// Navigation/UI chrome words in page titles
+	"Home", "Settings", "Profile", "Dashboard", "Overview", "Summary",
+	"Details", "Results", "Loading", "Untitled",
+	// Generic tech acronyms (no knowledge value as entities)
+	"HTML", "CSS", "API", "URL", "SDK", "CLI", "GUI", "IDE",
+]);
+
 // ── Raw Event Normalization ─────────────────────────────
 
 interface RawEvent {
@@ -204,7 +258,12 @@ function inferIntent(text: string, source: string): IntentType {
 	return "explore";
 }
 
-function extractEntities(text: string, domain?: string): string[] {
+export function extractEntities(text: string, domain?: string): string[] {
+	// Skip noisy domains entirely — maps, booking, email, shopping
+	if (domain && ENTITY_EXTRACTION_SKIP_DOMAINS.has(domain)) {
+		return [];
+	}
+
 	const entities: string[] = [];
 
 	// Extract domain as entity for browser events
@@ -218,7 +277,7 @@ function extractEntities(text: string, domain?: string): string[] {
 	// Extract capitalized words that look like tool/library names
 	const capWords = text.match(/\b[A-Z][a-zA-Z0-9]+(?:\.[a-zA-Z]+)?\b/g) || [];
 	for (const word of capWords) {
-		if (word.length > 2 && !["The", "This", "That", "How", "What", "Why", "When"].includes(word)) {
+		if (word.length > 2 && !ENTITY_STOPWORDS.has(word)) {
 			if (!entities.includes(word)) entities.push(word);
 		}
 	}
