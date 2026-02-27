@@ -12,6 +12,7 @@ import { AIProvider } from "../settings/types";
 import { KnowledgeSections } from "../analyze/knowledge";
 import { formatDetailsBlock, type PromptLog } from "../../scripts/lib/prompt-logger";
 import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml } from "./escape";
+import { cleanUrlForDisplay } from "./url-display";
 
 function formatTime(d: Date | null): string {
 	if (!d) return "";
@@ -330,8 +331,8 @@ export function renderMarkdown(
 					const ts = formatTime(v.time);
 					let title = (v.title || "").trim() || v.url;
 					if (title.length > 75) title = title.slice(0, 75) + "\u2026";
-					const safeUrl = v.url.replace(/\)/g, "%29");
-					lines.push(`  - [${escapeForLinkText(title)}](${safeUrl})` + (ts ? ` \u2014 ${ts}` : ""));
+					const displayUrl = cleanUrlForDisplay(v.url).replace(/\)/g, "%29");
+					lines.push(`  - [${escapeForLinkText(title)}](${displayUrl})` + (ts ? ` \u2014 ${ts}` : ""));
 				}
 			}
 			lines.push("");
