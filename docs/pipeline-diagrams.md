@@ -113,12 +113,14 @@ Knowledge delta counts      ✗           ✗           ✗           ✗       
 
 ---
 
-## 3. Renderer Output Map
+## 3. Renderer Output Map — Three-Layer Layout
 
-What each input produces in the final Obsidian note. Order matches document order top-to-bottom.
+The note is organized into three visual layers for progressive disclosure.
 
 ```
 INPUT                                  OUTPUT IN NOTE
+══════════════════════════════════════════════════════════════════════════════
+                               LAYER 1 — "10-second glance" (always visible)
 ──────────────────────────────────────────────────────────────────────────────
 date                              ──►  frontmatter: date, day
 CategorizedVisits (keys)          ──►  frontmatter: categories[], tags[]
@@ -137,51 +139,65 @@ gitCommits.length                 ──►  │
 categorized key count             ──►  ┘
 
 AISummary.headline                ──►  > [!tip] headline
-AISummary.tldr                    ──►  > [!abstract] tldr
+AISummary.tldr (no work_story)    ──►  plain paragraph (fallback)
+AISummary.work_story              ──►  plain paragraph (primary)
 AISummary.themes                  ──►  **Themes:** `chip` · `chip`
 
 AISummary.notable[]               ──►  ## ✨ Notable
                                        - item
 
-AISummary.category_summaries      ──►  | Category | Activity |
-                                       | --- | --- |
-                                       | label | summary |
+PromptLog[]                       ──►  > [!example]- prompt details (collapsed)
 
-AISummary.work_patterns[]         ──►  ## ⚡ Work Patterns
-                                       - pattern
+                               LAYER 2 — "Curated insights + actionables"
+──────────────────────────────────────────────────────────────────────────────
+AISummary.category_summaries      ──►  > [!abstract]- Activity Overview
+                                       > | Category | Activity |
 
-AISummary.cross_source_connections[] ► ### 🔗 Cross-Source Connections
-                                       > [!note] connection
+AISummary.work_patterns[]         ──►  > [!info]- ⚡ Work Patterns
+AISummary.cross_source_connections[] ► > **🔗 Cross-Source Connections**
 
-AISummary.focus_narrative         ──►  ## 🔭 Cognitive Patterns
-AISummary.meta_insights[]         ──►    ### Insights  - item
-AISummary.quirky_signals[]        ──►    ### 🔎 Unusual Signals  - item
+AISummary.focus_narrative         ──►  > [!example]- 🔭 Cognitive Patterns
+AISummary.meta_insights[]         ──►  > **Insights**  - item
+AISummary.quirky_signals[]        ──►  > **🔎 Unusual Signals**  - item
 
-KnowledgeSections.focusSummary    ──►  ## 🧠 Knowledge Insights
-KnowledgeSections.temporalInsights ─►    ### ⏰ Activity Clusters  - item
-KnowledgeSections.topicMap        ──►    ### 🗺️ Topic Map  - item
-KnowledgeSections.entityGraph     ──►    ### 🔗 Entity Relations  - item
-KnowledgeSections.recurrenceNotes ──►    ### 🔄 Recurrence Patterns  - item
-KnowledgeSections.knowledgeDeltaLines ►  ### 💡 Knowledge Delta  - item
+KnowledgeSections (AI-on)         ──►  > [!info]- 🧠 Knowledge Insights
+                                       > **⏰ Activity Clusters**  - item
+                                       > **🗺️ Topic Map**  - item
+                                       > **🔗 Entity Relations**  - item
+                                       > **🔄 Recurrence Patterns**  - item
+                                       > **💡 Knowledge Delta**  - item
 
-SearchQuery[]                     ──►  ## 🔍 Searches
-                                       - `engine` **query** — HH:MM
+AISummary.learnings[]             ──►  > [!todo]- 📚 Learnings
+AISummary.remember[]              ──►  > [!todo]- 🗒️ Remember
+AISummary.note_seeds[]            ──►  > [!tip]- 🌱 Note Seeds
 
-ClaudeSession[]                   ──►  ## 🤖 Claude Code / AI Work
-                                       - `project` prompt — HH:MM
-
-CategorizedVisits                 ──►  ## 🌐 Browser Activity
-                                       ### emoji Category (N)
-                                       **domain** (N)
-                                         - [title](url) — HH:MM
-
-GitCommit[]                       ──►  ## 📦 Git Activity
-                                       ### repo (N commits)
-                                       - `hash` message (+ins/-del) — HH:MM
-
-AISummary.prompts[]               ──►  ## 🪞 Reflection
+AISummary.prompts[]               ──►  ## 🪞 Reflection  (open, Dataview fields)
                                        ### Question text
                                        answer_slug::
+
+                               LAYER 3 — "Archive" (raw data, collapsed)
+──────────────────────────────────────────────────────────────────────────────
+SearchQuery[]                     ──►  > [!info]- 🔍 Searches (N)
+                                       > - `engine` **query** — HH:MM
+
+articleClusters                   ──►  > [!info]- 📖 Today I Read About
+commitWorkUnits                   ──►  > [!info]- 🔨 Today I Worked On
+claudeTaskSessions                ──►  > [!info]- 🤖 Today I Asked Claude About
+
+ClaudeSession[]                   ──►  > [!info]- 🤖 Claude Code / AI Work (N)
+                                       > - `project` prompt — HH:MM
+
+CategorizedVisits                 ──►  > [!info]- 🌐 Browser Activity (N visits, M cats)
+                                       > - emoji **Category** (N) — top domains
+                                       > > [!info]- emoji Category (N)
+                                       > > **domain** (N)
+                                       > >   - [title](url) — HH:MM
+
+GitCommit[]                       ──►  > [!info]- 📦 Git Activity (N commits)
+                                       > **repo** (N commits)
+                                       > - `hash` message (+ins/-del) — HH:MM
+
+KnowledgeSections (no-AI)         ──►  ## 🧠 Knowledge Insights (open headings)
 
 (static)                          ──►  ## 📝 Notes
                                        > _Add your reflections here_
@@ -246,8 +262,14 @@ Write merged (or new) note to vault
 ─────────────────────────────────────────────────────────
 Generated headings (never treated as user content):
   Notable, Cognitive Patterns, Knowledge Insights,
-  Searches, Claude Code / AI Work, Browser Activity,
-  Git Activity, Reflection, Notes
+  Searches, Today I Read About, Today I Worked On,
+  Today I Asked Claude About, Task Sessions,
+  Claude Code / AI Work, Browser Activity,
+  Git Activity, Learnings, Remember, Note Seeds,
+  Reflection, Notes
+
+Most sections are now collapsed callouts (no ## heading),
+but the set is kept for backward compat with older notes.
 
 Any ## heading NOT in the above set → treated as
 user-authored custom section and preserved.
