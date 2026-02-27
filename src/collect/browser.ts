@@ -10,6 +10,7 @@ import {
 	SEARCH_ENGINES,
 	EXCLUDE_DOMAINS,
 } from "../types";
+import { deduplicateVisits, DEDUP_DEFAULTS } from "../filter/dedup";
 
 function tmpPath(suffix: string): string {
 	return join(tmpdir(), `daily-digest-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`);
@@ -302,8 +303,16 @@ export async function collectBrowserHistory(
 	const visitLimit = VISIT_CEILING;
 	const searchLimit = SEARCH_CEILING;
 
+	const { visits: dedupedVisits } = deduplicateVisits(
+		clean.slice(0, visitLimit),
+		{
+			maxVisitsPerDomain: settings.maxVisitsPerDomain ?? DEDUP_DEFAULTS.maxVisitsPerDomain,
+			maxOtherTotal: DEDUP_DEFAULTS.maxOtherTotal,
+		}
+	);
+
 	return {
-		visits: clean.slice(0, visitLimit),
+		visits: dedupedVisits,
 		searches: searches.slice(0, searchLimit),
 	};
 }
