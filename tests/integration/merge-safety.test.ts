@@ -39,7 +39,7 @@ const searches: SearchQuery[] = [
 	{ query: "typescript generics", time: new Date("2025-06-15T11:00:00"), engine: "google.com" },
 ];
 const claude: ClaudeSession[] = [
-	{ prompt: "Fix the auth bug", time: new Date("2025-06-15T11:30:00"), project: "webapp" },
+	{ prompt: "Fix the auth bug", time: new Date("2025-06-15T11:30:00"), project: "webapp", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 },
 ];
 const categorized: CategorizedVisits = {
 	dev: visits,

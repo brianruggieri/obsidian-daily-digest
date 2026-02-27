@@ -15,7 +15,7 @@ const sampleSearches: SearchQuery[] = [
 ];
 
 const sampleClaude: ClaudeSession[] = [
-	{ prompt: "Fix the auth bug", time: new Date("2025-06-15T11:30:00"), project: "webapp" },
+	{ prompt: "Fix the auth bug", time: new Date("2025-06-15T11:30:00"), project: "webapp", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 },
 ];
 
 const sampleCategorized: CategorizedVisits = {

@@ -16,6 +16,12 @@ export interface ClaudeSession {
 	prompt: string;
 	time: Date;
 	project: string;
+	/** true = first user message in this JSONL file (conversation opener) */
+	isConversationOpener: boolean;
+	/** JSONL filename — conversation identity boundary */
+	conversationFile: string;
+	/** Total user turns in this JSONL file — engagement signal */
+	conversationTurnCount: number;
 }
 
 export interface GitCommit {

@@ -610,6 +610,9 @@ export function generateClaudeSessions(options: {
 			prompt,
 			time,
 			project: options.projectName,
+			isConversationOpener: i === 0,
+			conversationFile: `session-${options.projectName}-${i}.jsonl`,
+			conversationTurnCount: 1,
 		});
 	}
 	return sessions;
@@ -651,6 +654,9 @@ export function generateCodexSessions(options: {
 			prompt,
 			time,
 			project: options.projectName,
+			isConversationOpener: i === 0,
+			conversationFile: `codex-${options.projectName}-${i}.jsonl`,
+			conversationTurnCount: 1,
 		});
 	}
 	return sessions;

@@ -239,7 +239,7 @@ ${deidentified.slice(-800)}
 				{ query: "settings for admin@company.com SMTP config", time: DATE, engine: "google.com" },
 			];
 			const dirtyClaude: ClaudeSession[] = [
-				{ prompt: "Help me deploy to /Users/brian/secret-project/deploy.sh", time: DATE, project: "test" },
+				{ prompt: "Help me deploy to /Users/brian/secret-project/deploy.sh", time: DATE, project: "test", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 },
 			];
 
 			const sanitized = sanitizeCollectedData(

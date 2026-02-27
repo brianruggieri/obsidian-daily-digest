@@ -82,6 +82,88 @@ function normalizeGitCommits(commits: GitCommit[]): RawEvent[] {
 	}));
 }
 
+// ── Claude Task Classification ──────────────────────────
+
+/**
+ * Vocabulary-based intent type for Claude Code conversations.
+ * Applied to the opener prompt (first user message in a JSONL file).
+ *   - "implementation"  Add/Build/Create/Implement/Write — acceleration mode
+ *   - "debugging"       Fix/Debug/Why does/not working/error — acceleration
+ *   - "review"          Review/Check/Audit/Is this correct — acceleration
+ *   - "learning"        Explain/Describe/What is/How does — exploration
+ *   - "architecture"    Design/Plan/Should I/What approach — exploration
+ */
+export type ClaudeTaskType =
+	| "implementation"
+	| "debugging"
+	| "review"
+	| "learning"
+	| "architecture";
+
+/**
+ * Ordered decision tree: first matching pattern wins.
+ * Applied to the opener prompt text (up to 200 chars).
+ */
+const CLAUDE_TASK_TYPE_PATTERNS: [RegExp, ClaudeTaskType][] = [
+	[/\b(fix|debug|why\s+(does|is|isn'?t)|not\s+work|error|crash|bug|broken|fail)\b/i, "debugging"],
+	[/\b(review|check|audit|is\s+this\s+(correct|right|good)|critique|look\s+at)\b/i, "review"],
+	[/\b(explain|describe|what\s+is|what\s+are|how\s+does|help\s+me\s+understand|teach|clarify)\b/i, "learning"],
+	[/\b(design|plan|should\s+i|what\s+approach|architecture|structure|how\s+should\s+i\s+(design|structure|organize))\b/i, "architecture"],
+	[/\b(add|build|create|implement|write|refactor|update|generate|set\s+up|migrate)\b/i, "implementation"],
+];
+
+/**
+ * Classifies a Claude prompt into a ClaudeTaskType using verb-based pattern matching.
+ * Defaults to "implementation" when no pattern matches.
+ */
+export function classifyClaudeTaskType(prompt: string): ClaudeTaskType {
+	const text = prompt.slice(0, 200);
+	for (const [pattern, taskType] of CLAUDE_TASK_TYPE_PATTERNS) {
+		if (pattern.test(text)) return taskType;
+	}
+	return "implementation";
+}
+
+/**
+ * Vocabulary-based topic clusters for Claude prompts.
+ * Each entry is [pattern, topicLabel]. First match wins.
+ * Covers 15 common software development topic domains.
+ */
+export const CLAUDE_TOPIC_VOCABULARY: [RegExp, string][] = [
+	[/\b(oauth|auth|jwt|token|session|login|password|credential|permission|role|access)\b/i, "authentication"],
+	[/\b(react|vue|angular|svelte|next\.?js|remix|component|hook|state|props|jsx|tsx)\b/i, "frontend"],
+	[/\b(api|rest|graphql|endpoint|route|http|request|response|fetch|axios|webhook)\b/i, "api-design"],
+	[/\b(docker|kubernetes|k8s|terraform|aws|cloud|deploy|ci|cd|pipeline|helm|ecs)\b/i, "infrastructure"],
+	[/\b(test|spec|mock|vitest|jest|coverage|unit|integration|e2e|assert|expect)\b/i, "testing"],
+	[/\b(sql|database|postgres|mysql|sqlite|query|schema|migration|index|orm|prisma)\b/i, "database"],
+	[/\b(typescript|type|interface|generic|infer|narrowing|zod|validation)\b/i, "typescript"],
+	[/\b(performance|optimize|slow|latency|memory|cache|cdn|bundle|profil)\b/i, "performance"],
+	[/\b(security|vuln|xss|csrf|injection|sanitize|escape|encrypt|hash)\b/i, "security"],
+	[/\b(git|commit|branch|merge|rebase|conflict|pr|pull\s+request|review)\b/i, "version-control"],
+	[/\b(algorithm|data\s+structure|complexity|sort|search|tree|graph|dynamic\s+programming)\b/i, "algorithms"],
+	[/\b(machine\s+learning|llm|ai|model|embedding|vector|neural|gpt|claude|anthropic)\b/i, "ai-ml"],
+	[/\b(refactor|clean|solid|pattern|architecture|design|monolith|microservice|domain)\b/i, "software-design"],
+	[/\b(error|exception|crash|stack\s+trace|debug|log|monitor|alert|incident)\b/i, "debugging"],
+	[/\b(doc|readme|comment|jsdoc|api\s+spec|openapi|swagger|markdown)\b/i, "documentation"],
+];
+
+/**
+ * Extracts a topic cluster label from a Claude prompt using CLAUDE_TOPIC_VOCABULARY.
+ * Falls back to extracting the first 3 meaningful words when no vocabulary match is found.
+ */
+function extractClaudeTopics(text: string): string[] {
+	for (const [pattern, label] of CLAUDE_TOPIC_VOCABULARY) {
+		if (pattern.test(text)) return [label];
+	}
+	// Fallback: first 3 meaningful words
+	const words = text
+		.replace(/[^\w\s-]/g, " ")
+		.split(/\s+/)
+		.filter((w) => w.length > 3)
+		.slice(0, 3);
+	return words.length > 0 ? [words.join(" ")] : [];
+}
+
 // ── Rule-Based Fallback Classification ──────────────────
 
 const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
@@ -154,32 +236,67 @@ function extractEntities(text: string, domain?: string): string[] {
 
 function ruleBasedClassify(event: RawEvent): StructuredEvent {
 	let activityType: ActivityType = "unknown";
+	let topics: string[];
 
 	if (event.source === "browser") {
 		activityType = CATEGORY_TO_ACTIVITY[event.category || "other"] || "unknown";
+		// Simple topic extraction: first 3 meaningful words
+		const words = event.text
+			.replace(/[^\w\s-]/g, " ")
+			.split(/\s+/)
+			.filter((w) => w.length > 3)
+			.slice(0, 3);
+		topics = words.length > 0 ? [words.join(" ")] : [];
 	} else if (event.source === "search") {
 		activityType = "research";
+		// Simple topic extraction: first 3 meaningful words
+		const words = event.text
+			.replace(/[^\w\s-]/g, " ")
+			.split(/\s+/)
+			.filter((w) => w.length > 3)
+			.slice(0, 3);
+		topics = words.length > 0 ? [words.join(" ")] : [];
 	} else if (event.source === "claude") {
-		activityType = "implementation";
+		// Vocabulary-based classification replaces unconditional "implementation"
+		const taskType = classifyClaudeTaskType(event.text);
+		// Map ClaudeTaskType → ActivityType
+		const claudeActivityMap: Record<ClaudeTaskType, ActivityType> = {
+			implementation: "implementation",
+			debugging: "debugging",
+			review: "implementation",
+			learning: "learning",
+			architecture: "planning",
+		};
+		activityType = claudeActivityMap[taskType];
+		// Vocabulary-based topic extraction replaces "first 3 words" heuristic
+		topics = extractClaudeTopics(event.text);
 	} else if (event.source === "git") {
 		activityType = "implementation";
+		// Simple topic extraction: first 3 meaningful words
+		const words = event.text
+			.replace(/[^\w\s-]/g, " ")
+			.split(/\s+/)
+			.filter((w) => w.length > 3)
+			.slice(0, 3);
+		topics = words.length > 0 ? [words.join(" ")] : [];
+	} else {
+		// Simple topic extraction: first 3 meaningful words
+		const words = event.text
+			.replace(/[^\w\s-]/g, " ")
+			.split(/\s+/)
+			.filter((w) => w.length > 3)
+			.slice(0, 3);
+		topics = words.length > 0 ? [words.join(" ")] : [];
 	}
 
 	const intent = inferIntent(event.text, event.source);
 	const entities = extractEntities(event.text, event.metadata?.domain);
 
-	// Simple topic extraction: first 3 meaningful words
-	const words = event.text
-		.replace(/[^\w\s-]/g, " ")
-		.split(/\s+/)
-		.filter((w) => w.length > 3)
-		.slice(0, 3);
-
 	return {
 		timestamp: event.timestamp,
 		source: event.source,
 		activityType,
-		topics: words.length > 0 ? [words.join(" ")] : [],
+		topics,
 		entities,
 		intent,
 		confidence: 0.3,

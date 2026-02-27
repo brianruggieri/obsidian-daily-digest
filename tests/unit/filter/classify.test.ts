@@ -31,15 +31,23 @@ describe("classifyEventsRuleOnly", () => {
 		expect(result.events[0].source).toBe("search");
 	});
 
-	it("classifies Claude sessions as implementation", () => {
-		const claude: ClaudeSession[] = [
-			{ prompt: "Fix the auth middleware bug", time: NOW, project: "webapp" },
+	it("classifies Claude sessions using vocabulary-based task type", () => {
+		const claudeDebug: ClaudeSession[] = [
+			{ prompt: "Fix the auth middleware bug", time: NOW, project: "webapp", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 },
+		];
+		const claudeImpl: ClaudeSession[] = [
+			{ prompt: "Implement the OAuth PKCE flow for our React app", time: NOW, project: "webapp", isConversationOpener: true, conversationFile: "session2.jsonl", conversationTurnCount: 1 },
 		];
 
-		const result = classifyEventsRuleOnly([], [], claude, [], {});
-		expect(result.events).toHaveLength(1);
-		expect(result.events[0].activityType).toBe("implementation");
-		expect(result.events[0].source).toBe("claude");
+		const resultDebug = classifyEventsRuleOnly([], [], claudeDebug, [], {});
+		expect(resultDebug.events).toHaveLength(1);
+		expect(resultDebug.events[0].activityType).toBe("debugging");
+		expect(resultDebug.events[0].source).toBe("claude");
+
+		const resultImpl = classifyEventsRuleOnly([], [], claudeImpl, [], {});
+		expect(resultImpl.events).toHaveLength(1);
+		expect(resultImpl.events[0].activityType).toBe("implementation");
+		expect(resultImpl.events[0].source).toBe("claude");
 	});
 
 	it("handles empty input", () => {
