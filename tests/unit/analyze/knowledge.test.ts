@@ -78,6 +78,11 @@ describe("focus summary", () => {
 		const sections = generateKnowledgeSections(makePatterns());
 		expect(sections.focusSummary).toContain("10am");
 	});
+
+	it("returns empty focusSummary when focusScore is 0 (no-activity sentinel)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0 }));
+		expect(sections.focusSummary).toBe("");
+	});
 });
 
 // ── Temporal Insights ───────────────────────────────────
@@ -301,9 +306,20 @@ describe("tag generation", () => {
 		expect(sections.tags).toContain("pattern/deep-focus");
 	});
 
-	it("generates scattered pattern tag (<=0.45)", () => {
+	it("generates scattered pattern tag (<0.45)", () => {
 		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.2 }));
 		expect(sections.tags).toContain("pattern/scattered");
+	});
+
+	it("does not generate deep-focus or scattered tag when focusScore is 0 (no-activity sentinel)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0 }));
+		expect(sections.tags).not.toContain("pattern/deep-focus");
+		expect(sections.tags).not.toContain("pattern/scattered");
+	});
+
+	it("does not tag focusScore 0.45 as scattered (boundary is exclusive)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.45 }));
+		expect(sections.tags).not.toContain("pattern/scattered");
 	});
 
 	it("generates new-exploration pattern tag", () => {

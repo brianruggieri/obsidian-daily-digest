@@ -524,9 +524,12 @@ export function compressScore(blended: number): number {
 
 /**
  * Canonical focus label -- single source of truth for the entire codebase.
- * Operates on the compressed (sigmoid) scale.
+ * Operates on the compressed (sigmoid) scale (0.30–0.98).
+ * Returns "" for score === 0, which is the sentinel value produced by
+ * extractPatterns() when no events are present (not a real focus reading).
  */
 export function getFocusLabel(score: number): string {
+	if (score === 0) return "";
 	if (score >= 0.75) return "Highly focused";
 	if (score >= 0.60) return "Moderately focused";
 	if (score >= 0.45) return "Varied";

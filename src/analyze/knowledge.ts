@@ -62,6 +62,7 @@ function buildFocusSummary(patterns: PatternAnalysis): string {
 	const topTypes = patterns.topActivityTypes.slice(0, 3);
 
 	const focusLevel = getFocusLabel(score);
+	if (!focusLevel) return "";
 
 	const typeBreakdown = topTypes
 		.map((t) => `${t.type} (${t.pct}%)`)
@@ -286,7 +287,7 @@ function generateTags(patterns: PatternAnalysis): string[] {
 	if (returningSignals.length > 0) scored.push({ tag: "pattern/returning-interest", score: 1.0 });
 
 	if (patterns.focusScore >= 0.75) scored.push({ tag: "pattern/deep-focus", score: 1.0 });
-	else if (patterns.focusScore <= 0.45) scored.push({ tag: "pattern/scattered", score: 1.0 });
+	else if (patterns.focusScore > 0 && patterns.focusScore < 0.45) scored.push({ tag: "pattern/scattered", score: 1.0 });
 
 	// Activity tags always lead; fill remaining slots (up to TAG_CAP) with
 	// scored tags sorted by relevance, skipping any that duplicate an activity tag.

@@ -6,6 +6,7 @@ import {
 	buildEmptyTopicHistory,
 	computeKnowledgeDelta,
 	ENTITY_BEARING_CATEGORIES,
+	getFocusLabel,
 } from "../../../src/analyze/patterns";
 import {
 	StructuredEvent,
@@ -603,5 +604,23 @@ describe("ENTITY_BEARING_CATEGORIES gate", () => {
 		expect(result.temporalClusters.length).toBeGreaterThan(0);
 		// But entity relations should be empty (gated out)
 		expect(result.entityRelations).toHaveLength(0);
+	});
+});
+
+// ── getFocusLabel sentinel handling ──────────────────────
+
+describe("getFocusLabel", () => {
+	it("returns empty string for sentinel value 0 (no activity)", () => {
+		expect(getFocusLabel(0)).toBe("");
+	});
+
+	it("returns correct labels for real compressed-scale scores", () => {
+		expect(getFocusLabel(0.80)).toBe("Highly focused");
+		expect(getFocusLabel(0.75)).toBe("Highly focused");
+		expect(getFocusLabel(0.65)).toBe("Moderately focused");
+		expect(getFocusLabel(0.60)).toBe("Moderately focused");
+		expect(getFocusLabel(0.50)).toBe("Varied");
+		expect(getFocusLabel(0.45)).toBe("Varied");
+		expect(getFocusLabel(0.30)).toBe("Widely scattered");
 	});
 });
