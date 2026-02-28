@@ -33,3 +33,12 @@ jobs:
 
       - name: Unit & integration tests
         run: npm test
+
+      - name: Verify settings registry completeness
+        run: npm run docs:check
+
+      - name: Verify settings-reference.md is up to date
+        run: |
+          npm run docs:generate
+          git diff --exit-code docs/settings-reference.md || \
+            (echo "❌ docs/settings-reference.md is out of date. Run 'npm run docs:generate' and commit the result." && exit 1)

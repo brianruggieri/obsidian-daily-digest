@@ -10,24 +10,19 @@
  * Each preset is a partial override of DEFAULT_SETTINGS.
  */
 
-import type { DailyDigestSettings } from "../../src/settings";
+import type { DailyDigestSettings } from "../../src/settings/types";
 import type { BrowserInstallConfig, SensitivityCategory } from "../../src/types";
 
 /**
  * Minimal copy of DEFAULT_SETTINGS to avoid importing Obsidian-dependent code.
- * This must stay in sync with src/settings.ts DEFAULT_SETTINGS.
+ * This must stay in sync with src/settings/types.ts DEFAULT_SETTINGS.
  * The CI check-settings-registry script will catch drift.
  */
 export const BASE: DailyDigestSettings = {
 	dailyFolder: "daily",
 	filenameTemplate: "YYYY-MM-DD",
-	lookbackHours: 24,
-	collectionMode: "complete",
 	promptBudget: 3000,
-	maxBrowserVisits: 80,
-	maxSearches: 40,
-	maxShellCommands: 50,
-	maxClaudeSessions: 30,
+	maxVisitsPerDomain: 5,
 	browserConfigs: [],
 	aiModel: "claude-haiku-4-5",
 	profile: "",
@@ -36,9 +31,10 @@ export const BASE: DailyDigestSettings = {
 	localEndpoint: "http://localhost:11434",
 	localModel: "",
 	enableBrowser: false,
-	enableShell: false,
 	enableClaude: false,
 	claudeSessionsDir: "~/.claude/projects",
+	enableCodex: false,
+	codexSessionsDir: "~/.codex/sessions",
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
@@ -56,16 +52,15 @@ export const BASE: DailyDigestSettings = {
 	sensitivityAction: "exclude",
 	enableGit: false,
 	gitParentDir: "",
-	maxGitCommits: 50,
 	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
-	enablePromptMoodMirror: false,
-	enablePromptMoodCognition: false,
-	promptMoodCognitionModel: "",
+	promptStrategy: "monolithic-json",
+	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
+	debugMode: false,
 };
 
 /** Realistic mock browser profiles for the browser detection screenshot. */
@@ -104,8 +99,8 @@ export const PRESETS = {
 	/** All data sources enabled with browser profiles detected. */
 	sourcesExpanded: {
 		enableBrowser: true,
-		enableShell: true,
 		enableClaude: true,
+		enableCodex: true,
 		browserConfigs: MOCK_BROWSER_CONFIGS,
 		hasCompletedOnboarding: true,
 	},
@@ -165,8 +160,8 @@ export const PRESETS = {
 	/** Privacy warning state: Anthropic + all sources = yellow callout. */
 	privacyWarn: {
 		enableBrowser: true,
-		enableShell: true,
 		enableClaude: true,
+		enableCodex: true,
 		enableAI: true,
 		aiProvider: "anthropic" as const,
 		hasCompletedOnboarding: true,
