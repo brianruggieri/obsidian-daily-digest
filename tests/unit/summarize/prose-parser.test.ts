@@ -178,4 +178,57 @@ Test
 		expect(summary.themes).toEqual([]);
 		expect(summary.questions).toEqual([]);
 	});
+
+	it("parses tagged reflections from ## Reflections heading", () => {
+		const raw = `
+## Headline
+Auth deep-dive day
+
+## Reflections
+- **token-storage**: You spent 3 hours researching token storage but never committed a solution. What's blocking the decision?
+- **pkce-flow**: The PKCE implementation went smoothly. What made that flow easier than expected?
+`;
+
+		const summary = parseProseSections(raw);
+		expect(summary.prompts).toHaveLength(2);
+		expect(summary.prompts![0].id).toBe("token-storage");
+		expect(summary.prompts![0].question).toContain("blocking the decision");
+		expect(summary.prompts![1].id).toBe("pkce-flow");
+		expect(summary.prompts![1].question).toContain("easier than expected");
+	});
+
+	it("prefers tagged reflections over legacy questions", () => {
+		const raw = `
+## Headline
+Test day
+
+## Questions
+- Why did the tests flake?
+
+## Reflections
+- **test-flake**: Your CI flaked 3 times on the same test. Is the test actually non-deterministic or is there an env issue?
+`;
+
+		const summary = parseProseSections(raw);
+		// Reflections should take priority over Questions
+		expect(summary.prompts).toHaveLength(1);
+		expect(summary.prompts![0].id).toBe("test-flake");
+		expect(summary.prompts![0].question).toContain("non-deterministic");
+	});
+
+	it("deduplicates theme IDs in reflections", () => {
+		const raw = `
+## Headline
+Test
+
+## Reflections
+- **auth**: First question about auth?
+- **auth**: Second question about auth?
+`;
+
+		const summary = parseProseSections(raw);
+		expect(summary.prompts).toHaveLength(2);
+		expect(summary.prompts![0].id).toBe("auth");
+		expect(summary.prompts![1].id).toBe("auth_2");
+	});
 });

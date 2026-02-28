@@ -201,6 +201,23 @@ export const CLAUDE_PROMPT_TEMPLATES: Record<string, string[]> = {
 		"Review this PR description and suggest improvements",
 		"What's the best way to structure a monorepo for a TypeScript project with 3 packages?",
 	],
+	conversational: [
+		"build, test, lint, deploy",
+		"yeah go ahead",
+		"keep them local for now",
+		"review open github issues, check for the next biggest impact",
+		"commit and push, then cleanup stale branches and worktrees",
+		"review the copilot comments on this PR and fix as needed",
+		"give me some stats here, what's fresh and what's stale?",
+		"do these changes hit any documentation or claude notes",
+		"1, 2 and remove the old prototype repos",
+		"review for frontend usability",
+		"confirm fixes, then merge PR",
+		"clean up unused worktrees",
+		"leave good documentation so this project can be picked up by a new agent",
+		"what can we learn from these tests and analysis",
+		"review all documentation in .claude directory, investigate for cleanup",
+	],
 	academic: [
 		"Summarize this paper's methodology section and explain the experimental setup: 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks'",
 		"Compare BERT and GPT architectures. When should I use each for my NLP research?",
@@ -537,6 +554,40 @@ export const GIT_COMMIT_TEMPLATES: Record<string, { messages: string[]; repo: st
 			],
 		},
 	],
+	multiRepo: [
+		{
+			repo: "obsidian-daily-digest",
+			messages: [
+				"feat: three-layer digest layout with collapsed callouts",
+				"feat: add semantic context Layer 0 to prose prompt",
+				"feat: hybrid prose prompt strategy with learnings rendering",
+				"fix: reorder note layout, remove tldr callout, collapse work patterns",
+				"fix: filter claude code noise prompts and add conversation identity",
+				"fix: improve entity extraction with stopwords and domain gating",
+				"fix: clean tracking URLs and collapse redirect wrappers",
+				"fix: add canonical-key URL dedup and per-domain cap",
+				"Merge pull request #31 from devuser/feat/article-first-browsing",
+				"Merge pull request #30 from devuser/fix/tracking-url-display",
+				"Merge pull request #29 from devuser/fix/note-layout-reorder",
+				"Merge pull request #28 from devuser/fix/entity-extraction-quality",
+			],
+		},
+		{
+			repo: "prompt-review",
+			messages: [
+				"Consolidate PR #1 + PR #2: hardening, test suites, and gap coverage",
+			],
+		},
+		{
+			repo: "arc",
+			messages: [
+				"Add CLAUDE.md and .claude/ARCHITECTURE.md for agent handoff",
+				"Strip ANTHROPIC_API_KEY from subprocess env",
+				"Fix setuptools build backend for Python 3.10 compatibility",
+				"Initial arc implementation",
+			],
+		},
+	],
 };
 
 // ── Generator Functions ─────────────────────────────────
@@ -681,14 +732,19 @@ export function generateGitCommits(options: {
 		const entry = allMessages[i % allMessages.length];
 		const time = i < options.timestamps.length ? options.timestamps[i] : options.timestamps[options.timestamps.length - 1];
 		const hash = Math.random().toString(36).slice(2, 9);
+		const isMerge = entry.message.startsWith("Merge pull request");
+		// Log-normal distribution centered around ~150 lines for features, ~40 for fixes
+		const isFeat = entry.message.startsWith("feat:");
+		const baseInsertions = isMerge ? 0 : Math.round(Math.exp(Math.random() * 2 + (isFeat ? 4.5 : 3.5)));
+		const baseDeletions = isMerge ? 0 : Math.round(baseInsertions * (0.1 + Math.random() * 0.4));
 		commits.push({
 			hash,
 			message: entry.message,
 			time,
 			repo: entry.repo,
-			filesChanged: Math.floor(Math.random() * 10) + 1,
-			insertions: Math.floor(Math.random() * 100) + 1,
-			deletions: Math.floor(Math.random() * 50),
+			filesChanged: isMerge ? 0 : Math.floor(Math.random() * 10) + 1,
+			insertions: baseInsertions,
+			deletions: baseDeletions,
 		});
 	}
 	return commits;

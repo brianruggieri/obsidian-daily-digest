@@ -250,10 +250,14 @@ export default class DailyDigestPlugin extends Plugin {
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
-		// Build sanitization config
+		// Build sanitization config — auto-upgrade to aggressive for Anthropic
+		const effectiveSanitizationLevel =
+			this.settings.autoAggressiveSanitization && this.settings.aiProvider === "anthropic"
+				? "aggressive"
+				: this.settings.sanitizationLevel;
 		const sanitizeConfig: SanitizeConfig = {
 			enabled: this.settings.enableSanitization,
-			level: this.settings.sanitizationLevel,
+			level: effectiveSanitizationLevel,
 			excludedDomains: this.settings.excludedDomains
 				.split(",")
 				.map((d) => d.trim())
@@ -593,7 +597,7 @@ export default class DailyDigestPlugin extends Plugin {
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
 							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-							articleClustersForSemantic
+							articleClustersForSemantic, this.settings.privacyTierOverride
 						);
 						aiNotice.hide();
 					} else {
@@ -610,7 +614,7 @@ export default class DailyDigestPlugin extends Plugin {
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
 						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-						articleClustersForSemantic
+						articleClustersForSemantic, this.settings.privacyTierOverride
 					);
 				}
 			}

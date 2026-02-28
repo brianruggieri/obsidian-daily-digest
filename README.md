@@ -1,8 +1,8 @@
 # Daily Digest for Obsidian
 
-**Your day, distilled.** Daily Digest reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles everything into a single, AI-summarized daily note in your Obsidian vault.
+**Your day, distilled.** Daily Digest is an Obsidian plugin that reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles them into an AI-summarized daily note.
 
-One command. One note. A complete picture of what you did today.
+One command. One note. Everything you did today, in one place.
 
 ![Daily Digest hero screenshot](tests/screenshots/baseline/digest-hero.png)
 
@@ -10,7 +10,7 @@ One command. One note. A complete picture of what you did today.
 
 ## Why this exists
 
-I kept forgetting what I worked on. Not the big stuff — the small stuff. The Stack Overflow rabbit hole at 2pm. The three search queries that led me to rethink my entire auth approach. The Claude conversation where I figured out the fix. The git commits I couldn't remember making by Friday.
+What survives my day: commits, a merged PR, a closed ticket. What doesn't: why I threw out the first approach. The searches that shifted my thinking. The rabbit hole that cost two hours and saved six. I built this because I kept losing that stuff. After the third time I re-solved the same problem from scratch, I figured I needed a record.
 
 Daily Digest captures all of that and turns it into something you can actually read tomorrow, next week, or six months from now.
 
@@ -19,10 +19,10 @@ Daily Digest captures all of that and turns it into something you can actually r
 Every day (or whenever you want), Daily Digest:
 
 1. **Collects** your browser history, search queries, [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions, [Codex CLI](https://github.com/openai/codex) sessions, and git commits
-2. **Sanitizes** everything — scrubs API keys, tokens, passwords, and sensitive URLs before anything touches your vault
-3. **Categorizes** browser visits into meaningful groups (Dev, Research, Work, News, etc.)
-4. **Summarizes** the whole day with AI — a headline, key themes, notable moments, and reflection questions
-5. **Writes** a structured markdown note into your vault with frontmatter, tags, and Dataview-compatible fields
+2. **Sanitizes** everything. Scrubs API keys, tokens, passwords, and sensitive URLs before anything touches your vault
+3. **Categorizes** browser visits into groups (Dev, Research, Work, News, etc.)
+4. **Summarizes** the day with AI. Headline, key themes, notable moments, and reflection questions
+5. **Writes** a structured markdown note with frontmatter, tags, and Dataview-compatible fields
 
 The result is a note that looks like this:
 
@@ -163,7 +163,7 @@ If anything goes wrong during merge, your original content is never lost.
 
 ## Privacy architecture
 
-Daily Digest was built with a simple principle: **your data is yours.**
+Everything here is designed around one constraint: **nothing leaves your machine unless you opt in.**
 
 ### The defaults
 
@@ -174,7 +174,7 @@ Daily Digest was built with a simple principle: **your data is yours.**
 
 ### The privacy escalation chain
 
-When you use Anthropic's cloud API, Daily Digest doesn't just dump your raw data over the wire. It has a 4-tier system that controls exactly how much context the cloud model sees:
+When you use Anthropic's cloud API, a 4-tier system controls how much context the cloud model sees:
 
 ```
 Tier 4 ─── De-identified ──── Only aggregated statistics. Zero per-event data.
@@ -276,7 +276,7 @@ FROM #daily-digest
 WHERE answer_what_token_storage_strategy_is_safest_for_our_spa
 ```
 
-Frontmatter includes `focus_score`, `themes`, `categories`, and `tags` for powerful cross-day queries.
+Frontmatter includes `focus_score`, `themes`, `categories`, and `tags` for cross-day queries.
 
 ### Matrix Validation
 
@@ -284,7 +284,7 @@ Before choosing your provider and privacy tier, **run the matrix validator** to 
 
 ```bash
 npm run matrix:validate:phase1      # Free validation (Tier 4 only) — 2 minutes
-npm run matrix:validate:full        # Full matrix (all tiers) — 10 minutes, ~$0.04
+npm run matrix:validate             # Full matrix (all tiers) — 10 minutes, ~$0.04
 ```
 
 This generates metrics for 4 real-world decision scenarios:
@@ -374,7 +374,7 @@ Screenshots are saved to `tests/screenshots/output/`. Committed baselines live i
 
 ### Testing
 
-The test suite includes 649 test cases:
+The test suite includes:
 
 - **Unit tests** — sanitization, categorization, classification, pattern extraction, knowledge generation, rendering, summarization, merge safety, browser profiles, secret storage, prompt templates, presets
 - **Integration tests** — full pipeline runs with 6 realistic personas, privacy escalation chain verification, merge safety, multi-day topic recurrence, matrix validation
@@ -499,7 +499,7 @@ What matters is that you understand the code you're submitting and can explain y
 
 This project was developed extensively with AI coding tools, primarily [Claude Code](https://docs.anthropic.com/en/docs/claude-code). AI assisted with implementation, testing, and documentation across the codebase.
 
-All code is human-reviewed, tested (649 test cases), and maintained by [Brian Ruggieri](https://github.com/brianruggieri). The architecture, product decisions, and quality standards are mine — the AI accelerated getting there.
+All code is human-reviewed, tested, and maintained by [Brian Ruggieri](https://github.com/brianruggieri). I made the architecture and product decisions. The AI made me faster.
 
 ---
 

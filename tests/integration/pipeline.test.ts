@@ -5,6 +5,10 @@ import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { generateKnowledgeSections } from "../../src/analyze/knowledge";
 import { renderMarkdown } from "../../src/render/renderer";
+import { cleanTitle } from "../../src/collect/browser";
+import { computeEngagementScore } from "../../src/analyze/engagement";
+import { linkSearchesToVisits } from "../../src/analyze/intent";
+import { clusterArticles } from "../../src/analyze/clusters";
 import { ALL_PERSONAS, PersonaOutput } from "../fixtures/personas";
 import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
 
@@ -34,19 +38,41 @@ function runPipeline(persona: PersonaOutput) {
 		categorized
 	);
 
-	// 4. Extract patterns
+	// 4. Article clustering (matches main.ts pipeline)
+	const searchLinks = linkSearchesToVisits(sanitized.searches, sanitized.visits);
+	const cleanedTitles = sanitized.visits.map((v) => cleanTitle(v.title ?? ""));
+	const engagementScores = sanitized.visits.map((v, i) =>
+		computeEngagementScore(v, cleanedTitles[i], sanitized.visits, searchLinks)
+	);
+	const articleClusters = clusterArticles(sanitized.visits, cleanedTitles, engagementScores);
+
+	// 5. Extract patterns (all 9 args — matching main.ts)
 	const patternConfig = defaultPatternConfig();
 	const patterns = extractPatterns(
 		classification,
 		patternConfig,
 		buildEmptyTopicHistory(),
-		TODAY
+		TODAY,
+		sanitized.gitCommits,
+		sanitized.claudeSessions,
+		sanitized.searches,
+		sanitized.visits,
+		articleClusters
 	);
 
-	// 5. Generate knowledge sections
+	// 6. Generate knowledge sections + attach semantic data
 	const knowledge = generateKnowledgeSections(patterns);
+	if (articleClusters.length > 0) {
+		knowledge.articleClusters = articleClusters;
+	}
+	if (patterns.commitWorkUnits.length > 0) {
+		knowledge.commitWorkUnits = patterns.commitWorkUnits;
+	}
+	if (patterns.claudeTaskSessions.length > 0) {
+		knowledge.claudeTaskSessions = patterns.claudeTaskSessions;
+	}
 
-	// 6. Render markdown
+	// 7. Render markdown
 	const markdown = renderMarkdown(
 		DATE,
 		sanitized.visits,

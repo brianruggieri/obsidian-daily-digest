@@ -2,9 +2,9 @@ import { CATEGORY_LABELS } from "../filter/categorize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit, ArticleCluster } from "../types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, sanitizeReflectionId, GitCommit, ArticleCluster } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
-import { loadPromptTemplate, fillTemplate } from "./prompt-templates";
+import { loadPromptTemplate, loadProseTemplate, fillTemplate, PromptCapability } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
 import { PromptStrategy } from "../settings/types";
 import * as log from "../plugin/log";
@@ -573,7 +573,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "questions": ["1-2 genuinely open questions a thoughtful outside observer would ask after reading this — questions the person themselves might not think to ask. Do not presuppose an emotional state, outcome, or conclusion. Focus on the 'why' behind patterns, not just 'what happened next'."],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed, then ask a short direct question"}],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"]${metaFields}
 }
 
@@ -581,7 +581,9 @@ Write \`headline\` and \`tldr\` last — as final distillations after completing
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories or activity types that had actual activity.
-Write for a person reading their own notes 3 months from now — help them remember what it felt like, what they understood, and where they were in their work.`;
+Write for a person reading their own notes 3 months from now — help them remember what it felt like, what they understood, and where they were in their work.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each object has: "theme" = short kebab-case topic ID (e.g. job-search, tool-boundaries, focus-pattern) — prefer reusing common themes across days when the topic recurs; "text" = 1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend, not an analyst. Use second person (you).`;
 }
 
 // ── Privacy tier resolution (sync, no network) ──────────
@@ -592,6 +594,58 @@ export interface PromptResolution {
 	prompt: string;
 	tier: PrivacyTier;
 	maxTokens: number;
+}
+
+/**
+ * Routes to a specific forced tier, falling back to Tier 1 with a warning
+ * if the requested tier's data is unavailable.
+ */
+function buildTierForced(
+	tier: number,
+	date: Date,
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	config: AICallConfig,
+	profile: string,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+	compressed?: CompressedActivity,
+	gitCommits: GitCommit[] = [],
+	promptsDir?: string
+): PromptResolution {
+	const standardPrompt = () =>
+		compressed
+			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
+			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+
+	switch (tier) {
+		case 4:
+			if (patterns) {
+				return { prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir), tier: 4, maxTokens: 1500 };
+			}
+			log.warn("Daily Digest: Tier 4 override requested but no patterns available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+		case 3:
+			if (classification && classification.events.length > 0) {
+				return {
+					prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
+					tier: 3,
+					maxTokens: 1000,
+				};
+			}
+			log.warn("Daily Digest: Tier 3 override requested but no classification available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+		case 2:
+			if (compressed) {
+				return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+			}
+			log.warn("Daily Digest: Tier 2 override requested but no compressed activity available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+		case 1:
+		default:
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+	}
 }
 
 /**
@@ -622,12 +676,21 @@ export function resolvePromptAndTier(
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	privacyTierOverride?: number | null
 ): PromptResolution {
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
 			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
+
+	// Explicit tier override bypasses auto-escalation
+	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
+		return buildTierForced(
+			privacyTierOverride, date, categorized, searches, claudeSessions,
+			config, profile, classification, patterns, compressed, gitCommits, promptsDir
+		);
+	}
 
 	if (patterns && config.provider === "anthropic") {
 		return {
@@ -664,6 +727,109 @@ export function resolvePromptAndTier(
 	}
 }
 
+// ── Privacy tier helpers ─────────────────────────────────
+
+/**
+ * Resolve the privacy tier for a prose-strategy call, applying the same
+ * escalation logic used by the monolithic-json path in resolvePromptAndTier().
+ */
+export function resolvePrivacyTier(
+	config: AICallConfig,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+	ragConfig?: RAGConfig,
+	privacyTierOverride?: number | null
+): 1 | 2 | 3 | 4 {
+	// Determine the highest privacy tier actually supported by available data.
+	const maxAvailableTier: 1 | 2 | 3 | 4 = (() => {
+		if (patterns) return 4;
+		if (classification?.events?.length) return 3;
+		if (ragConfig?.enabled) return 2;
+		return 1;
+	})();
+
+	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
+		const requested = privacyTierOverride as 1 | 2 | 3 | 4;
+		// If the requested tier requires data that is not available, warn and
+		// fall back to the most private tier that *is* supported.
+		if (requested > maxAvailableTier) {
+			log.warn(
+				`Daily Digest: resolvePrivacyTier: requested privacy tier ${requested} but only tier ${maxAvailableTier} data is available; falling back to ${maxAvailableTier}.`
+			);
+			return maxAvailableTier;
+		}
+		return requested;
+	}
+
+	if (config.provider !== "anthropic") return 1;
+	return maxAvailableTier;
+}
+
+/** Data options object passed to buildProsePrompt. */
+type ProseOptions = {
+	categorized?: CategorizedVisits;
+	searches?: SearchQuery[];
+	claudeSessions?: ClaudeSession[];
+	gitCommits?: GitCommit[];
+	compressed?: CompressedActivity;
+	classification?: ClassificationResult;
+	patterns?: PatternAnalysis;
+	articleClusters?: ArticleCluster[];
+};
+
+/**
+ * Filter the full options object to only include data layers appropriate
+ * for the resolved privacy tier.
+ */
+export function buildTierFilteredOptions(
+	tier: 1 | 2 | 3 | 4,
+	full: ProseOptions
+): ProseOptions {
+	if (tier === 4) {
+		// Aggregated statistics + semantic patterns only — no raw text
+		return {
+			patterns: full.patterns,
+			articleClusters: full.articleClusters,
+		};
+	}
+	if (tier === 3) {
+		// Classified abstractions + patterns — no raw browser/search/git text
+		return {
+			classification: full.classification,
+			patterns: full.patterns,
+			articleClusters: full.articleClusters,
+		};
+	}
+	if (tier === 2) {
+		// RAG-selected chunks + patterns + classification
+		return {
+			compressed: full.compressed,
+			classification: full.classification,
+			patterns: full.patterns,
+			articleClusters: full.articleClusters,
+		};
+	}
+	// Tier 1: everything
+	return full;
+}
+
+/**
+ * Resolve the prompt complexity tier based on model and provider.
+ * Sonnet/Opus → "high" (full schema), Haiku / large local → "balanced",
+ * small local models → "lite".
+ */
+export function resolvePromptCapability(model: string, provider: string): PromptCapability {
+	if (provider === "anthropic") {
+		if (/sonnet|opus/i.test(model)) return "high";
+		return "balanced";
+	}
+	if (provider === "local") {
+		if (/\b(14b|22b|32b|70b)\b/i.test(model)) return "balanced";
+		return "lite";
+	}
+	return "balanced";
+}
+
 // ── Prose prompt builder ─────────────────────────────────
 // Builds a prose-format prompt that asks for heading-delimited markdown
 // instead of JSON. Uses the same activity data as the JSON prompts.
@@ -671,17 +837,10 @@ export function resolvePromptAndTier(
 export function buildProsePrompt(
 	date: Date,
 	profile: string,
-	options: {
-		categorized?: CategorizedVisits;
-		searches?: SearchQuery[];
-		claudeSessions?: ClaudeSession[];
-		gitCommits?: GitCommit[];
-		compressed?: CompressedActivity;
-		classification?: ClassificationResult;
-		patterns?: PatternAnalysis;
-		articleClusters?: ArticleCluster[];
-	},
-	promptsDir?: string
+	options: ProseOptions,
+	promptsDir?: string,
+	capability: PromptCapability = "balanced",
+	tier: 1 | 2 | 3 | 4 = 1
 ): string {
 	const {
 		categorized, searches, claudeSessions, gitCommits,
@@ -802,12 +961,19 @@ export function buildProsePrompt(
 
 	const activityData = dataSections.join("\n\n");
 
+	const tierInstruction = tier === 4
+		? "You are working from statistical patterns only. Do not invent specific events, names, or entities. Every claim must be inferrable from the pattern data provided.\n\n"
+		: tier === 3
+		? "You are working from classified activity abstractions. Do not invent specific URLs, domain names, or verbatim queries.\n\n"
+		: "";
+
 	const vars: Record<string, string> = {
 		dateStr,
 		contextHint,
 		activityData: activityData || "(no activity data available)",
+		tierInstruction,
 	};
-	return fillTemplate(loadPromptTemplate("prose", promptsDir), vars);
+	return fillTemplate(loadProseTemplate(capability, promptsDir), vars);
 }
 
 // ── Main summarization entry point ──────────────────────
@@ -826,18 +992,26 @@ export async function summarizeDay(
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
 	promptStrategy: PromptStrategy = "monolithic-json",
-	articleClusters?: ArticleCluster[]
+	articleClusters?: ArticleCluster[],
+	privacyTierOverride?: number | null
 ): Promise<AISummary> {
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
-		const prompt = buildProsePrompt(date, profile, {
+		// Resolve privacy tier and filter data layers accordingly
+		const tier = resolvePrivacyTier(config, classification, patterns, ragConfig, privacyTierOverride);
+		const proseOptions = buildTierFilteredOptions(tier, {
 			categorized, searches, claudeSessions, gitCommits,
 			compressed, classification, patterns, articleClusters,
-		}, promptsDir);
+		});
+
+		const modelName = config.provider === "anthropic" ? config.anthropicModel : config.localModel;
+		const capability = resolvePromptCapability(modelName, config.provider);
+		const prompt = buildProsePrompt(date, profile, proseOptions, promptsDir, capability, tier);
 
 		log.debug(
 			`Daily Digest: Using single-prose strategy ` +
-			`(~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
+			`(tier=${tier}, capability=${capability}, ` +
+			`~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
 		);
 
 		const raw = await callAI(prompt, config, 1500, undefined, false);
@@ -889,7 +1063,7 @@ export async function summarizeDay(
 			);
 			const fallback = resolvePromptAndTier(
 				date, categorized, searches, claudeSessions, config, profile,
-				undefined, classification, patterns, compressed, gitCommits, promptsDir
+				undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
 			);
 			prompt = fallback.prompt;
 			maxTokens = fallback.maxTokens;
@@ -897,7 +1071,7 @@ export async function summarizeDay(
 	} else {
 		const resolution = resolvePromptAndTier(
 			date, categorized, searches, claudeSessions, config, profile,
-			undefined, classification, patterns, compressed, gitCommits, promptsDir
+			undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
 		);
 		prompt = resolution.prompt;
 		maxTokens = resolution.maxTokens;
@@ -935,12 +1109,25 @@ export async function summarizeDay(
 
 	try {
 		const summary = JSON.parse(cleaned) as AISummary;
-		// Derive structured prompts with stable IDs from plain question strings
-		if (summary.questions?.length) {
+		// Derive structured prompts from reflections (new format) or questions (legacy)
+		if (summary.reflections?.length) {
+			// New format: [{theme, text}] → ReflectionPrompt {id, question}
+			const seen = new Set<string>();
+			summary.prompts = summary.reflections.map((r) => {
+				let id = sanitizeReflectionId(r.theme);
+				const base = id;
+				let n = 2;
+				while (seen.has(id)) {
+					id = `${base}_${n++}`;
+				}
+				seen.add(id);
+				return { id, question: r.text };
+			});
+		} else if (summary.questions?.length) {
+			// Legacy fallback: derive IDs from question text
 			const seen = new Set<string>();
 			summary.prompts = summary.questions.map((q) => {
 				let id = slugifyQuestion(q);
-				// Deduplicate IDs by appending a suffix
 				const base = id;
 				let n = 2;
 				while (seen.has(id)) {

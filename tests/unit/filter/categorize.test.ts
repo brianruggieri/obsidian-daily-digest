@@ -92,6 +92,88 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("readwise.io")).toBe("pkm");
 	});
 
+	// Enriched category coverage
+	it("categorizes Wayfair as shopping", () => {
+		expect(categorizeDomain("wayfair.com")).toBe("shopping");
+	});
+
+	it("categorizes Temu as shopping", () => {
+		expect(categorizeDomain("temu.com")).toBe("shopping");
+	});
+
+	it("categorizes Peacock as media", () => {
+		expect(categorizeDomain("peacocktv.com")).toBe("media");
+	});
+
+	it("categorizes ESPN as media", () => {
+		expect(categorizeDomain("espn.com")).toBe("media");
+	});
+
+	it("categorizes Pinterest as social", () => {
+		expect(categorizeDomain("pinterest.com")).toBe("social");
+	});
+
+	it("categorizes dev.to as social", () => {
+		expect(categorizeDomain("dev.to")).toBe("social");
+	});
+
+	it("categorizes CNN as news", () => {
+		expect(categorizeDomain("cnn.com")).toBe("news");
+	});
+
+	it("categorizes Capital One as finance", () => {
+		expect(categorizeDomain("capitalone.com")).toBe("finance");
+	});
+
+	it("categorizes Mistral as ai_tools", () => {
+		expect(categorizeDomain("mistral.ai")).toBe("ai_tools");
+	});
+
+	it("categorizes Groq as ai_tools", () => {
+		expect(categorizeDomain("groq.com")).toBe("ai_tools");
+	});
+
+	it("categorizes Strava as personal", () => {
+		expect(categorizeDomain("strava.com")).toBe("personal");
+	});
+
+	it("categorizes Goodreads as personal", () => {
+		expect(categorizeDomain("goodreads.com")).toBe("personal");
+	});
+
+	it("categorizes TED as education", () => {
+		expect(categorizeDomain("ted.com")).toBe("education");
+	});
+
+	it("categorizes Minecraft as gaming", () => {
+		// Note: roblox.com contains "x.com" substring so it matches social first (known limitation)
+		expect(categorizeDomain("minecraft.net")).toBe("gaming");
+	});
+
+	it("categorizes Nexus Mods as gaming", () => {
+		expect(categorizeDomain("nexusmods.com")).toBe("gaming");
+	});
+
+	it("categorizes Wattpad as writing", () => {
+		expect(categorizeDomain("wattpad.com")).toBe("writing");
+	});
+
+	it("categorizes Workflowy as pkm", () => {
+		expect(categorizeDomain("workflowy.com")).toBe("pkm");
+	});
+
+	it("categorizes Zendesk as work", () => {
+		expect(categorizeDomain("zendesk.com")).toBe("work");
+	});
+
+	it("categorizes Supabase as dev", () => {
+		expect(categorizeDomain("supabase.com")).toBe("dev");
+	});
+
+	it("categorizes Nature as research", () => {
+		expect(categorizeDomain("nature.com")).toBe("research");
+	});
+
 	it("categorizes unknown domains as other", () => {
 		expect(categorizeDomain("random-obscure-site.xyz")).toBe("other");
 	});
