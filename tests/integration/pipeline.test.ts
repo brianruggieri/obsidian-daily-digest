@@ -113,8 +113,8 @@ describe("full pipeline", () => {
 			});
 
 			it("produces focus score in valid range", () => {
-				// Focus score is Shannon entropy-based and depends on random mock data
-				// distribution, so we verify it's a valid number in [0, 1]
+				// Focus score blends topic entropy (60%) + category concentration (40%),
+				// then compresses via sigmoid to 0.30-0.98 (0 sentinel for empty input).
 				expect(result.patterns.focusScore).toBeGreaterThanOrEqual(0);
 				expect(result.patterns.focusScore).toBeLessThanOrEqual(1);
 				// Also verify it's a finite number (not NaN/Infinity)

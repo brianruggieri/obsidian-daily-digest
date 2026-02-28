@@ -469,7 +469,7 @@ export function computeKnowledgeDelta(
 
 // ── Focus Score ────────────────────────────────────────
 
-function computeFocusScore(events: StructuredEvent[]): number {
+function computeTopicFocus(events: StructuredEvent[]): number {
 	if (events.length === 0) return 0;
 
 	// Focus = inverse of topic entropy. More concentrated topics = higher focus
@@ -497,6 +497,43 @@ function computeFocusScore(events: StructuredEvent[]): number {
 
 	// Invert: low entropy = high focus
 	return Math.max(0, Math.min(1, 1 - (entropy / maxEntropy)));
+}
+
+/**
+ * Compress a blended focus score (0-1) into a perceptually useful range
+ * via sigmoid mapping. Normal days land in 55-80%.
+ *
+ * FLOOR=0.30, CEIL=0.98, k=5 (steepness)
+ *
+ *   blended 0.0 -> 30%
+ *   blended 0.5 -> 64%
+ *   blended 1.0 -> 98%
+ */
+export function compressScore(blended: number): number {
+	const FLOOR = 0.30;
+	const CEIL = 0.98;
+	const k = 5;
+
+	const sig = 1 / (1 + Math.exp(-k * (blended - 0.5)));
+	const sigMin = 1 / (1 + Math.exp(-k * (0 - 0.5)));
+	const sigMax = 1 / (1 + Math.exp(-k * (1 - 0.5)));
+	const sigRange = sigMax - sigMin;
+
+	return FLOOR + (CEIL - FLOOR) * (sig - sigMin) / sigRange;
+}
+
+/**
+ * Canonical focus label -- single source of truth for the entire codebase.
+ * Operates on the compressed (sigmoid) scale (0.30–0.98).
+ * Returns "" for score === 0, which is the sentinel value produced by
+ * extractPatterns() when no events are present (not a real focus reading).
+ */
+export function getFocusLabel(score: number): string {
+	if (score === 0) return "";
+	if (score >= 0.75) return "Highly focused";
+	if (score >= 0.60) return "Moderately focused";
+	if (score >= 0.45) return "Varied";
+	return "Widely scattered";
 }
 
 // ── Category Diversity Score ────────────────────────────
@@ -610,11 +647,12 @@ export function extractPatterns(
 		topicCooccurrences
 	);
 
-	// Focus score
-	const focusScore = computeFocusScore(events);
-
-	// Category diversity score
+	// Focus score: blend topic entropy with category concentration, then compress
+	const topicFocus = computeTopicFocus(events);
 	const activityConcentrationScore = computeCategoryDiversityScore(events);
+	const focusScore = events.length === 0
+		? 0
+		: compressScore(0.6 * topicFocus + 0.4 * activityConcentrationScore);
 
 	// Activity type distribution
 	const topActivityTypes = computeActivityDistribution(events);

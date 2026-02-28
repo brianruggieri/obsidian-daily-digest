@@ -67,7 +67,7 @@ describe("knowledge value evaluation", () => {
 			const result = await evaluateWithRubric(
 				`Focus summary: "${knowledge.focusSummary}"\n\nContext: Focus score was ${(patterns.focusScore * 100).toFixed(0)}%. Top activity types: ${patterns.topActivityTypes.map((a) => `${a.type} (${a.pct}%)`).join(", ")}`,
 				`Evaluate whether the focus summary:
-1. Uses appropriate language for the focus level (e.g., "highly focused" for >70%, "varied" for 30-50%, "scattered" for <30%)
+1. Uses appropriate language for the focus level (e.g., "highly focused" for >=75%, "moderately focused" for 60-75%, "varied" for 45-60%, "scattered" for <45%)
 2. Mentions relevant activity types or topics
 3. Is concise and informative (1-2 sentences)
 4. Provides useful context about the day's work pattern

@@ -47,24 +47,24 @@ describe("generateKnowledgeSections", () => {
 // ── Focus Summary ───────────────────────────────────────
 
 describe("focus summary", () => {
-	it("labels highly focused day (≥0.7)", () => {
+	it("labels highly focused day (>=0.75)", () => {
 		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.8 }));
 		expect(sections.focusSummary).toContain("Highly focused");
 		expect(sections.focusSummary).toContain("80%");
 	});
 
-	it("labels moderately focused day (0.5-0.7)", () => {
-		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.6 }));
+	it("labels moderately focused day (0.60-0.75)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.65 }));
 		expect(sections.focusSummary).toContain("Moderately focused");
 	});
 
-	it("labels varied day (0.3-0.5)", () => {
-		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.4 }));
+	it("labels varied day (0.45-0.60)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.5 }));
 		expect(sections.focusSummary).toContain("Varied");
 	});
 
-	it("labels scattered day (<0.3)", () => {
-		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.2 }));
+	it("labels scattered day (<0.45)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.3 }));
 		expect(sections.focusSummary).toContain("Widely scattered");
 	});
 
@@ -77,6 +77,11 @@ describe("focus summary", () => {
 	it("includes peak hours", () => {
 		const sections = generateKnowledgeSections(makePatterns());
 		expect(sections.focusSummary).toContain("10am");
+	});
+
+	it("returns empty focusSummary when focusScore is 0 (no-activity sentinel)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0 }));
+		expect(sections.focusSummary).toBe("");
 	});
 });
 
@@ -296,14 +301,25 @@ describe("tag generation", () => {
 		expect(sections.tags.some((t) => t.startsWith("entity/"))).toBe(true);
 	});
 
-	it("generates deep-focus pattern tag", () => {
+	it("generates deep-focus pattern tag (>=0.75)", () => {
 		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.8 }));
 		expect(sections.tags).toContain("pattern/deep-focus");
 	});
 
-	it("generates scattered pattern tag", () => {
+	it("generates scattered pattern tag (<0.45)", () => {
 		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.2 }));
 		expect(sections.tags).toContain("pattern/scattered");
+	});
+
+	it("does not generate deep-focus or scattered tag when focusScore is 0 (no-activity sentinel)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0 }));
+		expect(sections.tags).not.toContain("pattern/deep-focus");
+		expect(sections.tags).not.toContain("pattern/scattered");
+	});
+
+	it("does not tag focusScore 0.45 as scattered (boundary is exclusive)", () => {
+		const sections = generateKnowledgeSections(makePatterns({ focusScore: 0.45 }));
+		expect(sections.tags).not.toContain("pattern/scattered");
 	});
 
 	it("generates new-exploration pattern tag", () => {

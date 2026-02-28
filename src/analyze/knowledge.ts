@@ -17,6 +17,7 @@ import {
 	TemporalCluster,
 	RecurrenceSignal,
 } from "../types";
+import { getFocusLabel } from "./patterns";
 
 // ── Knowledge Sections ─────────────────────────────────
 
@@ -60,11 +61,8 @@ function buildFocusSummary(patterns: PatternAnalysis): string {
 	const score = patterns.focusScore;
 	const topTypes = patterns.topActivityTypes.slice(0, 3);
 
-	let focusLevel: string;
-	if (score >= 0.7) focusLevel = "Highly focused";
-	else if (score >= 0.5) focusLevel = "Moderately focused";
-	else if (score >= 0.3) focusLevel = "Varied";
-	else focusLevel = "Widely scattered";
+	const focusLevel = getFocusLabel(score);
+	if (!focusLevel) return "";
 
 	const typeBreakdown = topTypes
 		.map((t) => `${t.type} (${t.pct}%)`)
@@ -288,8 +286,8 @@ function generateTags(patterns: PatternAnalysis): string[] {
 	const returningSignals = patterns.recurrenceSignals.filter((s) => s.trend === "returning");
 	if (returningSignals.length > 0) scored.push({ tag: "pattern/returning-interest", score: 1.0 });
 
-	if (patterns.focusScore >= 0.7) scored.push({ tag: "pattern/deep-focus", score: 1.0 });
-	else if (patterns.focusScore <= 0.3) scored.push({ tag: "pattern/scattered", score: 1.0 });
+	if (patterns.focusScore >= 0.75) scored.push({ tag: "pattern/deep-focus", score: 1.0 });
+	else if (patterns.focusScore > 0 && patterns.focusScore < 0.45) scored.push({ tag: "pattern/scattered", score: 1.0 });
 
 	// Activity tags always lead; fill remaining slots (up to TAG_CAP) with
 	// scored tags sorted by relevance, skipping any that duplicate an activity tag.
