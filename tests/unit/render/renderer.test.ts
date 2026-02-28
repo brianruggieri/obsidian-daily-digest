@@ -40,13 +40,18 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("tags:");
 		expect(md).toContain("daily");
 		expect(md).toContain("daily-digest");
-		expect(md).toContain("categories:");
+		expect(md).not.toContain("categories:");
 	});
 
-	it("includes theme tags in frontmatter", () => {
+	it("includes themes in note body and themes field (not in tags)", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
-		expect(md).toContain("oauth");
-		expect(md).toContain("react");
+		expect(md).toContain("OAuth");
+		expect(md).toContain("React");
+		expect(md).toContain("themes:");
+		// theme slugs must NOT appear in the tags: line
+		const tagsLine = md.split("\n").find((l) => l.startsWith("tags:")) ?? "";
+		expect(tagsLine).not.toContain("oauth");
+		expect(tagsLine).not.toContain("react");
 	});
 
 	it("includes title with date", () => {

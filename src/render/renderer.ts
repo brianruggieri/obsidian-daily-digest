@@ -157,24 +157,14 @@ export function renderMarkdown(
 	const dow = dayOfWeek(date);
 	const lines: string[] = [];
 
-	// Theme tags from AI
-	const themeTags: string[] = [];
-	if (aiSummary?.themes) {
-		for (const t of aiSummary.themes) {
-			themeTags.push(t.toLowerCase().replace(/ /g, "-").replace(/\//g, "-"));
-		}
-	}
-	const catTags = Object.keys(categorized).filter((k) => k !== "other");
-
 	// ── Frontmatter ──────────────────────────────
 	const knowledgeTags = knowledge?.tags ?? [];
-	const allTags = ["daily", "daily-digest", ...catTags, ...themeTags, ...knowledgeTags];
+	const allTags = ["daily", "daily-digest", ...knowledgeTags];
 	lines.push("---");
 	lines.push(`date: ${today}`);
 	lines.push(`day: ${dow}`);
 	lines.push(`tags: [${allTags.join(", ")}]`);
 	lines.push(`generated: ${formatDate(new Date())} ${formatTime(new Date())}`);
-	lines.push(`categories: [${catTags.join(", ")}]`);
 	if (aiSummary?.themes?.length) {
 		lines.push(`themes: [${aiSummary.themes.map((t) => escapeForYaml(t)).join(", ")}]`);
 	}

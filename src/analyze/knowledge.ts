@@ -231,7 +231,7 @@ function buildKnowledgeDeltaLines(patterns: PatternAnalysis): string[] {
 
 // ── Tag Generation ─────────────────────────────────────
 
-const TAG_CAP = 20;
+const TAG_CAP = 10;
 const TAG_MIN_SCORE = 0.1;
 
 interface ScoredTag {
