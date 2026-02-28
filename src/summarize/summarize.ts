@@ -595,19 +595,41 @@ export interface PromptResolution {
 }
 
 /**
+ * Legacy tier inference: derives the tier from which features are enabled.
+ * Used as a fallback when `forceTier` is not set.
+ */
+function inferTierLegacy(
+	config: AICallConfig,
+	ragConfig?: RAGConfig,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+): PrivacyTier {
+	if (patterns && config.provider === "anthropic") return 4;
+	if (classification && classification.events.length > 0 && config.provider === "anthropic") return 3;
+	if (config.provider === "local") return 1;
+	if (ragConfig?.enabled) return 2;
+	return 1;
+}
+
+/**
  * Resolve which prompt to build and which privacy tier it corresponds to,
  * based on available data layers and the AI provider.
+ *
+ * When `forceTier` is provided it acts as an explicit output filter and
+ * determines the tier unconditionally — no feature-flag inference occurs.
+ * When `forceTier` is undefined the legacy inference chain is used for
+ * backwards compatibility.
  *
  * This is the synchronous, non-network portion of the privacy escalation
  * chain. The async RAG path (tier 2 with actual chunk retrieval) is handled
  * only inside `summarizeDay`; this function returns tier 2 with a standard
  * prompt as a placeholder for the tier label when RAG is enabled.
  *
- * Privacy escalation for Anthropic:
- *   Tier 4: De-identified — aggregated patterns only, zero per-event data
+ * Privacy tiers (output filters for Anthropic prompts):
+ *   Tier 4: De-identified — aggregate statistics only, zero per-event data
  *   Tier 3: Classified — per-event abstractions, no raw URLs
  *   Tier 2: RAG — retrieval-selected chunks (async path in summarizeDay)
- *   Tier 1: Standard — sanitized raw activity data
+ *   Tier 1: Full sanitized context — domains, titles, queries, commits
  * Local provider always uses the unified prompt (all layers, stays on device).
  */
 export function resolvePromptAndTier(
@@ -622,45 +644,59 @@ export function resolvePromptAndTier(
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	forceTier?: PrivacyTier
 ): PromptResolution {
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
 			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
 
-	if (patterns && config.provider === "anthropic") {
-		return {
-			prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir),
-			tier: 4,
-			maxTokens: 1500,
-		};
-	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
-		return {
-			prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
-			tier: 3,
-			maxTokens: 1000,
-		};
-	} else if (config.provider === "local") {
-		return {
-			prompt: buildUnifiedPrompt(date, profile, {
-				categorized,
-				searches,
-				claudeSessions,
-				gitCommits,
-				compressed,
-				classification: classification?.events.length ? classification : undefined,
-				patterns,
-			}),
-			tier: 1,
-			maxTokens: patterns ? 1500 : 1000,
-		};
-	} else if (ragConfig?.enabled) {
-		// RAG requires async chunk retrieval — return the standard prompt as a
-		// placeholder. The actual RAG prompt is built inside summarizeDay.
-		return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
-	} else {
-		return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
+	const tier: PrivacyTier = forceTier ?? inferTierLegacy(config, ragConfig, classification, patterns);
+
+	switch (tier) {
+		case 4:
+			// Always build the de-identified prompt when tier 4 is declared.
+			// If patterns are unavailable, build an empty-patterns placeholder.
+			return {
+				prompt: patterns
+					? buildDeidentifiedPrompt(date, patterns, profile, promptsDir)
+					: standardPrompt(),
+				tier: 4,
+				maxTokens: 1500,
+			};
+		case 3:
+			// Always build the classified prompt when tier 3 is declared.
+			// If classification is unavailable, fall back to the standard prompt.
+			return {
+				prompt: (classification && classification.events.length > 0)
+					? buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore)
+					: standardPrompt(),
+				tier: 3,
+				maxTokens: 1000,
+			};
+		case 2:
+			// RAG requires async chunk retrieval — return the standard prompt as a
+			// placeholder. The actual RAG prompt is built inside summarizeDay.
+			return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+		case 1:
+		default:
+			if (config.provider === "local") {
+				return {
+					prompt: buildUnifiedPrompt(date, profile, {
+						categorized,
+						searches,
+						claudeSessions,
+						gitCommits,
+						compressed,
+						classification: classification?.events.length ? classification : undefined,
+						patterns,
+					}),
+					tier: 1,
+					maxTokens: patterns ? 1500 : 1000,
+				};
+			}
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
 	}
 }
 
@@ -826,7 +862,8 @@ export async function summarizeDay(
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
 	promptStrategy: PromptStrategy = "monolithic-json",
-	articleClusters?: ArticleCluster[]
+	articleClusters?: ArticleCluster[],
+	forceTier?: PrivacyTier
 ): Promise<AISummary> {
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
@@ -877,7 +914,7 @@ export async function summarizeDay(
 				);
 				const fallback = resolvePromptAndTier(
 					date, categorized, searches, claudeSessions, config, profile,
-					undefined, classification, patterns, compressed, gitCommits, promptsDir
+					undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 				);
 				prompt = fallback.prompt;
 				maxTokens = fallback.maxTokens;
@@ -889,7 +926,7 @@ export async function summarizeDay(
 			);
 			const fallback = resolvePromptAndTier(
 				date, categorized, searches, claudeSessions, config, profile,
-				undefined, classification, patterns, compressed, gitCommits, promptsDir
+				undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 			);
 			prompt = fallback.prompt;
 			maxTokens = fallback.maxTokens;
@@ -897,7 +934,7 @@ export async function summarizeDay(
 	} else {
 		const resolution = resolvePromptAndTier(
 			date, categorized, searches, claudeSessions, config, profile,
-			undefined, classification, patterns, compressed, gitCommits, promptsDir
+			undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 		);
 		prompt = resolution.prompt;
 		maxTokens = resolution.maxTokens;

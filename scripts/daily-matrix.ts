@@ -207,7 +207,8 @@ async function runPreset(
 		const resolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits,
+			undefined, settings.forceTier
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -239,7 +240,8 @@ async function runPreset(
 		const previewResolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits,
+			undefined, settings.forceTier
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -264,7 +266,9 @@ async function runPreset(
 			undefined,
 			sanitized.gitCommits,
 			settings.promptsDir,
-			settings.promptStrategy
+			settings.promptStrategy,
+			undefined,
+			settings.forceTier
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}

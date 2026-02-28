@@ -971,6 +971,48 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
+		// ── Privacy tier override ─────────────────
+		if (this.plugin.settings.aiProvider === "anthropic") {
+			new Setting(containerEl)
+				.setName("Privacy tier override")
+				.setDesc(
+					"Explicitly control what data is sent to Anthropic. " +
+					"When set, this overrides any tier inferred from enabled features. " +
+					"Leave on \"Auto\" to use the default behavior."
+				)
+				.addDropdown((drop) => {
+					drop
+						.addOption("", "Auto (infer from features)")
+						.addOption("4", "Tier 4 — statistics only (most private)")
+						.addOption("3", "Tier 3 — activity types and topics, no URLs")
+						.addOption("2", "Tier 2 — RAG-selected excerpts")
+						.addOption("1", "Tier 1 — full sanitized context")
+						.setValue(
+							this.plugin.settings.forceTier !== undefined
+								? String(this.plugin.settings.forceTier)
+								: ""
+						)
+						.onChange(async (value) => {
+							this.plugin.settings.forceTier = value
+								? (Number(value) as 1 | 2 | 3 | 4)
+								: undefined;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			const tierCallout = containerEl.createDiv({
+				cls: "dd-settings-callout dd-settings-callout-info",
+			});
+			tierCallout.createEl("p", {
+				text:
+					"Tier 4: Only statistics — focus score, category counts, commit count. " +
+					"Nothing about what you visited, searched, wrote, or asked. " +
+					"Tier 3: Activity types and topics, no URLs or verbatim content. " +
+					"Tier 2: Semantically relevant excerpts selected by local search. " +
+					"Tier 1: Full activity after secret removal — domains, titles, searches, commit messages.",
+			});
+		}
+
 	}
 
 	/** Prepend a Lucide icon before the text content of a heading element. */

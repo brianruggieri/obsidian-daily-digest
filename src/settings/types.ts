@@ -54,6 +54,18 @@ export interface DailyDigestSettings {
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 	debugMode: boolean;
+	/**
+	 * Explicit privacy tier for Anthropic prompts. When set, this overrides
+	 * the legacy tier inference based on feature flags. Undefined = infer from
+	 * enabled features (legacy behaviour).
+	 *
+	 * Tiers are output filters that control what data reaches the Anthropic API:
+	 *   1 – Full sanitized context (domains, titles, queries, commit messages)
+	 *   2 – RAG-selected chunks only
+	 *   3 – Classified abstractions only (no raw URLs or verbatim content)
+	 *   4 – Aggregate statistics only (no per-event data)
+	 */
+	forceTier?: 1 | 2 | 3 | 4;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {

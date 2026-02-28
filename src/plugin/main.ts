@@ -593,7 +593,7 @@ export default class DailyDigestPlugin extends Plugin {
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
 							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-							articleClustersForSemantic
+							articleClustersForSemantic, this.settings.forceTier
 						);
 						aiNotice.hide();
 					} else {
@@ -610,7 +610,7 @@ export default class DailyDigestPlugin extends Plugin {
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
 						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-						articleClustersForSemantic
+						articleClustersForSemantic, this.settings.forceTier
 					);
 				}
 			}

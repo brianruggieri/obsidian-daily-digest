@@ -423,6 +423,110 @@ describe("resolvePromptAndTier", () => {
 	});
 });
 
+// ── forceTier overrides legacy inference ─────────────────
+
+describe("resolvePromptAndTier — forceTier", () => {
+	const anthropicConfig: AICallConfig = {
+		provider: "anthropic",
+		anthropicApiKey: "key",
+		anthropicModel: "claude-haiku-4-5-20251001",
+	};
+
+	it("forceTier: 4 overrides inference even without patterns", () => {
+		// Without forceTier and without patterns, inference would return tier 1.
+		// forceTier: 4 must override that.
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, undefined, undefined, undefined, [],
+			undefined, 4
+		);
+		expect(tier).toBe(4);
+	});
+
+	it("forceTier: 1 overrides inference when patterns present (no tier escalation)", () => {
+		// With patterns and Anthropic, legacy inference would return tier 4.
+		// forceTier: 1 must prevent escalation.
+		const mockPatterns = makeMockPatterns();
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, undefined, mockPatterns, undefined, [],
+			undefined, 1
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("forceTier: 1 with patterns uses standard prompt, not de-identified", () => {
+		const mockPatterns = makeMockPatterns();
+		const { prompt, tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, undefined, mockPatterns, undefined, [],
+			undefined, 1
+		);
+		expect(tier).toBe(1);
+		// Standard prompt does NOT contain de-identified stats markers
+		expect(prompt).not.toContain("activity_distribution");
+		expect(prompt).not.toContain("temporal_clusters");
+	});
+
+	it("forceTier: 4 with patterns uses de-identified prompt", () => {
+		const mockPatterns = makeMockPatterns();
+		const { prompt, tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, undefined, mockPatterns, undefined, [],
+			undefined, 4
+		);
+		expect(tier).toBe(4);
+		expect(prompt).toContain("activity_distribution");
+	});
+
+	it("forceTier: 3 with classification uses classified prompt", () => {
+		const mockClassification = makeMockClassification(3);
+		const { prompt, tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, mockClassification, undefined, undefined, [],
+			undefined, 3
+		);
+		expect(tier).toBe(3);
+		// Classified prompt groups by activity type
+		expect(prompt).toContain("browsing");
+	});
+
+	it("forceTier: 2 returns tier 2 regardless of classification/patterns", () => {
+		const mockPatterns = makeMockPatterns();
+		const mockClassification = makeMockClassification(3);
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, mockClassification, mockPatterns, undefined, [],
+			undefined, 2
+		);
+		expect(tier).toBe(2);
+	});
+
+	it("undefined forceTier preserves legacy inference (patterns → tier 4)", () => {
+		const mockPatterns = makeMockPatterns();
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], anthropicConfig, "test",
+			undefined, undefined, mockPatterns, undefined, [],
+			undefined, undefined
+		);
+		expect(tier).toBe(4);
+	});
+});
+
 // ── buildProsePrompt Layer 0 (Semantic Context) ─────────
 
 describe("buildProsePrompt Layer 0", () => {
