@@ -53,7 +53,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	sensitivityCustomDomains: "",
 
 	// AI
-	promptStrategy: "single-prose",
 	promptsDir: "",
 	debugMode: false,
 	enableAI: false,
@@ -70,7 +69,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "qwen2.5:7b-instruct",
 	classificationBatchSize: 8,
-	enablePatterns: true,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: false,
@@ -78,7 +76,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	// Meta
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,
-	privacyTierOverride: null,
+	privacyTier: null,
 	autoAggressiveSanitization: true,
 };
 
@@ -89,7 +87,7 @@ export const PRESETS: Preset[] = [
 	// No data ever leaves the machine; no LLM sees any content.
 	{
 		id: "no-ai-minimal",
-		description: "Browser only, no AI, no patterns — minimum viable note",
+		description: "Browser only, no AI — minimum viable note",
 		privacyRank: 1,
 		privacyGroup: "no-ai",
 		settings: {
@@ -97,7 +95,6 @@ export const PRESETS: Preset[] = [
 			enableGit: false,
 			enableAI: false,
 			aiProvider: "none",
-			enablePatterns: false,
 		},
 	},
 	{
@@ -108,7 +105,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: false,
 			aiProvider: "none",
-			enablePatterns: true,
 		},
 	},
 
@@ -151,26 +147,14 @@ export const PRESETS: Preset[] = [
 			enableClassification: false,
 		},
 	},
-	{
-		id: "local-llm-prose",
-		description: "All sources, local model, prose output",
-		privacyRank: 6,
-		privacyGroup: "local",
-		settings: {
-			enableAI: true,
-			aiProvider: "local",
-			enableRAG: false,
-			enableClassification: false,
-		},
-	},
 
-	// ── Cloud group (ranks 7–13) ─────────────────────────────────────────────
+	// ── Cloud group (ranks 6–11) ─────────────────────────────────────────────
 	// Data sent to Anthropic API. Ordered by least exposure:
 	// stats-only → abstractions → RAG chunks → aggressive sanitization → full context.
 	{
 		id: "cloud-tier4-stats",
 		description: "Anthropic Haiku, aggregated statistics only (Tier 4)",
-		privacyRank: 7,
+		privacyRank: 6,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -178,14 +162,14 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableClassification: true,
 			enableRAG: false,
-			enablePatterns: true,
 			sanitizationLevel: "aggressive",
+			privacyTier: 4,
 		},
 	},
 	{
 		id: "cloud-sonnet-tier3",
 		description: "Anthropic Sonnet, classified abstractions only (Tier 3)",
-		privacyRank: 8,
+		privacyRank: 7,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -193,13 +177,13 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-sonnet-4-6",
 			enableClassification: true,
 			enableRAG: false,
-			enablePatterns: false, // patterns → Tier 4; disable to route classification → Tier 3
+			privacyTier: 3,
 		},
 	},
 	{
 		id: "cloud-haiku-tier2",
 		description: "Anthropic Haiku, RAG chunks only (Tier 2)",
-		privacyRank: 9,
+		privacyRank: 8,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -207,13 +191,13 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableRAG: true,
 			enableClassification: false,
-			enablePatterns: false, // patterns → Tier 4; disable to route RAG → Tier 2
+			privacyTier: 2,
 		},
 	},
 	{
 		id: "privacy-aggressive",
 		description: "All sources, Sonnet, aggressive sanitization + all sensitivity categories",
-		privacyRank: 10,
+		privacyRank: 9,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -225,13 +209,13 @@ export const PRESETS: Preset[] = [
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
 			] as SensitivityCategory[],
 			sensitivityAction: "redact",
-			enablePatterns: false, // Tier 1 full context with aggressive sanitization
+			privacyTier: 1,
 		},
 	},
 	{
 		id: "cloud-haiku-tier1",
 		description: "Anthropic Haiku, full sanitized context (Tier 1)",
-		privacyRank: 11,
+		privacyRank: 10,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -239,27 +223,13 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableRAG: false,
 			enableClassification: false,
-			enablePatterns: false, // Tier 1 full context
-		},
-	},
-	{
-		id: "cloud-haiku-prose",
-		description: "Anthropic Haiku, prose output (Tier 1)",
-		privacyRank: 12,
-		privacyGroup: "cloud",
-		settings: {
-			enableAI: true,
-			aiProvider: "anthropic",
-			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: false,
-			enableClassification: false,
-			enablePatterns: false,
+			privacyTier: 1,
 		},
 	},
 	{
 		id: "cloud-sonnet-tier1",
 		description: "Anthropic Sonnet, full sanitized context (Tier 1)",
-		privacyRank: 13,
+		privacyRank: 11,
 		privacyGroup: "cloud",
 		settings: {
 			enableAI: true,
@@ -267,7 +237,7 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-sonnet-4-6",
 			enableRAG: false,
 			enableClassification: false,
-			enablePatterns: false, // Tier 1 full context
+			privacyTier: 1,
 		},
 	},
 ];

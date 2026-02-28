@@ -24,7 +24,7 @@ describe("Structural assertions", () => {
 	});
 
 	it("passes when optional focus_score is absent", () => {
-		// focus_score is only written when enablePatterns: true, so its absence is valid
+		// focus_score may be absent if no events were classified, so its absence is valid
 		const noFocus = VALID_MD.replace("focus_score: 74%\n", "");
 		const result = runStructuralAssertions(noFocus);
 		expect(result.passed).toBe(true);

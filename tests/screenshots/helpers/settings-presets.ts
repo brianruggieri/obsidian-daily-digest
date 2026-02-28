@@ -109,7 +109,6 @@ export const PRESETS = {
 		aiProvider: "anthropic" as const,
 		enableClassification: true,
 		classificationModel: "llama3.2",
-		enablePatterns: true,
 		trackRecurrence: true,
 		localEndpoint: "http://localhost:11434",
 		hasCompletedOnboarding: true,

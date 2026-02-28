@@ -9,8 +9,8 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 - [⚙️ General](#general) (2 settings)
 - [🗄️ Data sources](#data-sources) (10 settings)
 - [🛡️ Privacy & filtering](#privacy-filtering) (12 settings)
-- [✨ AI summarization](#ai-summarization) (8 settings)
-- [🧠 Advanced AI processing](#advanced-ai-processing) (10 settings)
+- [✨ AI summarization](#ai-summarization) (7 settings)
+- [🧠 Advanced AI processing](#advanced-ai-processing) (9 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -236,11 +236,11 @@ Always apply aggressive sanitization when sending data to the Anthropic API. Str
 - **On by default:** yes
 - **Visible when:** `enableSanitization` is enabled
 
-### `privacyTierOverride`
+### `privacyTier`
 
-**Privacy tier override**
+**Privacy tier**
 
-Force a specific privacy tier instead of auto-selecting the most private available tier. Tiers: 4 (de-identified stats only), 3 (classified abstractions), 2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.
+Explicit privacy tier for Anthropic cloud calls. Tiers: 4 (de-identified stats only), 3 (classified abstractions), 2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.
 
 - **Type:** Dropdown
 - **Default:** `null`
@@ -327,16 +327,6 @@ Path to a directory containing custom prompt templates (standard.txt, rag.txt, e
 - **Default:** *(empty)*
 - **Visible when:** `enableAI` is enabled
 
-### `promptStrategy`
-
-**Prompt strategy**
-
-monolithic-json: sends all activity as a structured JSON object in a single prompt — best for most models. single-prose: sends activity as natural language prose — may suit some models better.
-
-- **Type:** Dropdown
-- **Default:** `monolithic-json`
-- **Visible when:** `enableAI` is enabled
-
 ## 🧠 Advanced AI processing
 
 ### `enableRAG`
@@ -401,17 +391,6 @@ Number of events per classification batch. Larger batches are faster but may red
 - **Default:** `8`
 - **Visible when:** `enableClassification` is enabled
 
-### `enablePatterns`
-
-**Enable pattern extraction**
-
-Extract temporal clusters, topic co-occurrences, entity relations, and recurrence signals from classified events. Adds focus scores, topic maps, and knowledge delta analysis to your daily notes.
-
-- **Type:** Toggle
-- **Default:** `false`
-- **Visible when:** `enableClassification` is enabled
-- **Privacy:** Pattern extraction is entirely local and statistical — no LLM calls.
-
 ### `patternCooccurrenceWindow`
 
 **Co-occurrence window**
@@ -420,7 +399,6 @@ Time window in minutes for detecting topic co-occurrences. Events within the sam
 
 - **Type:** Slider
 - **Default:** `30`
-- **Visible when:** `enablePatterns` is enabled
 
 ### `patternMinClusterSize`
 
@@ -430,7 +408,6 @@ Minimum number of events required to form a temporal cluster. Lower values detec
 
 - **Type:** Slider
 - **Default:** `3`
-- **Visible when:** `enablePatterns` is enabled
 
 ### `trackRecurrence`
 
@@ -441,7 +418,6 @@ Persist topic history across days to detect recurring interests, returning topic
 - **Type:** Toggle
 - **Default:** `true`
 - **On by default:** yes
-- **Visible when:** `enablePatterns` is enabled
 
 ## 🔧 Meta
 

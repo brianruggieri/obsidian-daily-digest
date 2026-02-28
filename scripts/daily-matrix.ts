@@ -63,7 +63,7 @@ import { groupCommitsIntoWorkUnits } from "../src/analyze/commits";
 import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "../src/analyze/task-sessions";
 import { compressActivity } from "../src/summarize/compress";
 import { renderMarkdown } from "../src/render/renderer";
-import { buildPrompt, summarizeDay, resolvePromptAndTier } from "../src/summarize/summarize";
+import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../src/summarize/summarize";
 
 import type {
 	SanitizeConfig,
@@ -94,7 +94,7 @@ const VAULT_ROOT = join(homedir(), "obsidian-vaults", "daily-digest-test");
 //
 // This function mirrors the plugin's generateNote() method stage-for-stage.
 // Whenever main.ts gains a new pipeline stage, add it here in the same order.
-// Whenever summarizeDay() or resolvePromptAndTier() signatures change, update
+// Whenever summarizeDay() or resolvePrivacyTier() signatures change, update
 // both call sites below to match.
 // Verify with: npx tsc --project scripts/tsconfig.json --noEmit
 //
@@ -193,37 +193,27 @@ async function runPreset(
 	const categorized = categorizeVisits(visits);
 
 	// ── 5. Classify ──────────────────────────────────────
-	// AI_MODE=real: mirrors main.ts — LLM classification only when enableClassification && enableAI.
-	// AI_MODE=mock: uses rule-only as a testing approximation (LLM not available).
-	let classification: ClassificationResult | undefined;
+	// Always run rule-based classification (free, on-device).
+	// Optional: LLM-enriched classification when enableClassification && AI_MODE=real.
 	const useAI = settings.enableAI && settings.aiProvider !== "none";
+	let classification: ClassificationResult = classifyEventsRuleOnly(
+		visits, searches, claudeSessions, gitCommits, categorized
+	);
 
-	if (AI_MODE === "real") {
-		if (settings.enableClassification && useAI) {
-			const classifyConfig = {
-				enabled: true,
-				endpoint: settings.localEndpoint,
-				model: settings.classificationModel,
-				batchSize: settings.classificationBatchSize,
-			};
-			try {
-				classification = await classifyEvents(
-					visits, searches, claudeSessions, gitCommits, categorized, classifyConfig
-				);
-				console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
-			} catch (e) {
-				console.warn(`[${presetId}] Classification failed, continuing without:`, e);
-			}
-		}
-	} else {
-		// AI_MODE=mock: rule-only for presets that need classification or patterns
-		if (settings.enableClassification || settings.enablePatterns) {
-			if (settings.enableClassification) {
-				console.log(`[${presetId}] Classification: rule-only (AI_MODE=mock, skipping LLM)`);
-			}
-			classification = classifyEventsRuleOnly(
-				visits, searches, claudeSessions, gitCommits, categorized
+	if (AI_MODE === "real" && settings.enableClassification && useAI) {
+		const classifyConfig = {
+			enabled: true,
+			endpoint: settings.localEndpoint,
+			model: settings.classificationModel,
+			batchSize: settings.classificationBatchSize,
+		};
+		try {
+			classification = await classifyEvents(
+				visits, searches, claudeSessions, gitCommits, categorized, classifyConfig
 			);
+			console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
+		} catch (e) {
+			console.warn(`[${presetId}] LLM classification failed, using rule-based:`, e);
 		}
 	}
 
@@ -246,9 +236,10 @@ async function runPreset(
 	}
 
 	// ── 7. Patterns ─────────────────────────────────────
+	// Always run (free, on-device computation)
 	let patterns: PatternAnalysis | undefined;
 
-	if (settings.enablePatterns && classification && classification.events.length > 0) {
+	if (classification.events.length > 0) {
 		const patternConfig: PatternConfig = {
 			enabled: true,
 			cooccurrenceWindow: settings.patternCooccurrenceWindow,
@@ -328,7 +319,7 @@ async function runPreset(
 	if (!useAI) {
 		console.log(`[${presetId}] AI: disabled`);
 	} else if (AI_MODE === "mock") {
-		// Use resolvePromptAndTier to log the actual prompt + tier that would be sent
+		// Build the prompt preview to log tier + token count
 		const aiCallConfig: AICallConfig = {
 			provider: settings.aiProvider as "anthropic" | "local",
 			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "mock-key",
@@ -340,23 +331,25 @@ async function runPreset(
 			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
 			: undefined;
 		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
-		const resolution = resolvePromptAndTier(
-			date, categorized, searches, claudeSessions,
-			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, compressed, gitCommits,
-			settings.promptsDir, settings.privacyTierOverride
-		);
+		const mockTier = resolvePrivacyTier(aiCallConfig, classification, patterns, ragConfigPreview, settings.privacyTier);
+		const mockOptions = buildTierFilteredOptions(mockTier, {
+			categorized, searches, claudeSessions, gitCommits,
+			compressed, classification, patterns, articleClusters,
+		});
+		const mockModelName = aiCallConfig.provider === "anthropic" ? aiCallConfig.anthropicModel : aiCallConfig.localModel;
+		const mockCapability = resolvePromptCapability(mockModelName, aiCallConfig.provider);
+		const mockPrompt = buildProsePrompt(date, settings.profile, mockOptions, settings.promptsDir, mockCapability, mockTier);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
 			model: aiCallConfig.provider === "local"
 				? (aiCallConfig.localModel ?? "local")
 				: (aiCallConfig.anthropicModel ?? "mock"),
-			tokenCount: estimateTokens(resolution.prompt),
-			privacyTier: resolution.tier,
-			prompt: resolution.prompt,
+			tokenCount: estimateTokens(mockPrompt),
+			privacyTier: mockTier,
+			prompt: mockPrompt,
 		});
 		aiSummary = getMockSummary(presetId);
-		console.log(`[${presetId}] AI: mock (tier ${resolution.tier}, ${estimateTokens(resolution.prompt)} tokens)`);
+		console.log(`[${presetId}] AI: mock (tier ${mockTier}, ${estimateTokens(mockPrompt)} tokens)`);
 	} else {
 		// AI_MODE === "real" — call the real AI provider
 		const aiCallConfig: AICallConfig = {
@@ -370,26 +363,26 @@ async function runPreset(
 		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
 		console.log(`[${presetId}] Compressed: ~${compressed.tokenEstimate} tokens (budget: ${settings.promptBudget})`);
 
-		// Log the prompt and tier that resolvePromptAndTier selects.
-		// For RAG presets, we pass a minimal ragConfig so the tier label (Tier 2) is
-		// correct; the actual RAG chunks are fetched asynchronously inside summarizeDay.
+		// Log the prompt and tier that will be used.
 		const ragConfigPreview = settings.enableRAG
 			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
 			: undefined;
-		const previewResolution = resolvePromptAndTier(
-			date, categorized, searches, claudeSessions,
-			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, compressed, gitCommits,
-			settings.promptsDir, settings.privacyTierOverride
-		);
+		const previewTier = resolvePrivacyTier(aiCallConfig, classification, patterns, ragConfigPreview, settings.privacyTier);
+		const previewOptions = buildTierFilteredOptions(previewTier, {
+			categorized, searches, claudeSessions, gitCommits,
+			compressed, classification, patterns, articleClusters,
+		});
+		const previewModelName = aiCallConfig.provider === "anthropic" ? aiCallConfig.anthropicModel : aiCallConfig.localModel;
+		const previewCapability = resolvePromptCapability(previewModelName, aiCallConfig.provider);
+		const previewPrompt = buildProsePrompt(date, settings.profile, previewOptions, settings.promptsDir, previewCapability, previewTier);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
 			model: aiCallConfig.provider === "local"
 				? (aiCallConfig.localModel ?? "local")
 				: (aiCallConfig.anthropicModel ?? "unknown"),
-			tokenCount: estimateTokens(previewResolution.prompt),
-			privacyTier: previewResolution.tier,
-			prompt: previewResolution.prompt,
+			tokenCount: estimateTokens(previewPrompt),
+			privacyTier: previewTier,
+			prompt: previewPrompt,
 		});
 
 		aiSummary = await summarizeDay(
@@ -397,8 +390,8 @@ async function runPreset(
 			aiCallConfig, settings.profile,
 			ragConfigPreview, classification, patterns,
 			compressed, gitCommits,
-			settings.promptsDir, settings.promptStrategy,
-			articleClusters, settings.privacyTierOverride
+			settings.promptsDir,
+			articleClusters, settings.privacyTier
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}

@@ -976,50 +976,47 @@ async function runPipeline(
 
 	// ── 5. Classify ──────────────────────────────────────
 
+	// Always run classification (rule-based is free, on-device)
 	let classification: ClassificationResult | undefined;
-	if (settings.enableClassification || settings.enablePatterns) {
-		await stage("classify", async () => {
-			if (aiMode === "real" && settings.enableClassification) {
-				const classifyConfig = {
-					enabled: true,
-					endpoint: settings.localEndpoint,
-					model: settings.classificationModel,
-					batchSize: settings.classificationBatchSize,
-				};
-				classification = await classifyEvents(
-					filteredVisits,
-					sanitized.searches,
-					sanitized.claudeSessions,
-					sanitized.gitCommits,
-					categorized,
-					classifyConfig
-				);
-				return {
-					detail: `LLM: ${classification.llmClassified} events`,
-					output: classifyOutput(classification),
-				};
-			} else {
-				classification = classifyEventsRuleOnly(
-					filteredVisits,
-					sanitized.searches,
-					sanitized.claudeSessions,
-					sanitized.gitCommits,
-					categorized
-				);
-				return {
-					detail: "rule-only",
-					output: classifyOutput(classification),
-				};
-			}
-		});
-	} else {
-		skip("classify");
-	}
+	await stage("classify", async () => {
+		if (aiMode === "real" && settings.enableClassification) {
+			const classifyConfig = {
+				enabled: true,
+				endpoint: settings.localEndpoint,
+				model: settings.classificationModel,
+				batchSize: settings.classificationBatchSize,
+			};
+			classification = await classifyEvents(
+				filteredVisits,
+				sanitized.searches,
+				sanitized.claudeSessions,
+				sanitized.gitCommits,
+				categorized,
+				classifyConfig
+			);
+			return {
+				detail: `LLM: ${classification.llmClassified} events`,
+				output: classifyOutput(classification),
+			};
+		} else {
+			classification = classifyEventsRuleOnly(
+				filteredVisits,
+				sanitized.searches,
+				sanitized.claudeSessions,
+				sanitized.gitCommits,
+				categorized
+			);
+			return {
+				detail: "rule-only",
+				output: classifyOutput(classification),
+			};
+		}
+	});
 
 	// ── 6. Patterns ──────────────────────────────────────
-
+	// Always run (free, on-device computation)
 	let patterns: PatternAnalysis | undefined;
-	if (settings.enablePatterns && classification) {
+	if (classification) {
 		await stage("patterns", () => {
 			const patternConfig: PatternConfig = {
 				enabled: true,
@@ -1133,8 +1130,7 @@ async function runPipeline(
 				patterns,
 				undefined,
 				sanitized.gitCommits,
-				settings.promptsDir,
-				settings.promptStrategy
+				settings.promptsDir
 			);
 			return {
 				detail: `model=${aiCallConfig.provider === "local" ? aiCallConfig.localModel : aiCallConfig.anthropicModel}`,
