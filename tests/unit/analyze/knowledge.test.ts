@@ -315,7 +315,7 @@ describe("tag generation", () => {
 		expect(sections.tags).toContain("pattern/new-exploration");
 	});
 
-	it("caps tags at 20 even with many clusters and entities", () => {
+	it("caps tags at 10 even with many clusters and entities", () => {
 		// Generate enough temporal clusters and entity relations to exceed 20 raw tags
 		const manyClusters = Array.from({ length: 15 }, (_, i) => ({
 			hourStart: i,
@@ -342,7 +342,7 @@ describe("tag generation", () => {
 			],
 			focusScore: 0.8,
 		}));
-		expect(sections.tags.length).toBeLessThanOrEqual(20);
+		expect(sections.tags.length).toBeLessThanOrEqual(10);
 		expect(sections.tags.length).toBeGreaterThan(0);
 	});
 

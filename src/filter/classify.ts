@@ -422,7 +422,9 @@ function ruleBasedClassify(event: RawEvent): StructuredEvent {
 	} else if (event.source === "git") {
 		activityType = "implementation";
 		// Extract message from "{repo}: {message} (+N/-N)" and classify via vocabulary
-		const message = event.text.replace(/^\S+:\s+/, "").replace(/\s*\(\+\d+-\/\d+\)\s*$/, "");
+		const message = event.text
+			.replace(/^\S+:\s+/, "")
+			.replace(/\s*\(\s*\+\s*\d+\s*\/\s*-\s*\d+\s*\)\s*$/, "");
 		topics = extractClaudeTopics(message);
 	} else {
 		topics = [];
