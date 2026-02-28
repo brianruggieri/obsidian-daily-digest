@@ -183,7 +183,7 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 						if (typeof ts === "number") {
 							dt = new Date(ts > 1e10 ? ts : ts * 1000);
 						} else if (typeof ts === "string") {
-							dt = new Date(ts.replace(/Z$/, ""));
+							dt = new Date(ts);
 						}
 						if (dt && dt.getTime() < cutoffMs) continue;
 					}
