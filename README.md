@@ -284,7 +284,7 @@ Before choosing your provider and privacy tier, **run the matrix validator** to 
 
 ```bash
 npm run matrix:validate:phase1      # Free validation (Tier 4 only) — 2 minutes
-npm run matrix:validate:full        # Full matrix (all tiers) — 10 minutes, ~$0.04
+npm run matrix:validate             # Full matrix (all tiers) — 10 minutes, ~$0.04
 ```
 
 This generates metrics for 4 real-world decision scenarios:
