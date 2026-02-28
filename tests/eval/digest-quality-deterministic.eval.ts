@@ -47,21 +47,24 @@ describe("digest quality — deterministic", () => {
 			});
 
 			// ── Layer ordering ────────────────────────────────────
-			// In no-AI mode: Knowledge Insights → Browser Activity → Notes
-			// (Notable and Activity Overview only appear with AI summary)
+			// In no-AI mode: Browser Activity → Knowledge Insights → footer
+			// (Notable, Activity Overview, and Reflection only appear with AI summary)
+			// Knowledge Insights renders as open headings after archive in no-AI mode.
 			it("has correct layer ordering", () => {
-				const knowledgeIdx = markdown.indexOf("Knowledge Insights");
 				const browserIdx = markdown.indexOf("Browser Activity");
-				const notesIdx = markdown.indexOf("## \u{1F4DD} Notes");
+				const knowledgeIdx = markdown.indexOf("Knowledge Insights");
+				const footerIdx = markdown.indexOf("by Daily Digest");
 
-				if (knowledgeIdx !== -1 && browserIdx !== -1) {
-					expect(knowledgeIdx).toBeLessThan(notesIdx);
+				// Browser Activity comes before Knowledge Insights in no-AI layout
+				if (browserIdx !== -1 && knowledgeIdx !== -1) {
+					expect(browserIdx).toBeLessThan(knowledgeIdx);
 				}
-				if (browserIdx !== -1) {
-					expect(browserIdx).toBeLessThan(notesIdx);
+				// Everything before footer
+				if (knowledgeIdx !== -1 && footerIdx !== -1) {
+					expect(knowledgeIdx).toBeLessThan(footerIdx);
 				}
-				// Notes section must exist
-				expect(notesIdx).toBeGreaterThan(-1);
+				// Footer must exist
+				expect(footerIdx).toBeGreaterThan(-1);
 			});
 
 			// ── Callout syntax: every [!type] has body lines ──────
@@ -248,7 +251,7 @@ describe("digest quality — AI-on deterministic", () => {
 				const activityIdx = markdown.indexOf("Activity Overview");
 				const searchesIdx = markdown.indexOf("Searches");
 				const browserIdx = markdown.indexOf("Browser Activity");
-				const notesIdx = markdown.indexOf("## \u{1F4DD} Notes");
+				const notesIdx = markdown.indexOf("_Anything else on your mind today?_");
 
 				// Layer 1: headline and notable come first
 				if (headlineIdx !== -1 && notableIdx !== -1) {
