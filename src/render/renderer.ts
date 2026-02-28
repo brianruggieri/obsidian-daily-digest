@@ -168,10 +168,10 @@ export function renderMarkdown(
 	if (aiSummary?.themes?.length) {
 		lines.push(`themes: [${aiSummary.themes.map((t) => escapeForYaml(t)).join(", ")}]`);
 	}
-	// Add prompt IDs to frontmatter for Dataview discoverability
+	// Add reflection theme IDs to frontmatter for Dataview discoverability
 	const prompts = aiSummary?.prompts ?? [];
 	if (prompts.length) {
-		lines.push(`prompts: [${prompts.map((p) => p.id).join(", ")}]`);
+		lines.push(`reflections: [${prompts.map((p) => p.id).join(", ")}]`);
 	}
 	if (knowledge) {
 		const score = knowledge.focusScore;
@@ -572,13 +572,72 @@ export function renderMarkdown(
 		renderKnowledgeInsights(lines, knowledge, false);
 	}
 
-	// ── Notes ────────────────────────────────────
-	lines.push("---");
-	lines.push("");
-	lines.push("## \u{1F4DD} Notes");
-	lines.push("");
-	lines.push("> _Add your reflections here_");
-	lines.push("");
+	// ── Learnings ────────────────────────────────
+	if (aiSummary?.learnings?.length) {
+		lines.push("## \u{1F4DA} Learnings");
+		lines.push("");
+		for (const item of aiSummary.learnings) {
+			lines.push(`- ${escapeForMarkdown(item)}`);
+		}
+		lines.push("");
+	}
+
+	// ── Remember ─────────────────────────────────
+	if (aiSummary?.remember?.length) {
+		lines.push("## \u{1F5D2}\uFE0F Remember");
+		lines.push("");
+		for (const item of aiSummary.remember) {
+			lines.push(`- ${escapeForMarkdown(item)}`);
+		}
+		lines.push("");
+	}
+
+	// ── Note Seeds ───────────────────────────────
+	if (aiSummary?.note_seeds?.length) {
+		lines.push("## \u{1F331} Note Seeds");
+		lines.push("");
+		for (const seed of aiSummary.note_seeds) {
+			lines.push(`- [[${escapeForMarkdown(seed)}]]`);
+		}
+		lines.push("");
+	}
+
+	// ── Reflection ───────────────────────────────
+	if (prompts.length) {
+		lines.push("## \u{1FA9E} Reflection");
+		lines.push("");
+		for (const p of prompts) {
+			// AI's voice: observation woven with question in a blockquote
+			for (const textLine of escapeForMarkdown(p.question).split("\n")) {
+				lines.push(`> ${textLine}`);
+			}
+			lines.push("");
+			lines.push("---");
+			lines.push(`reflect_${p.id}:: `);
+			lines.push("");
+		}
+		// Soft close — replaces the old ## 📝 Notes section
+		lines.push("---");
+		lines.push("");
+		lines.push("_Anything else on your mind today?_");
+		lines.push("");
+	} else if (aiSummary?.questions?.length) {
+		// Legacy fallback: plain questions without structured IDs
+		lines.push("## \u{1FA9E} Reflection");
+		lines.push("");
+		for (const q of aiSummary.questions) {
+			const id = slugifyQuestion(q);
+			lines.push(`> ${escapeForMarkdown(q)}`);
+			lines.push("");
+			lines.push("---");
+			lines.push(`reflect_${id}:: `);
+			lines.push("");
+		}
+		lines.push("---");
+		lines.push("");
+		lines.push("_Anything else on your mind today?_");
+		lines.push("");
+	}
 
 	// ── Generation footer ────────────────────────
 	lines.push("---");
