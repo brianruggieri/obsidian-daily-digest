@@ -19,6 +19,8 @@
 		"version": "node scripts/version-bump.mjs && git add manifest.json versions.json",
 		"deploy": "npm run build && node scripts/deploy.mjs",
 		"deploy:dev": "node esbuild.config.mjs production && node scripts/deploy.mjs",
+		"docs:generate": "tsx --tsconfig scripts/tsconfig.json scripts/generate-settings-docs.ts",
+		"docs:check": "tsx --tsconfig scripts/tsconfig.json scripts/check-settings-registry.ts",
 		"screenshots:setup": "bash tests/screenshots/setup.sh",
 		"screenshots": "npm run screenshots:setup && npx wdio run tests/screenshots/wdio.conf.ts",
 		"matrix": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig scripts/tsconfig.json scripts/daily-matrix.ts",

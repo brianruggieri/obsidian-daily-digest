@@ -10,63 +10,16 @@
  * Each preset is a partial override of DEFAULT_SETTINGS.
  */
 
-import type { DailyDigestSettings } from "../../src/settings";
-import type { BrowserInstallConfig, SensitivityCategory } from "../../src/types";
+import { DEFAULT_SETTINGS } from "../../../src/settings/types";
+import type { DailyDigestSettings } from "../../../src/settings/types";
+import type { BrowserInstallConfig, SensitivityCategory } from "../../../src/types";
 
 /**
- * Minimal copy of DEFAULT_SETTINGS to avoid importing Obsidian-dependent code.
- * This must stay in sync with src/settings.ts DEFAULT_SETTINGS.
- * The CI check-settings-registry script will catch drift.
+ * Base defaults sourced directly from DEFAULT_SETTINGS to avoid drift.
+ * src/settings/types.ts has no Obsidian dependency, so this import is safe
+ * in the screenshot (WDIO) context.
  */
-export const BASE: DailyDigestSettings = {
-	dailyFolder: "daily",
-	filenameTemplate: "YYYY-MM-DD",
-	lookbackHours: 24,
-	collectionMode: "complete",
-	promptBudget: 3000,
-	maxBrowserVisits: 80,
-	maxSearches: 40,
-	maxShellCommands: 50,
-	maxClaudeSessions: 30,
-	browserConfigs: [],
-	aiModel: "claude-haiku-4-5",
-	profile: "",
-	enableAI: false,
-	aiProvider: "local",
-	localEndpoint: "http://localhost:11434",
-	localModel: "",
-	enableBrowser: false,
-	enableShell: false,
-	enableClaude: false,
-	claudeSessionsDir: "~/.claude/projects",
-	enableClassification: false,
-	classificationModel: "",
-	classificationBatchSize: 8,
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
-	enableSanitization: true,
-	sanitizationLevel: "standard",
-	excludedDomains: "",
-	redactPaths: true,
-	scrubEmails: true,
-	enableSensitivityFilter: false,
-	sensitivityCategories: [],
-	sensitivityCustomDomains: "",
-	sensitivityAction: "exclude",
-	enableGit: false,
-	gitParentDir: "",
-	maxGitCommits: 50,
-	enablePatterns: false,
-	patternCooccurrenceWindow: 30,
-	patternMinClusterSize: 3,
-	trackRecurrence: true,
-	enablePromptMoodMirror: false,
-	enablePromptMoodCognition: false,
-	promptMoodCognitionModel: "",
-	hasCompletedOnboarding: false,
-	privacyConsentVersion: 0,
-};
+export const BASE: DailyDigestSettings = DEFAULT_SETTINGS;
 
 /** Realistic mock browser profiles for the browser detection screenshot. */
 const MOCK_BROWSER_CONFIGS: BrowserInstallConfig[] = [
@@ -104,8 +57,8 @@ export const PRESETS = {
 	/** All data sources enabled with browser profiles detected. */
 	sourcesExpanded: {
 		enableBrowser: true,
-		enableShell: true,
 		enableClaude: true,
+		enableCodex: true,
 		browserConfigs: MOCK_BROWSER_CONFIGS,
 		hasCompletedOnboarding: true,
 	},
@@ -165,8 +118,8 @@ export const PRESETS = {
 	/** Privacy warning state: Anthropic + all sources = yellow callout. */
 	privacyWarn: {
 		enableBrowser: true,
-		enableShell: true,
 		enableClaude: true,
+		enableCodex: true,
 		enableAI: true,
 		aiProvider: "anthropic" as const,
 		hasCompletedOnboarding: true,
