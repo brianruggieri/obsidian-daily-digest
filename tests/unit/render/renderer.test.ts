@@ -72,7 +72,7 @@ describe("renderMarkdown", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
 		expect(md).toContain("1 visits");
 		expect(md).toContain("1 searches");
-		expect(md).toContain("1 AI prompts");
+		expect(md).toContain("1 AI prompt");
 	});
 
 	it("includes notable section", () => {

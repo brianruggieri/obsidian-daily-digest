@@ -14,6 +14,12 @@ const HEADING_MAP: Record<string, keyof AISummary> = {
 	"connections": "cross_source_connections",
 	"questions": "questions",
 	"note seeds": "note_seeds",
+	// Extended fields used by prose-high.txt
+	"work patterns": "work_patterns",
+	"notable": "notable",
+	"themes": "themes",
+	"topics": "topics",
+	"entities": "entities",
 };
 
 /**
@@ -26,6 +32,11 @@ const LIST_FIELDS = new Set<keyof AISummary>([
 	"questions",
 	"note_seeds",
 	"cross_source_connections",
+	"work_patterns",
+	"notable",
+	"themes",
+	"topics",
+	"entities",
 ]);
 
 /**

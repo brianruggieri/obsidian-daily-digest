@@ -3,6 +3,9 @@ import { join } from "path";
 
 export type PromptName = "standard" | "compressed" | "rag" | "classified" | "deidentified" | "prose";
 
+/** Which prompt complexity tier to use based on model capability. */
+export type PromptCapability = "high" | "balanced" | "lite";
+
 /**
  * Built-in prompt defaults, inlined as string literals so they work in both
  * the esbuild plugin bundle and tsx scripts without needing a .txt loader.
@@ -309,6 +312,24 @@ export function loadPromptTemplate(name: PromptName, promptsDir: string | undefi
 		}
 	}
 	return BUILT_IN_PROMPTS[name];
+}
+
+/**
+ * Load the prose template appropriate for the given model capability.
+ * Looks for prose-high.txt / prose-balanced.txt / prose-lite.txt in promptsDir;
+ * falls back to the built-in "prose" template if the file doesn't exist.
+ */
+export function loadProseTemplate(capability: PromptCapability, promptsDir?: string): string {
+	const name = capability === "high" ? "prose-high"
+		: capability === "lite" ? "prose-lite"
+		: "prose-balanced";
+	if (promptsDir) {
+		const filePath = join(promptsDir, `${name}.txt`);
+		if (existsSync(filePath)) {
+			return readFileSync(filePath, "utf-8");
+		}
+	}
+	return BUILT_IN_PROMPTS.prose;
 }
 
 /**

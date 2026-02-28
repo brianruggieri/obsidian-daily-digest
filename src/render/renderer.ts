@@ -184,7 +184,8 @@ export function renderMarkdown(
 		lines.push(`prompts: [${prompts.map((p) => p.id).join(", ")}]`);
 	}
 	if (knowledge) {
-		lines.push(`focus_score: ${Math.round(knowledge.focusScore * 100)}%`);
+		const score = knowledge.focusScore;
+		lines.push(`focus_score: ${score > 0 ? `${Math.round(score * 100)}%` : "N/A"}`);
 	}
 	if (gitCommits.length > 0) {
 		lines.push(`git-commits: ${gitCommits.length}`);
@@ -201,9 +202,12 @@ export function renderMarkdown(
 	lines.push("");
 
 	// ── Stats ────────────────────────────────────
+	const aiPromptsSegment = claudeSessions.length > 0
+		? `${claudeSessions.length} AI prompt${claudeSessions.length !== 1 ? "s" : ""} \u00B7 `
+		: "";
 	lines.push(
 		`> [!info] ${visits.length} visits \u00B7 ${searches.length} searches \u00B7 ` +
-			`${claudeSessions.length} AI prompts \u00B7 ` +
+			`${aiPromptsSegment}` +
 			`${gitCommits.length} commits \u00B7 ` +
 			`${Object.keys(categorized).length} categories`
 	);
@@ -318,8 +322,17 @@ export function renderMarkdown(
 	}
 
 	// ── Knowledge Insights (AI-on mode: callout) ─
-	if (knowledge && aiSummary) {
-		renderKnowledgeInsights(lines, knowledge, true);
+	// Only render when there's real pattern data — suppress empty callouts
+	// when patterns were disabled (focusScore=0 and no computed insights).
+	const hasKnowledgeContent = knowledge && (
+		knowledge.temporalInsights.length > 0 ||
+		knowledge.topicMap.length > 0 ||
+		knowledge.entityGraph.length > 0 ||
+		knowledge.recurrenceNotes.length > 0 ||
+		knowledge.knowledgeDeltaLines.length > 0
+	);
+	if (hasKnowledgeContent && aiSummary) {
+		renderKnowledgeInsights(lines, knowledge!, true);
 	}
 
 	// ── Learnings (collapsed callout, moved to Layer 2) ─
