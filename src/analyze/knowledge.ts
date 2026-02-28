@@ -242,10 +242,12 @@ interface ScoredTag {
 function generateTags(patterns: PatternAnalysis): string[] {
 	const scored: ScoredTag[] = [];
 
-	// Activity type tags — always included (top 3 are inherently meaningful)
-	for (const at of patterns.topActivityTypes.slice(0, 3)) {
-		scored.push({ tag: `activity/${at.type}`, score: Math.max(at.pct / 100, 0.5) });
-	}
+	// Activity type tags — always included (top 3 are inherently meaningful).
+	// Collected separately so they are guaranteed to appear in the final list
+	// regardless of how many higher-scored topic/entity/pattern tags exist.
+	const activityTags = patterns.topActivityTypes
+		.slice(0, 3)
+		.map((at) => `activity/${at.type}`);
 
 	// Topic tags from clusters — score = cluster intensity / max intensity (0–1)
 	const maxIntensity = patterns.temporalClusters.length > 0
@@ -289,10 +291,13 @@ function generateTags(patterns: PatternAnalysis): string[] {
 	if (patterns.focusScore >= 0.7) scored.push({ tag: "pattern/deep-focus", score: 1.0 });
 	else if (patterns.focusScore <= 0.3) scored.push({ tag: "pattern/scattered", score: 1.0 });
 
-	// Filter by minimum threshold, sort by score descending, cap at TAG_CAP
-	return scored
-		.filter((s) => s.score >= TAG_MIN_SCORE)
+	// Activity tags always lead; fill remaining slots (up to TAG_CAP) with
+	// scored tags sorted by relevance, skipping any that duplicate an activity tag.
+	const activityTagSet = new Set(activityTags);
+	const otherTags = scored
+		.filter((s) => s.score >= TAG_MIN_SCORE && !activityTagSet.has(s.tag))
 		.sort((a, b) => b.score - a.score)
-		.slice(0, TAG_CAP)
 		.map((s) => s.tag);
+
+	return [...activityTags, ...otherTags].slice(0, TAG_CAP);
 }
