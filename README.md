@@ -1,6 +1,6 @@
 # Daily Digest for Obsidian
 
-**Your day, distilled.** An Obsidian plugin that reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles them into an AI-summarized daily note.
+**Your day, distilled.** Daily Digest is an Obsidian plugin that reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles them into an AI-summarized daily note.
 
 One command. One note. Everything you did today, in one place.
 
