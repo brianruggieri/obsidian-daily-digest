@@ -32,7 +32,6 @@ const GENERATED_HEADINGS = new Set([
 	"Remember",
 	"Note Seeds",
 	"Reflection",
-	"Notes",
 ]);
 
 /** Normalize a heading by stripping leading emoji + whitespace. */
@@ -109,10 +108,10 @@ export function extractUserContent(markdown: string): ExtractionResult {
 }
 
 /**
- * Regex matching a Dataview inline field: `answer_some_slug:: user value`
+ * Regex matching a Dataview inline field: `answer_some_slug:: value` or `reflect_theme-id:: value`
  * Captures: [1] = full field key, [2] = value (may be empty/whitespace)
  */
-const INLINE_FIELD_RE = /^(answer_[a-z0-9_]+)::\s*(.*)$/;
+const INLINE_FIELD_RE = /^((?:answer|reflect)_[a-z0-9_-]+)::\s*(.*)$/;
 
 function parseUserContent(md: string): UserContent {
 	const lines = md.split("\n");
@@ -148,20 +147,81 @@ function parseUserContent(md: string): UserContent {
 			}
 
 			if (strippedHeading === "Reflection") {
-				// Parse Dataview inline-field answers:
+				// Parse Dataview inline-field answers and free-form user text.
+				// New format uses --- separators inside the section:
+				//   > Observation. Question?
+				//   ---
+				//   reflect_theme-id:: user's answer
+				//   ---
+				//   _Anything else on your mind today?_   ← soft close (or user text)
+				// Legacy format:
 				//   ### Question text
 				//   answer_slug:: user's answer
+				// Scan until the next ## heading or generation footer.
+				// Collect all lines, then separate structural from user-authored.
+				const sectionLines: string[] = [];
 				i++;
-				while (i < lines.length && !lines[i].startsWith("## ") && lines[i] !== "---") {
-					const match = lines[i].match(INLINE_FIELD_RE);
+				while (i < lines.length && !lines[i].startsWith("## ")) {
+					// Stop at the generation footer: a `---` followed by blank or *Generated
+					if (lines[i] === "---") {
+						const next = lines[i + 1] ?? "";
+						if (next === "" && (lines[i + 2] ?? "").startsWith("*Generated")) {
+							break;
+						}
+					}
+					sectionLines.push(lines[i]);
+					i++;
+				}
+
+				// First pass: extract inline field answers
+				for (const sl of sectionLines) {
+					const match = sl.match(INLINE_FIELD_RE);
 					if (match) {
-						const fieldKey = match[1]; // e.g. "answer_whats_the_best_token_storage_strategy"
+						const fieldKey = match[1];
 						const value = match[2].trim();
 						if (value.length > 0) {
 							reflectionAnswers.set(fieldKey, value);
 						}
 					}
-					i++;
+				}
+
+				// Second pass: collect user-authored freeform text.
+				// The Reflection section has a repeating structural pattern:
+				//   > AI prompt       ← blockquote (structural)
+				//   ---               ← separator (structural)
+				//   reflect_id::      ← inline field (extracted above)
+				//   (blank)           ← structural
+				// After the last reflect field block: a --- separator, then
+				// optionally the soft-close placeholder, then possibly user text.
+				// mergeContent places user text BEFORE the soft-close:
+				//   reflect_id:: answer
+				//   ---
+				//   User text here
+				//
+				//   _Anything else..._
+				// So we collect non-structural lines between the last field
+				// and the end of the section.
+				const freeformLines: string[] = [];
+				let pastLastField = false;
+				for (let j = 0; j < sectionLines.length; j++) {
+					if (INLINE_FIELD_RE.test(sectionLines[j])) {
+						pastLastField = true;
+						freeformLines.length = 0; // reset — only text after the LAST field counts
+						continue;
+					}
+					if (!pastLastField) continue;
+					const trimmed = sectionLines[j].trim();
+					// Skip structural lines between the last field and user content
+					if (trimmed === "---") continue;
+					if (trimmed.startsWith("> ")) continue;
+					if (trimmed.startsWith("### ")) continue;
+					if (trimmed === "_Anything else on your mind today?_") continue;
+					// Preserve the line (including blank lines within user text)
+					freeformLines.push(sectionLines[j]);
+				}
+				const freeform = freeformLines.join("\n").trim();
+				if (freeform) {
+					notesText = freeform;
 				}
 				continue;
 			}
@@ -214,6 +274,7 @@ function parseUserContent(md: string): UserContent {
 // ── Merge ────────────────────────────────────────────────
 
 const NOTES_PLACEHOLDER = "> _Add your reflections here_";
+const SOFT_CLOSE_PLACEHOLDER = "_Anything else on your mind today?_";
 
 /**
  * Merge preserved user content into a freshly rendered daily-digest note.
@@ -260,9 +321,17 @@ function structuredMerge(md: string, user: UserContent): string {
 
 	let result = md;
 
-	// 1. Replace Notes placeholder with user notes
+	// 1. Replace Notes placeholder with user notes (handles both old and new format)
 	if (hasNotes) {
-		result = result.replace(NOTES_PLACEHOLDER, user.notesText);
+		if (result.includes(NOTES_PLACEHOLDER)) {
+			result = result.replace(NOTES_PLACEHOLDER, user.notesText);
+		} else if (result.includes(SOFT_CLOSE_PLACEHOLDER)) {
+			result = result.replace(SOFT_CLOSE_PLACEHOLDER, user.notesText + "\n\n" + SOFT_CLOSE_PLACEHOLDER);
+		} else {
+			// Neither placeholder exists (e.g. new note has no AI / no Reflection).
+			// Preserve notes as a custom section so they're not lost.
+			user.customSections.unshift("## Notes\n\n" + user.notesText);
+		}
 	}
 
 	// 2. Restore reflection answers into Dataview inline fields
@@ -285,7 +354,7 @@ function structuredMerge(md: string, user: UserContent): string {
 	}
 
 	// 3. Insert custom user sections before the footer (last ---)
-	if (hasCustom) {
+	if (user.customSections.length > 0) {
 		const footerMarker = "\n---\n";
 		const lastFooterIdx = result.lastIndexOf(footerMarker);
 		if (lastFooterIdx !== -1) {

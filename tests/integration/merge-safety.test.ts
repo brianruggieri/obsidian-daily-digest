@@ -55,8 +55,8 @@ const aiSummary: AISummary = {
 
 const Q1 = "Should we use sessions or JWTs?";
 const Q2 = "Is PKCE worth the complexity?";
-const SLUG1 = `answer_${slugifyQuestion(Q1)}`;
-const SLUG2 = `answer_${slugifyQuestion(Q2)}`;
+const SLUG1 = `reflect_${slugifyQuestion(Q1)}`;
+const SLUG2 = `reflect_${slugifyQuestion(Q2)}`;
 
 function render(ai: AISummary | null = aiSummary): string {
 	return renderMarkdown(DATE, visits, searches, claude, [], categorized, ai);
@@ -100,7 +100,7 @@ describe("full round-trip: generate -> edit -> regenerate", () => {
 
 		// Step 2: User adds notes
 		const edited = initial.replace(
-			"> _Add your reflections here_",
+			"_Anything else on your mind today?_",
 			"Today was productive. I finally understood PKCE.\n\nNext step: implement refresh tokens."
 		);
 
@@ -123,7 +123,8 @@ describe("full round-trip: generate -> edit -> regenerate", () => {
 		expect(merged).toContain("Auth day continued");
 		expect(merged).toContain("Continued work on OAuth implementation.");
 		// Verify: old placeholder NOT present
-		expect(merged).not.toContain("Add your reflections here");
+		// Soft close placeholder should still exist (user notes prepended before it)
+		expect(merged).toContain("Anything else on your mind today?");
 	});
 
 	it("preserves reflection answers across regeneration", () => {
@@ -169,7 +170,7 @@ describe("full round-trip: generate -> edit -> regenerate", () => {
 
 		// User edits notes
 		let edited = initial.replace(
-			"> _Add your reflections here_",
+			"_Anything else on your mind today?_",
 			"Great progress today on the auth system."
 		);
 		// User answers a question
@@ -201,7 +202,7 @@ describe("multiple regeneration cycles", () => {
 	it("does not accumulate duplicate content across 5 regenerations", () => {
 		const userNotes = "My important reflection that must survive.";
 		let current = render();
-		current = current.replace("> _Add your reflections here_", userNotes);
+		current = current.replace("_Anything else on your mind today?_", userNotes);
 
 		for (let cycle = 0; cycle < 5; cycle++) {
 			const fresh = render();
@@ -217,7 +218,7 @@ describe("multiple regeneration cycles", () => {
 	it("preserves user content that was added in different regeneration cycles", () => {
 		// Cycle 1: user adds notes
 		let current = render();
-		current = current.replace("> _Add your reflections here_", "Notes from cycle 1");
+		current = current.replace("_Anything else on your mind today?_", "Notes from cycle 1");
 
 		// Cycle 2: regenerate and user adds a custom section
 		let fresh = render();
@@ -251,7 +252,7 @@ describe("backup safety", () => {
 	});
 
 	it("backup contains exact copy of original file", async () => {
-		const original = render().replace("> _Add your reflections here_", "My precious notes");
+		const original = render().replace("_Anything else on your mind today?_", "My precious notes");
 		const backupPath = await createBackup(vault, "daily/2025-06-15.md", original);
 
 		const backupContent = vault.files.get(backupPath);
@@ -292,7 +293,7 @@ describe("backup safety", () => {
 	});
 
 	it("requires backup when file has user edits", () => {
-		const edited = render().replace("> _Add your reflections here_", "User was here");
+		const edited = render().replace("_Anything else on your mind today?_", "User was here");
 		const extraction = extractUserContent(edited);
 		expect(hasUserEdits(extraction)).toBe(true);
 	});
@@ -352,7 +353,7 @@ describe("edge cases and stress tests", () => {
 			`Paragraph ${i + 1}: ${"Lorem ipsum dolor sit amet. ".repeat(5)}`
 		).join("\n\n");
 
-		const edited = render().replace("> _Add your reflections here_", largeNotes);
+		const edited = render().replace("_Anything else on your mind today?_", largeNotes);
 		const extraction = extractUserContent(edited);
 		const merged = mergeContent(render(), extraction);
 
@@ -373,7 +374,7 @@ describe("edge cases and stress tests", () => {
 			"And back to normal notes.",
 		].join("\n");
 
-		const edited = render().replace("> _Add your reflections here_", notes);
+		const edited = render().replace("_Anything else on your mind today?_", notes);
 		const extraction = extractUserContent(edited);
 		const merged = mergeContent(render(), extraction);
 
@@ -408,7 +409,10 @@ describe("edge cases and stress tests", () => {
 		const noAiNote = renderMarkdown(
 			DATE, visits, searches, claude, [], categorized, null,
 		);
-		const edited = noAiNote.replace("> _Add your reflections here_", "Notes without AI");
+		// Without AI summary, there's no Reflection section or soft close.
+		// Add a custom section to simulate user content.
+		const footerIdx = noAiNote.lastIndexOf("\n---\n");
+		const edited = noAiNote.slice(0, footerIdx) + "\n\n## My Notes\n\nNotes without AI" + noAiNote.slice(footerIdx);
 		const extraction = extractUserContent(edited);
 		const merged = mergeContent(render(), extraction);
 
@@ -417,7 +421,7 @@ describe("edge cases and stress tests", () => {
 
 	it("does not lose data when new note has fewer sections than old", () => {
 		// Old note had AI summary, new note doesn't
-		const oldWithAI = render(aiSummary).replace("> _Add your reflections here_", "My reflections");
+		const oldWithAI = render(aiSummary).replace("_Anything else on your mind today?_", "My reflections");
 		const newWithoutAI = renderMarkdown(DATE, visits, searches, claude, [], categorized, null);
 
 		const extraction = extractUserContent(oldWithAI);
@@ -440,7 +444,7 @@ describe("edge cases and stress tests", () => {
 
 describe("privacy: no external data retention", () => {
 	it("merge operates purely on in-memory strings", () => {
-		const edited = render().replace("> _Add your reflections here_", "Private thoughts");
+		const edited = render().replace("_Anything else on your mind today?_", "Private thoughts");
 		const extraction = extractUserContent(edited);
 		const merged = mergeContent(render(), extraction);
 
@@ -462,7 +466,7 @@ describe("privacy: no external data retention", () => {
 	});
 
 	it("extraction result contains no references beyond the input string", () => {
-		const md = render().replace("> _Add your reflections here_", "Secret notes");
+		const md = render().replace("_Anything else on your mind today?_", "Secret notes");
 		const extraction = extractUserContent(md);
 
 		expect(extraction.raw).toBe(md);

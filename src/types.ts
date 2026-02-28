@@ -53,6 +53,18 @@ export function slugifyQuestion(question: string): string {
 		.slice(0, 60);                     // keep it reasonable
 }
 
+/** Normalize an LLM-generated theme string into a Dataview-safe kebab-case slug.
+ *  Ensures the result is safe for YAML frontmatter values and Dataview inline field keys. */
+export function sanitizeReflectionId(raw: string): string {
+	return raw
+		.toLowerCase()
+		.replace(/['']/g, "")
+		.replace(/[^a-z0-9-]+/g, "-")    // non-alphanumeric → hyphen (kebab-case)
+		.replace(/^-+|-+$/g, "")          // trim leading/trailing hyphens
+		.slice(0, 40)                     // bound length
+		|| "reflection";                  // fallback if empty after sanitization
+}
+
 export interface AISummary {
 	headline: string;
 	tldr: string;
@@ -74,6 +86,8 @@ export interface AISummary {
 	category_summaries: Record<string, string>;
 	notable: string[];
 	questions: string[];
+	/** Structured reflections returned by the LLM: [{theme, text}] */
+	reflections?: Array<{ theme: string; text: string }>;
 	// De-identified meta-insights (Anthropic + patterns, or local unified prompt)
 	meta_insights?: string[];       // cognitive pattern observations from aggregated data
 	quirky_signals?: string[];      // unusual combos, contradictions, unformalized interests

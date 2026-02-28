@@ -36,7 +36,7 @@ const sampleAISummary: AISummary = {
 };
 
 const QUESTION = "What's the best token storage strategy?";
-const ANSWER_SLUG = `answer_${slugifyQuestion(QUESTION)}`;
+const REFLECT_SLUG = `reflect_${slugifyQuestion(QUESTION)}`;
 
 /** Generate a fresh daily-digest note using the real renderer. */
 function freshNote(ai: AISummary | null = sampleAISummary): string {
@@ -46,9 +46,9 @@ function freshNote(ai: AISummary | null = sampleAISummary): string {
 	);
 }
 
-/** Simulate a user editing the Notes section. */
+/** Simulate a user adding free-form text at the soft-close placeholder. */
 function withUserNotes(md: string, notes: string): string {
-	return md.replace("> _Add your reflections here_", notes);
+	return md.replace("_Anything else on your mind today?_", notes);
 }
 
 /** Simulate a user answering a reflection question (Dataview inline field). */
@@ -83,7 +83,7 @@ describe("extractUserContent", () => {
 		expect(result.raw).toBe(md);
 	});
 
-	it("extracts user notes from the Notes section", () => {
+	it("extracts user notes from the soft-close area", () => {
 		const md = withUserNotes(freshNote(), "Today was a great day!\nI learned a lot about OAuth.");
 		const result = extractUserContent(md);
 
@@ -92,31 +92,27 @@ describe("extractUserContent", () => {
 		expect(result.content!.notesText).toContain("I learned a lot about OAuth.");
 	});
 
-	it("extracts multi-line user notes with markdown formatting", () => {
+	it("extracts multi-line user notes from the soft-close area", () => {
 		const notes = [
 			"My Thoughts",
 			"",
 			"- Point one about **OAuth**",
 			"- Point two about `React`",
-			"",
-			"```js",
-			"const token = getToken();",
-			"```",
 		].join("\n");
 
 		const md = withUserNotes(freshNote(), notes);
 		const result = extractUserContent(md);
 
 		expect(result.content!.notesText).toContain("Point one about **OAuth**");
-		expect(result.content!.notesText).toContain("const token = getToken();");
+		expect(result.content!.notesText).toContain("Point two about `React`");
 	});
 
 	it("extracts reflection answers from Dataview inline fields", () => {
-		const md = withReflectionAnswer(freshNote(), ANSWER_SLUG, "Use httpOnly cookies for token storage");
+		const md = withReflectionAnswer(freshNote(), REFLECT_SLUG, "Use httpOnly cookies for token storage");
 		const result = extractUserContent(md);
 
 		expect(result.content!.reflectionAnswers.size).toBe(1);
-		expect(result.content!.reflectionAnswers.get(ANSWER_SLUG)).toBe("Use httpOnly cookies for token storage");
+		expect(result.content!.reflectionAnswers.get(REFLECT_SLUG)).toBe("Use httpOnly cookies for token storage");
 	});
 
 	it("ignores empty reflection inline fields", () => {
@@ -138,7 +134,7 @@ describe("extractUserContent", () => {
 	it("extracts all three types of user content simultaneously", () => {
 		let md = freshNote();
 		md = withUserNotes(md, "My notes for the day");
-		md = withReflectionAnswer(md, ANSWER_SLUG, "Definitely httpOnly cookies");
+		md = withReflectionAnswer(md, REFLECT_SLUG, "Definitely httpOnly cookies");
 		md = withCustomSection(md, "## Ideas\n\n- Build a CLI tool\n- Write a blog post");
 		const result = extractUserContent(md);
 
@@ -161,8 +157,10 @@ describe("extractUserContent", () => {
 			"### my-repo (3 commits)",
 			"- `abc1234` fix auth bug (+10/-2) — 14:30",
 			"",
-			"## 📝 Notes",
-			"> _Add your reflections here_",
+			"## 🪞 Reflection",
+			"> Some prompt question?",
+			"---",
+			"reflect_some_id:: ",
 		].join("\n");
 
 		const result = extractUserContent(note);
@@ -183,19 +181,19 @@ describe("extractUserContent", () => {
 		expect(result.raw).toBe(md);
 	});
 
-	it("handles note with no Notes section (old format)", () => {
+	it("handles note with no Reflection section (old format)", () => {
 		const md = "---\ndate: 2025-06-15\n---\n\n# Title\n\nSome generated content.";
 		const result = extractUserContent(md);
 		expect(result.content).not.toBeNull();
 		expect(result.content!.notesText).toBe("");
 	});
 
-	it("preserves notes with frontmatter-like content", () => {
-		const notes = "key: value\n---\nMore content after dashes";
+	it("preserves notes with special characters", () => {
+		const notes = "key: value\nMore content with colons: and **bold**";
 		const md = withUserNotes(freshNote(), notes);
 		const result = extractUserContent(md);
-		// The content before --- in notes should be captured
 		expect(result.content!.notesText).toContain("key: value");
+		expect(result.content!.notesText).toContain("More content with colons");
 	});
 });
 
@@ -219,7 +217,7 @@ describe("mergeContent", () => {
 		expect(merged).toBe(newMd);
 	});
 
-	it("injects user notes into the new Notes section", () => {
+	it("injects user notes into the new note at the soft-close placeholder", () => {
 		const oldMd = withUserNotes(freshNote(), "My important notes\nLine two");
 		const newMd = freshNote();
 		const extraction = extractUserContent(oldMd);
@@ -227,11 +225,10 @@ describe("mergeContent", () => {
 
 		expect(merged).toContain("My important notes");
 		expect(merged).toContain("Line two");
-		expect(merged).not.toContain("Add your reflections here");
 	});
 
 	it("restores reflection answers in the new note", () => {
-		const oldMd = withReflectionAnswer(freshNote(), ANSWER_SLUG, "Use JWTs with short expiry");
+		const oldMd = withReflectionAnswer(freshNote(), REFLECT_SLUG, "Use JWTs with short expiry");
 		const newMd = freshNote();
 		const extraction = extractUserContent(oldMd);
 		const merged = mergeContent(newMd, extraction);
@@ -256,7 +253,7 @@ describe("mergeContent", () => {
 	it("merges all user content types together", () => {
 		let oldMd = freshNote();
 		oldMd = withUserNotes(oldMd, "End-of-day reflections here");
-		oldMd = withReflectionAnswer(oldMd, ANSWER_SLUG, "Stick with session tokens");
+		oldMd = withReflectionAnswer(oldMd, REFLECT_SLUG, "Stick with session tokens");
 		oldMd = withCustomSection(oldMd, "## Action Items\n\n- Follow up with team");
 
 		const newMd = freshNote();
@@ -320,7 +317,7 @@ describe("merge idempotency", () => {
 
 	it("merging twice does not duplicate reflection answers", () => {
 		const answer = "Definitely httpOnly cookies";
-		const oldMd = withReflectionAnswer(freshNote(), ANSWER_SLUG, answer);
+		const oldMd = withReflectionAnswer(freshNote(), REFLECT_SLUG, answer);
 		const newMd = freshNote();
 
 		const extraction1 = extractUserContent(oldMd);
@@ -420,7 +417,7 @@ describe("hasUserEdits", () => {
 	});
 
 	it("returns true when reflection answers exist", () => {
-		const md = withReflectionAnswer(freshNote(), ANSWER_SLUG, "My answer");
+		const md = withReflectionAnswer(freshNote(), REFLECT_SLUG, "My answer");
 		const extraction = extractUserContent(md);
 		expect(hasUserEdits(extraction)).toBe(true);
 	});
@@ -535,14 +532,16 @@ describe("edge cases", () => {
 			DATE, sampleVisits, sampleSearches,
 			sampleClaude, [], sampleCategorized, null,
 		);
-		const edited = withUserNotes(md, "User wrote some notes");
+		// Without AI summary, there's no Reflection section or soft close.
+		// Add a custom section to simulate user content.
+		const edited = withCustomSection(md, "## My Notes\n\nUser wrote some notes");
 		const extraction = extractUserContent(edited);
 		const merged = mergeContent(freshNote(), extraction);
 
 		expect(merged).toContain("User wrote some notes");
 	});
 
-	it("handles note with only whitespace in notes section", () => {
+	it("handles note with only whitespace in soft-close area", () => {
 		const md = withUserNotes(freshNote(), "   \n\n   ");
 		const extraction = extractUserContent(md);
 		expect(hasUserEdits(extraction)).toBe(false);
