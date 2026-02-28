@@ -34,7 +34,8 @@
 		"matrix:ci-gate": "tsx --tsconfig scripts/tsconfig.json scripts/matrix-ci-gate.ts",
 		"matrix:scenario:cost-benefit": "SCENARIO=cost-benefit npm run matrix:validate",
 		"matrix:scenario:privacy-audit": "SCENARIO=privacy-audit npm run matrix:validate",
-		"matrix:scenario:regression": "SCENARIO=regression npm run matrix:validate"
+		"matrix:scenario:regression": "SCENARIO=regression npm run matrix:validate",
+		"prepare": "husky"
 	},
 	"keywords": [],
 	"license": "MIT",
@@ -53,6 +54,7 @@
 		"@wdio/visual-service": "^6.0.0",
 		"esbuild": "0.25.5",
 		"globals": "^14.0.0",
+		"husky": "^9.1.7",
 		"tslib": "2.4.0",
 		"tsx": "^4.21.0",
 		"typescript": "^5.8.3",
