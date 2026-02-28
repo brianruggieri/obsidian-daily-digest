@@ -177,8 +177,8 @@ describe("digest quality — deterministic", () => {
 			});
 
 			// ── Tag cap ──────────────────────────────────────────
-			it("has at most 20 tags", () => {
-				expect(knowledge.tags.length).toBeLessThanOrEqual(20);
+			it("has at most 10 tags", () => {
+				expect(knowledge.tags.length).toBeLessThanOrEqual(10);
 			});
 
 			// ── Semantic section presence ─────────────────────────

@@ -175,7 +175,8 @@ export function renderMarkdown(
 	}
 	if (knowledge) {
 		const score = knowledge.focusScore;
-		lines.push(`focus_score: ${score > 0 ? `${Math.round(score * 100)}%` : "N/A"}`);
+		const hasFocusPatterns = typeof knowledge.focusSummary === "string" && knowledge.focusSummary !== "";
+		lines.push(`focus_score: ${hasFocusPatterns && typeof score === "number" ? `${Math.round(score * 100)}%` : "N/A"}`);
 	}
 	if (gitCommits.length > 0) {
 		lines.push(`git-commits: ${gitCommits.length}`);

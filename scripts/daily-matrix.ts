@@ -24,13 +24,18 @@ import { join } from "path";
 import { homedir } from "os";
 
 // Load .env if present (for ANTHROPIC_API_KEY in matrix:real runs).
-// File values override the shell environment so the per-project key wins.
+// Shell / CI environment values take precedence over .env so callers stay in control.
 const envPath = join(process.cwd(), ".env");
 if (existsSync(envPath)) {
 	for (const line of readFileSync(envPath, "utf-8").split("\n")) {
 		const match = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*"?(.*?)"?\s*$/);
 		if (match) {
-			process.env[match[1]] = match[2];
+			const key = match[1];
+			const value = match[2];
+			// Only populate missing variables and skip empty values to avoid accidental overrides.
+			if (process.env[key] === undefined && value !== "") {
+				process.env[key] = value;
+			}
 		}
 	}
 }

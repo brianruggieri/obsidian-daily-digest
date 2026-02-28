@@ -635,7 +635,11 @@ function buildTierForced(
 			log.warn("Daily Digest: Tier 3 override requested but no classification available, falling back to Tier 1");
 			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
 		case 2:
-			return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+			if (compressed) {
+				return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+			}
+			log.warn("Daily Digest: Tier 2 override requested but no compressed activity available, falling back to Tier 1");
+			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
 		case 1:
 		default:
 			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
@@ -734,14 +738,29 @@ export function resolvePrivacyTier(
 	ragConfig?: RAGConfig,
 	privacyTierOverride?: number | null
 ): 1 | 2 | 3 | 4 {
+	// Determine the highest privacy tier actually supported by available data.
+	const maxAvailableTier: 1 | 2 | 3 | 4 = (() => {
+		if (patterns) return 4;
+		if (classification?.events?.length) return 3;
+		if (ragConfig?.enabled) return 2;
+		return 1;
+	})();
+
 	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
-		return privacyTierOverride as 1 | 2 | 3 | 4;
+		const requested = privacyTierOverride as 1 | 2 | 3 | 4;
+		// If the requested tier requires data that is not available, warn and
+		// fall back to the most private tier that *is* supported.
+		if (requested > maxAvailableTier) {
+			log.warn(
+				`Daily Digest: resolvePrivacyTier: requested privacy tier ${requested} but only tier ${maxAvailableTier} data is available; falling back to ${maxAvailableTier}.`
+			);
+			return maxAvailableTier;
+		}
+		return requested;
 	}
+
 	if (config.provider !== "anthropic") return 1;
-	if (patterns) return 4;
-	if (classification?.events.length) return 3;
-	if (ragConfig?.enabled) return 2;
-	return 1;
+	return maxAvailableTier;
 }
 
 /** Data options object passed to buildProsePrompt. */

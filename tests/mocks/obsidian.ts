@@ -123,9 +123,11 @@ export async function requestUrl(opts: {
 	headers?: Record<string, string>;
 	body?: string;
 }): Promise<{ json: unknown; text: string; status: number }> {
-	// When AI_MODE=real, delegate to native fetch so matrix:real actually
-	// hits the Anthropic API instead of returning an empty stub.
-	if (process.env.AI_MODE === "real" && opts.url.startsWith("http")) {
+	// When AI_MODE=real AND ALLOW_NETWORK=true, delegate to native fetch so
+	// matrix:real actually hits the Anthropic API instead of returning an empty
+	// stub. Requiring both flags prevents accidental API quota spend when only
+	// AI_MODE is set in a broader test context.
+	if (process.env.AI_MODE === "real" && process.env.ALLOW_NETWORK === "true" && opts.url.startsWith("http")) {
 		const headers: Record<string, string> = { ...opts.headers };
 		if (opts.contentType) headers["Content-Type"] = opts.contentType;
 		const resp = await fetch(opts.url, {
