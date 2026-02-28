@@ -126,45 +126,46 @@ async function runPreset(
 	const categorized = categorizeVisits(filteredVisits);
 
 	// ── 5. Classify ──────────────────────────────────────
-	// classifyEvents makes LLM calls — only run when AI_MODE=real.
-	// classifyEventsRuleOnly is always safe (no network calls).
-	let classification: ClassificationResult | undefined;
+	// classifyEventsRuleOnly always runs for knowledge sections (no network calls).
+	// classifyEvents makes LLM calls — only run when AI_MODE=real + enableClassification.
+	const knowledgeClassification = classifyEventsRuleOnly(
+		filteredVisits,
+		sanitized.searches,
+		sanitized.claudeSessions,
+		sanitized.gitCommits,
+		categorized
+	);
 
-	if (settings.enableClassification || settings.enablePatterns) {
-		if (AI_MODE === "real" && settings.enableClassification) {
-			const classifyConfig = {
-				enabled: true,
-				endpoint: settings.localEndpoint,
-				model: settings.classificationModel,
-				batchSize: settings.classificationBatchSize,
-			};
-			classification = await classifyEvents(
-				filteredVisits,
-				sanitized.searches,
-				sanitized.claudeSessions,
-				sanitized.gitCommits,
-				categorized,
-				classifyConfig
-			);
-			console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
-		} else {
-			if (settings.enableClassification && AI_MODE === "mock") {
-				console.log(`[${presetId}] Classification: rule-only (AI_MODE=mock, skipping LLM)`);
-			}
-			classification = classifyEventsRuleOnly(
-				filteredVisits,
-				sanitized.searches,
-				sanitized.claudeSessions,
-				sanitized.gitCommits,
-				categorized
-			);
-		}
+	// `classification` starts as the rule-only result and is upgraded to the LLM
+	// result when available. It is passed to the AI prompt builder for richer context.
+	// Pattern extraction (step 6) always uses `knowledgeClassification` so knowledge
+	// sections are independent of whether LLM classification ran.
+	let classification: ClassificationResult = knowledgeClassification;
+
+	if (AI_MODE === "real" && settings.enableClassification) {
+		const classifyConfig = {
+			enabled: true,
+			endpoint: settings.localEndpoint,
+			model: settings.classificationModel,
+			batchSize: settings.classificationBatchSize,
+		};
+		classification = await classifyEvents(
+			filteredVisits,
+			sanitized.searches,
+			sanitized.claudeSessions,
+			sanitized.gitCommits,
+			categorized,
+			classifyConfig
+		);
+		console.log(`[${presetId}] LLM-classified ${classification.llmClassified} events`);
+	} else if (settings.enableClassification && AI_MODE === "mock") {
+		console.log(`[${presetId}] Classification: rule-only (AI_MODE=mock, skipping LLM)`);
 	}
 
 	// ── 6. Patterns ─────────────────────────────────────
 	let patterns: PatternAnalysis | undefined;
 
-	if (settings.enablePatterns && classification) {
+	if (settings.enablePatterns) {
 		const patternConfig: PatternConfig = {
 			enabled: true,
 			cooccurrenceWindow: settings.patternCooccurrenceWindow,
@@ -172,7 +173,7 @@ async function runPreset(
 			trackRecurrence: settings.trackRecurrence,
 		};
 		const topicHistory = buildEmptyTopicHistory();
-		patterns = extractPatterns(classification, patternConfig, topicHistory, DATE_STR);
+		patterns = extractPatterns(knowledgeClassification, patternConfig, topicHistory, DATE_STR);
 		console.log(
 			`[${presetId}] Patterns: focus=${Math.round(patterns.focusScore * 100)}%,` +
 			` clusters=${patterns.temporalClusters.length}`
@@ -207,7 +208,8 @@ async function runPreset(
 		const resolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits,
+			undefined, settings.forceTier
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -239,7 +241,8 @@ async function runPreset(
 		const previewResolution = resolvePromptAndTier(
 			date, categorized, sanitized.searches, sanitized.claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits
+			ragConfigPreview, classification, patterns, undefined, sanitized.gitCommits,
+			undefined, settings.forceTier
 		);
 		appendPromptEntry(promptLog, {
 			stage: "summarize",
@@ -264,7 +267,9 @@ async function runPreset(
 			undefined,
 			sanitized.gitCommits,
 			settings.promptsDir,
-			settings.promptStrategy
+			settings.promptStrategy,
+			undefined,
+			settings.forceTier
 		);
 		console.log(`[${presetId}] AI: real summary generated`);
 	}

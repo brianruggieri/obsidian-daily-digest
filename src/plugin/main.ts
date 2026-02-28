@@ -18,7 +18,7 @@ import {
 } from "./privacy";
 import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
 import { sanitizeCollectedData } from "../filter/sanitize";
-import { classifyEvents } from "../filter/classify";
+import { classifyEvents, classifyEventsRuleOnly } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "../analyze/patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "../analyze/knowledge";
@@ -332,6 +332,12 @@ export default class DailyDigestPlugin extends Plugin {
 			const categorized = categorizeVisits(visits);
 
 			// ── Classify (Phase 2) ──────────────
+			// Rule-based classification always runs for knowledge sections (no network calls).
+			const knowledgeClassification = classifyEventsRuleOnly(
+				visits, searches, claudeSessions, gitCommits, categorized
+			);
+
+			// LLM classification for richer prompt context (only when enabled + AI configured).
 			let classification: ClassificationResult | undefined;
 			if (this.settings.enableClassification && useAI) {
 				const classifyModel = this.settings.classificationModel || this.settings.localModel;
@@ -362,9 +368,11 @@ export default class DailyDigestPlugin extends Plugin {
 			}
 
 			// ── Pattern Extraction (Phase 3) ────
+			// Always uses knowledgeClassification so knowledge sections are generated
+			// independently of whether LLM classification ran.
 			let knowledgeSections: KnowledgeSections | undefined;
 			let extractedPatterns: PatternAnalysis | undefined;
-			if (this.settings.enablePatterns && classification && classification.events.length > 0) {
+			if (this.settings.enablePatterns && knowledgeClassification.events.length > 0) {
 				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
 				const patternConfig: PatternConfig = {
 					enabled: true,
@@ -391,7 +399,7 @@ export default class DailyDigestPlugin extends Plugin {
 				const todayStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
 				try {
 					const patterns: PatternAnalysis = extractPatterns(
-						classification, patternConfig, topicHistory, todayStr,
+						knowledgeClassification, patternConfig, topicHistory, todayStr,
 						gitCommits, claudeSessions, searches, visits
 					);
 					extractedPatterns = patterns;
@@ -408,7 +416,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 					// Persist updated topic history
 					if (patternConfig.trackRecurrence) {
-						const allTopics = [...new Set(classification.events.flatMap((e) => e.topics))];
+						const allTopics = [...new Set(knowledgeClassification.events.flatMap((e) => e.topics))];
 						const updatedHistory = updateTopicHistory(topicHistory, allTopics, todayStr);
 						try {
 							const historyFolder = ".daily-digest";
@@ -593,7 +601,7 @@ export default class DailyDigestPlugin extends Plugin {
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
 							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-							articleClustersForSemantic
+							articleClustersForSemantic, this.settings.forceTier
 						);
 						aiNotice.hide();
 					} else {
@@ -610,7 +618,7 @@ export default class DailyDigestPlugin extends Plugin {
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
 						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-						articleClustersForSemantic
+						articleClustersForSemantic, this.settings.forceTier
 					);
 				}
 			}

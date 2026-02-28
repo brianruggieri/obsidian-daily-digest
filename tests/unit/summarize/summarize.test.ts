@@ -421,6 +421,121 @@ describe("resolvePromptAndTier", () => {
 
 		expect(withPatterns.maxTokens).toBeGreaterThan(withoutPatterns.maxTokens);
 	});
+
+	// ── forceTier override tests ─────────────────────────
+
+	it("forceTier=1 routes to tier 1 even when patterns are present (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockPatterns = makeMockPatterns();
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, mockPatterns, undefined, [], undefined, 1
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("forceTier=4 routes to tier 4 when patterns present (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockPatterns = makeMockPatterns();
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, mockPatterns, undefined, [], undefined, 4
+		);
+		expect(tier).toBe(4);
+	});
+
+	it("forceTier=3 routes to tier 3 when classification present, no patterns (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockClassification = makeMockClassification(5);
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, mockClassification, undefined, undefined, [], undefined, 3
+		);
+		expect(tier).toBe(3);
+	});
+
+	it("forceTier=3 falls back to tier 1 when no classification available (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, undefined, undefined, [], undefined, 3
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("forceTier=4 falls back to tier 3 when patterns unavailable but classification present (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockClassification = makeMockClassification(5);
+		// forceTier=4 requested but no patterns → gracefully degrades to tier 3
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, mockClassification, undefined, undefined, [], undefined, 4
+		);
+		expect(tier).toBe(3);
+	});
+
+	it("forceTier=4 falls back to tier 1 when neither patterns nor classification available (anthropic)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const { tier } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, undefined, undefined, [], undefined, 4
+		);
+		expect(tier).toBe(1);
+	});
+
+	it("forceTier=1 with patterns does NOT use deidentified prompt (tier 1 standard prompt)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const mockPatterns = makeMockPatterns();
+		const { tier, prompt } = resolvePromptAndTier(
+			new Date("2026-02-24"),
+			emptyCategorized(),
+			[], [], config, "test",
+			undefined, undefined, mockPatterns, undefined, [], undefined, 1
+		);
+		expect(tier).toBe(1);
+		// Standard prompt should NOT contain de-identified stats markers
+		expect(prompt).not.toContain("focus_narrative");
+	});
 });
 
 // ── buildProsePrompt Layer 0 (Semantic Context) ─────────

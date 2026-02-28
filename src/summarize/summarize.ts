@@ -622,26 +622,16 @@ export function resolvePromptAndTier(
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
-	promptsDir?: string
+	promptsDir?: string,
+	forceTier?: PrivacyTier
 ): PromptResolution {
 	const standardPrompt = () =>
 		compressed
 			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
 			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
 
-	if (patterns && config.provider === "anthropic") {
-		return {
-			prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir),
-			tier: 4,
-			maxTokens: 1500,
-		};
-	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
-		return {
-			prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
-			tier: 3,
-			maxTokens: 1000,
-		};
-	} else if (config.provider === "local") {
+	// Local provider: unified prompt, stays on device — tier is always 1.
+	if (config.provider === "local") {
 		return {
 			prompt: buildUnifiedPrompt(date, profile, {
 				categorized,
@@ -655,13 +645,49 @@ export function resolvePromptAndTier(
 			tier: 1,
 			maxTokens: patterns ? 1500 : 1000,
 		};
-	} else if (ragConfig?.enabled) {
-		// RAG requires async chunk retrieval — return the standard prompt as a
-		// placeholder. The actual RAG prompt is built inside summarizeDay.
-		return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
-	} else {
+	}
+
+	if (config.provider === "anthropic") {
+		// Infer the tier from available data (legacy behaviour when forceTier is absent).
+		const inferredTier: PrivacyTier =
+			patterns ? 4
+			: classification?.events.length ? 3
+			: ragConfig?.enabled ? 2
+			: 1;
+		// forceTier overrides inference so tier is decoupled from which preprocessing
+		// steps happened to run.
+		const effectiveTier: PrivacyTier = forceTier ?? inferredTier;
+
+		// Each check attempts the requested tier and gracefully degrades to the next
+		// lower tier when the required data is not available. The returned `tier` value
+		// reflects what was actually used, not what was requested.
+		if (effectiveTier >= 4 && patterns) {
+			return {
+				prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir),
+				tier: 4,
+				maxTokens: 1500,
+			};
+		}
+		if (effectiveTier >= 3 && classification && classification.events.length > 0) {
+			return {
+				prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
+				tier: 3,
+				maxTokens: 1000,
+			};
+		}
+		if (effectiveTier >= 2 && ragConfig?.enabled) {
+			// RAG requires async chunk retrieval — return the standard prompt as a
+			// placeholder. The actual RAG prompt is built inside summarizeDay.
+			return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+		}
 		return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
 	}
+
+	// Non-anthropic, non-local fallback (future providers).
+	if (ragConfig?.enabled) {
+		return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
+	}
+	return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
 }
 
 // ── Prose prompt builder ─────────────────────────────────
@@ -826,7 +852,8 @@ export async function summarizeDay(
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
 	promptStrategy: PromptStrategy = "monolithic-json",
-	articleClusters?: ArticleCluster[]
+	articleClusters?: ArticleCluster[],
+	forceTier?: PrivacyTier
 ): Promise<AISummary> {
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
@@ -877,7 +904,7 @@ export async function summarizeDay(
 				);
 				const fallback = resolvePromptAndTier(
 					date, categorized, searches, claudeSessions, config, profile,
-					undefined, classification, patterns, compressed, gitCommits, promptsDir
+					undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 				);
 				prompt = fallback.prompt;
 				maxTokens = fallback.maxTokens;
@@ -889,7 +916,7 @@ export async function summarizeDay(
 			);
 			const fallback = resolvePromptAndTier(
 				date, categorized, searches, claudeSessions, config, profile,
-				undefined, classification, patterns, compressed, gitCommits, promptsDir
+				undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 			);
 			prompt = fallback.prompt;
 			maxTokens = fallback.maxTokens;
@@ -897,7 +924,7 @@ export async function summarizeDay(
 	} else {
 		const resolution = resolvePromptAndTier(
 			date, categorized, searches, claudeSessions, config, profile,
-			undefined, classification, patterns, compressed, gitCommits, promptsDir
+			undefined, classification, patterns, compressed, gitCommits, promptsDir, forceTier
 		);
 		prompt = resolution.prompt;
 		maxTokens = resolution.maxTokens;

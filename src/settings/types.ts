@@ -49,6 +49,13 @@ export interface DailyDigestSettings {
 	trackRecurrence: boolean;
 	/** Max unique pages shown per domain in the daily note. Default: 5. Range: 1-20. */
 	maxVisitsPerDomain: number;
+	/**
+	 * Explicit Anthropic privacy tier (1–4). When set, overrides the automatic
+	 * tier inference in resolvePromptAndTier so that the tier is decoupled from
+	 * which preprocessing steps (patterns/classification) happened to run.
+	 * Undefined → infer from available data (legacy behaviour).
+	 */
+	forceTier?: 1 | 2 | 3 | 4;
 	promptStrategy: PromptStrategy;
 	promptsDir: string;
 	hasCompletedOnboarding: boolean;
