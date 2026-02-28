@@ -1,0 +1,10 @@
+echo "Pre-commit: lint"
+npm run lint || exit 1
+
+echo "Pre-commit: type-check"
+npx tsc -noEmit -skipLibCheck || exit 1
+
+echo "Pre-commit: unit tests"
+npm run test:unit || exit 1
+
+echo "Pre-commit checks passed"
