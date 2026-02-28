@@ -32,7 +32,6 @@ const GENERATED_HEADINGS = new Set([
 	"Remember",
 	"Note Seeds",
 	"Reflection",
-	"Notes",
 ]);
 
 /** Normalize a heading by stripping leading emoji + whitespace. */
@@ -109,10 +108,10 @@ export function extractUserContent(markdown: string): ExtractionResult {
 }
 
 /**
- * Regex matching a Dataview inline field: `answer_some_slug:: user value`
+ * Regex matching a Dataview inline field: `answer_some_slug:: value` or `reflect_theme-id:: value`
  * Captures: [1] = full field key, [2] = value (may be empty/whitespace)
  */
-const INLINE_FIELD_RE = /^(answer_[a-z0-9_]+)::\s*(.*)$/;
+const INLINE_FIELD_RE = /^((?:answer|reflect)_[a-z0-9_-]+)::\s*(.*)$/;
 
 function parseUserContent(md: string): UserContent {
 	const lines = md.split("\n");
@@ -148,14 +147,20 @@ function parseUserContent(md: string): UserContent {
 			}
 
 			if (strippedHeading === "Reflection") {
-				// Parse Dataview inline-field answers:
+				// Parse Dataview inline-field answers.
+				// New format uses --- separators inside the section:
+				//   > Observation. Question?
+				//   ---
+				//   reflect_theme-id:: user's answer
+				// Legacy format:
 				//   ### Question text
 				//   answer_slug:: user's answer
+				// Scan until the next ## heading (--- separators are internal).
 				i++;
-				while (i < lines.length && !lines[i].startsWith("## ") && lines[i] !== "---") {
+				while (i < lines.length && !lines[i].startsWith("## ")) {
 					const match = lines[i].match(INLINE_FIELD_RE);
 					if (match) {
-						const fieldKey = match[1]; // e.g. "answer_whats_the_best_token_storage_strategy"
+						const fieldKey = match[1];
 						const value = match[2].trim();
 						if (value.length > 0) {
 							reflectionAnswers.set(fieldKey, value);
@@ -214,6 +219,7 @@ function parseUserContent(md: string): UserContent {
 // ── Merge ────────────────────────────────────────────────
 
 const NOTES_PLACEHOLDER = "> _Add your reflections here_";
+const SOFT_CLOSE_PLACEHOLDER = "_Anything else on your mind today?_";
 
 /**
  * Merge preserved user content into a freshly rendered daily-digest note.
@@ -260,9 +266,13 @@ function structuredMerge(md: string, user: UserContent): string {
 
 	let result = md;
 
-	// 1. Replace Notes placeholder with user notes
+	// 1. Replace Notes placeholder with user notes (handles both old and new format)
 	if (hasNotes) {
-		result = result.replace(NOTES_PLACEHOLDER, user.notesText);
+		if (result.includes(NOTES_PLACEHOLDER)) {
+			result = result.replace(NOTES_PLACEHOLDER, user.notesText);
+		} else if (result.includes(SOFT_CLOSE_PLACEHOLDER)) {
+			result = result.replace(SOFT_CLOSE_PLACEHOLDER, user.notesText + "\n\n" + SOFT_CLOSE_PLACEHOLDER);
+		}
 	}
 
 	// 2. Restore reflection answers into Dataview inline fields
