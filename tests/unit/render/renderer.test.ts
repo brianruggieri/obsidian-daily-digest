@@ -104,16 +104,18 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("github.com");
 	});
 
-	it("includes reflection section", () => {
+	it("includes reflection section with blockquote and reflect_ field", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
 		expect(md).toContain("Reflection");
 		expect(md).toContain("token storage strategy");
+		expect(md).toContain("reflect_");
+		expect(md).toContain("Anything else on your mind today?");
 	});
 
-	it("includes notes section", () => {
+	it("does not include old Notes section", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
-		expect(md).toContain("Notes");
-		expect(md).toContain("Add your reflections here");
+		expect(md).not.toContain("## \u{1F4DD} Notes");
+		expect(md).not.toContain("Add your reflections here");
 	});
 
 	it("includes footer with provider info", () => {

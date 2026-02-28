@@ -147,17 +147,27 @@ function parseUserContent(md: string): UserContent {
 			}
 
 			if (strippedHeading === "Reflection") {
-				// Parse Dataview inline-field answers.
+				// Parse Dataview inline-field answers and free-form user text.
 				// New format uses --- separators inside the section:
 				//   > Observation. Question?
 				//   ---
 				//   reflect_theme-id:: user's answer
+				//   ---
+				//   _Anything else on your mind today?_   ← soft close (or user text)
 				// Legacy format:
 				//   ### Question text
 				//   answer_slug:: user's answer
-				// Scan until the next ## heading (--- separators are internal).
+				// Scan until the next ## heading or generation footer.
+				const freeformLines: string[] = [];
 				i++;
 				while (i < lines.length && !lines[i].startsWith("## ")) {
+					// Stop at the generation footer: a `---` followed by blank or *Generated
+					if (lines[i] === "---") {
+						const next = lines[i + 1] ?? "";
+						if (next === "" && (lines[i + 2] ?? "").startsWith("*Generated")) {
+							break;
+						}
+					}
 					const match = lines[i].match(INLINE_FIELD_RE);
 					if (match) {
 						const fieldKey = match[1];
@@ -165,8 +175,25 @@ function parseUserContent(md: string): UserContent {
 						if (value.length > 0) {
 							reflectionAnswers.set(fieldKey, value);
 						}
+					} else {
+						const trimmed = lines[i].trim();
+						// Skip structural lines: blockquotes, separators, H3 headings, blanks,
+						// and the default soft-close placeholder
+						if (
+							trimmed &&
+							trimmed !== "---" &&
+							!trimmed.startsWith("> ") &&
+							!trimmed.startsWith("### ") &&
+							trimmed !== "_Anything else on your mind today?_"
+						) {
+							freeformLines.push(lines[i]);
+						}
 					}
 					i++;
+				}
+				const freeform = freeformLines.join("\n").trim();
+				if (freeform) {
+					notesText = freeform;
 				}
 				continue;
 			}
@@ -272,6 +299,10 @@ function structuredMerge(md: string, user: UserContent): string {
 			result = result.replace(NOTES_PLACEHOLDER, user.notesText);
 		} else if (result.includes(SOFT_CLOSE_PLACEHOLDER)) {
 			result = result.replace(SOFT_CLOSE_PLACEHOLDER, user.notesText + "\n\n" + SOFT_CLOSE_PLACEHOLDER);
+		} else {
+			// Neither placeholder exists (e.g. new note has no AI / no Reflection).
+			// Preserve notes as a custom section so they're not lost.
+			user.customSections.unshift("## Notes\n\n" + user.notesText);
 		}
 	}
 
@@ -295,7 +326,7 @@ function structuredMerge(md: string, user: UserContent): string {
 	}
 
 	// 3. Insert custom user sections before the footer (last ---)
-	if (hasCustom) {
+	if (user.customSections.length > 0) {
 		const footerMarker = "\n---\n";
 		const lastFooterIdx = result.lastIndexOf(footerMarker);
 		if (lastFooterIdx !== -1) {
