@@ -38,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshot-diffs
-          path: screenshots/output/
+          path: tests/screenshots/output/
           retention-days: 14

@@ -358,7 +358,19 @@ npm run test:eval:local  # AI eval tests against local model
 npm run test:coverage    # Coverage report (v8)
 npm run deploy           # Build and copy to your local Obsidian vault
 npm run deploy:dev       # Quick deploy without full rebuild
+npm run screenshots      # Capture all 15 screenshot scenarios
 ```
+
+### Screenshot automation
+
+The screenshot suite uses [wdio-obsidian-service](https://github.com/obsidianmd/wdio-obsidian-service) to launch a sandboxed Obsidian instance, install the plugin, and capture UI screenshots for the README:
+
+```bash
+npm run build            # Build main.js first
+npm run screenshots      # Vault setup + capture 15 screenshots
+```
+
+Screenshots are saved to `tests/screenshots/output/`. Committed baselines live in `tests/screenshots/baseline/`. The CI workflow runs these on every push to `main` and uploads diffs as artifacts on failure.
 
 ### Testing
 
