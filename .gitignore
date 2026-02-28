@@ -21,8 +21,7 @@ data.json
 Thumbs.db
 
 # Screenshot automation
-screenshots/output/
-screenshots/vault/
+tests/screenshots/output/
 tests/screenshots/vault/
 .obsidian-cache/
 
