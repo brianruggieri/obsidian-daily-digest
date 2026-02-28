@@ -74,6 +74,8 @@ export interface AISummary {
 	category_summaries: Record<string, string>;
 	notable: string[];
 	questions: string[];
+	/** Structured reflections returned by the LLM: [{theme, text}] */
+	reflections?: Array<{ theme: string; text: string }>;
 	// De-identified meta-insights (Anthropic + patterns, or local unified prompt)
 	meta_insights?: string[];       // cognitive pattern observations from aggregated data
 	quirky_signals?: string[];      // unusual combos, contradictions, unformalized interests

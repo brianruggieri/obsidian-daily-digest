@@ -1107,12 +1107,25 @@ export async function summarizeDay(
 
 	try {
 		const summary = JSON.parse(cleaned) as AISummary;
-		// Derive structured prompts with stable IDs from plain question strings
-		if (summary.questions?.length) {
+		// Derive structured prompts from reflections (new format) or questions (legacy)
+		if (summary.reflections?.length) {
+			// New format: [{theme, text}] → ReflectionPrompt {id, question}
+			const seen = new Set<string>();
+			summary.prompts = summary.reflections.map((r) => {
+				let id = r.theme;
+				const base = id;
+				let n = 2;
+				while (seen.has(id)) {
+					id = `${base}_${n++}`;
+				}
+				seen.add(id);
+				return { id, question: r.text };
+			});
+		} else if (summary.questions?.length) {
+			// Legacy fallback: derive IDs from question text
 			const seen = new Set<string>();
 			summary.prompts = summary.questions.map((q) => {
 				let id = slugifyQuestion(q);
-				// Deduplicate IDs by appending a suffix
 				const base = id;
 				let n = 2;
 				while (seen.has(id)) {
