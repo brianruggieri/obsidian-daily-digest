@@ -96,7 +96,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "reflections": ["Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each prompt is a JSON object with: {"theme": "short-kebab-case-topic (e.g. job-search, tool-boundaries, focus-pattern) — prefer reusing common themes across days when the topic recurs", "text": "1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend, not an analyst. Use second person (you)."}"],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed, then ask a short direct question"}],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments, candidates for new atomic notes in the vault"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained 3-hour focus block on auth', 'frequent context switching between research and implementation'"],
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched OAuth 2.0 flows, then committed auth middleware two hours later'"]
@@ -107,6 +107,8 @@ Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] 
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories that actually had activity.
 Write for a person reading their own notes 3 months from now — help them remember what they understood and where they were in their work.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each object has: "theme" = short kebab-case topic ID (e.g. job-search, tool-boundaries, focus-pattern) — prefer reusing common themes across days when the topic recurs; "text" = 1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend, not an analyst. Use second person (you).
 `,
 
 	rag: `You are building a daily note entry for a personal knowledge base. Your task is to synthesize this person's activity into meaningful, reflective intelligence. The following activity blocks were selected as the most relevant from today's data.{{contextHint}}{{focusHint}}
@@ -132,7 +134,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, apparent decisions or pivots, things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands, configurations, key resource names, approaches that worked"],
-  "reflections": ["Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each prompt is a JSON object with: {"theme": "short-kebab-case-topic", "text": "1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you)."}"],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed, then ask a short direct question"}],
   "note_seeds": ["2-4 topics that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth', 'context switching between research and implementation'"],
   "cross_source_connections": ["1-2 meaningful connections across data sources, e.g. 'Searched for X, then committed code addressing it'"]
@@ -142,6 +144,8 @@ Write \`headline\` and \`tldr\` last — as final distillations after completing
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Be specific and concrete. Only include category_summaries for categories represented in the activity blocks above.
 Write for a person reading their own notes 3 months from now.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each object has: "theme" = short kebab-case topic ID; "text" = 1-2 sentences: state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you).
 `,
 
 	classified: `You are building a daily note entry for a personal knowledge base. You are receiving structured activity abstractions — classified events with topics, entities, and summaries. Your task is to synthesize these into meaningful, reflective intelligence that helps this person understand their day, track learning, and connect today's work to their broader knowledge graph.{{contextHint}}{{focusHint}}
@@ -173,7 +177,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting patterns, apparent decisions or pivots, cross-domain connections worth noting"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills demonstrated, concepts grasped, transitions from research to application"],
   "remember": ["3-5 specific things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. what gets built"],
-  "reflections": ["Return 1-3 reflection prompts depending on the day's complexity. Each prompt is a JSON object with: {"theme": "short-kebab-case-topic", "text": "1-2 sentences: first state what you noticed in the patterns, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you)."}"],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed in the patterns, then ask a short direct question"}],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that appeared across multiple activity types or represent clear learning moments"],
   "work_patterns": ["1-3 behavioral observations, e.g. 'sustained focus block on auth implementation', 'context switching between debugging and research'"],
   "cross_source_connections": ["1-2 meaningful connections across activity types, e.g. 'Researched OAuth patterns, then implemented the flow in the same session'"]
@@ -182,6 +186,8 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
 Write \`headline\` and \`tldr\` last — as final distillations after completing all other fields.
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Be specific and concrete. Refer to the topics and entities in the activity data above.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity. Each object has: "theme" = short kebab-case topic ID; "text" = 1-2 sentences: state what you noticed in the patterns, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you).
 Write for a person reading their own notes 3 months from now — help them remember not just what happened, but what it meant and where they were in their work.
 Only include category_summaries for activity types that had events.
 `,
@@ -237,7 +243,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 notable patterns: unusual topic combinations, context-switching moments, research spirals, or decision points"],
   "learnings": ["2-4 things the person likely learned based on the patterns — transitions from research to application, topics that deepened, knowledge accumulation signals"],
   "remember": ["3-5 things worth surfacing for future recall — recurring topics not yet formalized, entities that keep appearing, patterns in what gets explored vs. built"],
-  "reflections": ["Return 1-3 reflection prompts depending on the day's complexity. Each prompt is a JSON object with: {"theme": "short-kebab-case-topic", "text": "1-2 sentences: first state what you noticed in the patterns, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you)."}"],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed in the patterns, then ask a short direct question"}],
   "note_seeds": ["2-4 topics from the distribution that most deserve their own permanent note — concepts that appeared across multiple clusters or represent clear knowledge accumulation"],
   "meta_insights": ["2-3 cognitive pattern observations: research-to-implementation ratio, topic depth vs breadth, attention fragmentation patterns, learning style indicators"],
   "quirky_signals": ["1-3 unusual or interesting signals: topics revisited but never formalized, contradictions between focus areas, rabbit holes, or unexpectedly connected interests"],
@@ -256,6 +262,8 @@ Be insightful and specific. You're analyzing work patterns for someone building 
 Themes are broad tags; topics are [[wikilink]] candidates; note seeds deserve standalone atomic notes.
 Write for a person reading their own notes 3 months from now — help them understand their own cognitive patterns, not just recall events.
 Only include category_summaries for activity types represented in the distribution.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity. Each object has: "theme" = short kebab-case topic ID; "text" = 1-2 sentences: state what you noticed in the patterns, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend. Use second person (you).
 `,
 
 	prose: `You are writing sections of a daily note for a personal knowledge base. Below is a structured summary of today's activity (already processed by code). Your job is to add the human insight layer — narrative, synthesis, and connections that code can't produce.

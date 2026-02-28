@@ -2,7 +2,7 @@ import { CATEGORY_LABELS } from "../filter/categorize";
 import { chunkActivityData, estimateTokens } from "./chunker";
 import { retrieveRelevantChunks } from "./embeddings";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, GitCommit, ArticleCluster } from "../types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, sanitizeReflectionId, GitCommit, ArticleCluster } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, loadProseTemplate, fillTemplate, PromptCapability } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
@@ -573,7 +573,7 @@ Return ONLY a JSON object with these exact keys — no markdown, no preamble:
   "notable": ["2-4 specific notable things: interesting searches, decisions, pivots, or things worth linking to other notes"],
   "learnings": ["2-4 concrete things the person learned or understood today that can be applied later — skills grasped, patterns recognized, things they can now do that they couldn't before"],
   "remember": ["3-5 specific things worth noting for quick future recall: commands that worked, configurations found, key resource names, approaches that succeeded or failed"],
-  "reflections": ["Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each prompt is a JSON object with: {"theme": "short-kebab-case-topic (e.g. job-search, tool-boundaries, focus-pattern) — prefer reusing common themes across days when the topic recurs", "text": "1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend, not an analyst. Use second person (you)."}"],
+  "reflections": [{"theme": "short-kebab-case-id", "text": "1-2 sentences: state what you noticed, then ask a short direct question"}],
   "note_seeds": ["2-4 topics from today that most deserve their own permanent note — concepts that came up repeatedly or represent key learning moments"]${metaFields}
 }
 
@@ -581,7 +581,9 @@ Write \`headline\` and \`tldr\` last — as final distillations after completing
 Themes are broad tags for cross-day filtering. Topics are specific [[wikilink]] candidates. Note seeds deserve standalone atomic notes.
 Be specific and concrete. Prefer "debugged the OAuth callback race condition in the auth module" over "did some dev work".
 Only include category_summaries for categories or activity types that had actual activity.
-Write for a person reading their own notes 3 months from now — help them remember what it felt like, what they understood, and where they were in their work.`;
+Write for a person reading their own notes 3 months from now — help them remember what it felt like, what they understood, and where they were in their work.
+
+Reflections: Return 1-3 reflection prompts depending on the day's complexity — fewer for focused days, more for scattered ones. Each object has: "theme" = short kebab-case topic ID (e.g. job-search, tool-boundaries, focus-pattern) — prefer reusing common themes across days when the topic recurs; "text" = 1-2 sentences: first state what you noticed in the data, then ask a short direct question (under 15 words). Use contractions. Sound like a thoughtful friend, not an analyst. Use second person (you).`;
 }
 
 // ── Privacy tier resolution (sync, no network) ──────────
@@ -1112,7 +1114,7 @@ export async function summarizeDay(
 			// New format: [{theme, text}] → ReflectionPrompt {id, question}
 			const seen = new Set<string>();
 			summary.prompts = summary.reflections.map((r) => {
-				let id = r.theme;
+				let id = sanitizeReflectionId(r.theme);
 				const base = id;
 				let n = 2;
 				while (seen.has(id)) {

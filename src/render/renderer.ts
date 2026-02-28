@@ -171,7 +171,7 @@ export function renderMarkdown(
 	// Add reflection theme IDs to frontmatter for Dataview discoverability
 	const prompts = aiSummary?.prompts ?? [];
 	if (prompts.length) {
-		lines.push(`reflections: [${prompts.map((p) => p.id).join(", ")}]`);
+		lines.push(`reflections: [${prompts.map((p) => escapeForYaml(p.id)).join(", ")}]`);
 	}
 	if (knowledge) {
 		const score = knowledge.focusScore;

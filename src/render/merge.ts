@@ -158,7 +158,8 @@ function parseUserContent(md: string): UserContent {
 				//   ### Question text
 				//   answer_slug:: user's answer
 				// Scan until the next ## heading or generation footer.
-				const freeformLines: string[] = [];
+				// Collect all lines, then separate structural from user-authored.
+				const sectionLines: string[] = [];
 				i++;
 				while (i < lines.length && !lines[i].startsWith("## ")) {
 					// Stop at the generation footer: a `---` followed by blank or *Generated
@@ -168,28 +169,55 @@ function parseUserContent(md: string): UserContent {
 							break;
 						}
 					}
-					const match = lines[i].match(INLINE_FIELD_RE);
+					sectionLines.push(lines[i]);
+					i++;
+				}
+
+				// First pass: extract inline field answers
+				for (const sl of sectionLines) {
+					const match = sl.match(INLINE_FIELD_RE);
 					if (match) {
 						const fieldKey = match[1];
 						const value = match[2].trim();
 						if (value.length > 0) {
 							reflectionAnswers.set(fieldKey, value);
 						}
-					} else {
-						const trimmed = lines[i].trim();
-						// Skip structural lines: blockquotes, separators, H3 headings, blanks,
-						// and the default soft-close placeholder
-						if (
-							trimmed &&
-							trimmed !== "---" &&
-							!trimmed.startsWith("> ") &&
-							!trimmed.startsWith("### ") &&
-							trimmed !== "_Anything else on your mind today?_"
-						) {
-							freeformLines.push(lines[i]);
-						}
 					}
-					i++;
+				}
+
+				// Second pass: collect user-authored freeform text.
+				// The Reflection section has a repeating structural pattern:
+				//   > AI prompt       ← blockquote (structural)
+				//   ---               ← separator (structural)
+				//   reflect_id::      ← inline field (extracted above)
+				//   (blank)           ← structural
+				// After the last reflect field block: a --- separator, then
+				// optionally the soft-close placeholder, then possibly user text.
+				// mergeContent places user text BEFORE the soft-close:
+				//   reflect_id:: answer
+				//   ---
+				//   User text here
+				//
+				//   _Anything else..._
+				// So we collect non-structural lines between the last field
+				// and the end of the section.
+				const freeformLines: string[] = [];
+				let pastLastField = false;
+				for (let j = 0; j < sectionLines.length; j++) {
+					if (INLINE_FIELD_RE.test(sectionLines[j])) {
+						pastLastField = true;
+						freeformLines.length = 0; // reset — only text after the LAST field counts
+						continue;
+					}
+					if (!pastLastField) continue;
+					const trimmed = sectionLines[j].trim();
+					// Skip structural lines between the last field and user content
+					if (trimmed === "---") continue;
+					if (trimmed.startsWith("> ")) continue;
+					if (trimmed.startsWith("### ")) continue;
+					if (trimmed === "_Anything else on your mind today?_") continue;
+					// Preserve the line (including blank lines within user text)
+					freeformLines.push(sectionLines[j]);
 				}
 				const freeform = freeformLines.join("\n").trim();
 				if (freeform) {
