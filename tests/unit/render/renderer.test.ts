@@ -40,13 +40,18 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("tags:");
 		expect(md).toContain("daily");
 		expect(md).toContain("daily-digest");
-		expect(md).toContain("categories:");
+		expect(md).not.toContain("categories:");
 	});
 
-	it("includes theme tags in frontmatter", () => {
+	it("includes themes in note body and themes field (not in tags)", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
-		expect(md).toContain("oauth");
-		expect(md).toContain("react");
+		expect(md).toContain("OAuth");
+		expect(md).toContain("React");
+		expect(md).toContain("themes:");
+		// theme slugs must NOT appear in the tags: line
+		const tagsLine = md.split("\n").find((l) => l.startsWith("tags:")) ?? "";
+		expect(tagsLine).not.toContain("oauth");
+		expect(tagsLine).not.toContain("react");
 	});
 
 	it("includes title with date", () => {
@@ -72,7 +77,7 @@ describe("renderMarkdown", () => {
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
 		expect(md).toContain("1 visits");
 		expect(md).toContain("1 searches");
-		expect(md).toContain("1 AI prompts");
+		expect(md).toContain("1 AI prompt");
 	});
 
 	it("includes notable section", () => {
@@ -322,14 +327,16 @@ describe("C2 callout format", () => {
 	it("does not render tldr as a [!abstract] callout — TL;DR callout has been removed", () => {
 		// mockAISummary has no work_story, so tldr renders as a plain paragraph
 		const md = renderMarkdown(testDate, [], [], [], [], {}, mockAISummary, "anthropic");
-		expect(md).not.toContain("> [!abstract]");
+		// The [!abstract]- callout is used for Activity Overview, not TL;DR
+		expect(md).not.toContain("> [!abstract] ");
 		// tldr content still appears as plain text since work_story is absent
 		expect(md).toContain("Spent the day building a CLI tool");
 	});
 
-	it("renders category_summaries as markdown table", () => {
+	it("renders category_summaries as collapsed callout with markdown table", () => {
 		const md = renderMarkdown(testDate, [], [], [], [], {}, mockAISummary, "anthropic");
-		expect(md).toContain("| Category | Activity |");
+		expect(md).toContain("> [!abstract]- Activity Overview");
+		expect(md).toContain("> | Category | Activity |");
 	});
 
 	it("renders work_patterns section when present", () => {
@@ -409,7 +416,8 @@ describe("note layout reorder", () => {
 			work_story: "Spent the morning deep in OAuth flows, finishing the PKCE implementation.",
 		};
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summaryWithWorkStory, "anthropic");
-		expect(md).not.toContain("> [!abstract]");
+		// No TL;DR [!abstract] callout (trailing space distinguishes from [!abstract]- Activity Overview)
+		expect(md).not.toContain("> [!abstract] ");
 		// tldr content must NOT appear because work_story is present
 		expect(md).not.toContain("Spent the day debugging and implementing");
 	});
@@ -421,7 +429,7 @@ describe("note layout reorder", () => {
 			tldr: "Wrapped up the OAuth implementation.",
 		};
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summaryNoWorkStory, "anthropic");
-		expect(md).not.toContain("> [!abstract]");
+		expect(md).not.toContain("> [!abstract] ");
 		expect(md).toContain("Wrapped up the OAuth implementation.");
 	});
 
@@ -434,5 +442,113 @@ describe("note layout reorder", () => {
 		expect(md).not.toContain("## \u26A1 Work Patterns");
 		expect(md).toContain("> [!info]- \u26A1 Work Patterns");
 		expect(md).toContain("> - 3-hour deep focus block on auth");
+	});
+});
+
+// ── Three-Layer Layout ──────────────────────────────────
+
+describe("three-layer layout", () => {
+	const fullSummary: AISummary = {
+		...sampleAISummary,
+		learnings: ["TypeScript generics can infer from return types"],
+		remember: ["Use --frozen-lockfile in CI"],
+		note_seeds: ["TypeScript inference patterns"],
+		meta_insights: ["Research-to-implementation ratio was 2:1"],
+		work_patterns: ["Deep focus block on auth"],
+	};
+
+	it("Layer 1 sections appear before Layer 2 callouts", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, sampleGitCommits, sampleCategorized, fullSummary, "anthropic", knowledgeForLayout);
+		const notableIdx = md.indexOf("Notable");
+		const activityOverviewIdx = md.indexOf("Activity Overview");
+		const searchesIdx = md.indexOf("Searches");
+		expect(notableIdx).toBeGreaterThan(-1);
+		expect(activityOverviewIdx).toBeGreaterThan(-1);
+		expect(notableIdx).toBeLessThan(activityOverviewIdx);
+		// Searches (Layer 3) comes after Activity Overview (Layer 2)
+		expect(searchesIdx).toBeGreaterThan(activityOverviewIdx);
+	});
+
+	it("Learnings, Remember, Note Seeds render as collapsed callouts in Layer 2", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, fullSummary, "anthropic");
+		expect(md).toContain("> [!todo]- \u{1F4DA} Learnings");
+		expect(md).toContain("> [!todo]- \u{1F5D2}\uFE0F Remember");
+		expect(md).toContain("> [!tip]- \u{1F331} Note Seeds");
+		// No ## headings for these
+		expect(md).not.toContain("## \u{1F4DA} Learnings");
+		expect(md).not.toContain("## \u{1F5D2}\uFE0F Remember");
+		expect(md).not.toContain("## \u{1F331} Note Seeds");
+	});
+
+	it("Learnings/Remember/Note Seeds appear before Searches (Layer 2 before Layer 3)", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, fullSummary, "anthropic");
+		const learningsIdx = md.indexOf("Learnings");
+		const searchesIdx = md.indexOf("Searches");
+		expect(learningsIdx).toBeGreaterThan(-1);
+		expect(searchesIdx).toBeGreaterThan(-1);
+		expect(learningsIdx).toBeLessThan(searchesIdx);
+	});
+
+	it("Cognitive Patterns renders as collapsed [!example] callout", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, fullSummary, "anthropic");
+		expect(md).toContain("> [!example]- \u{1F52D} Cognitive Patterns");
+		expect(md).not.toContain("## \u{1F52D} Cognitive Patterns");
+	});
+
+	it("Knowledge Insights renders as collapsed [!info] callout in AI-on mode", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, fullSummary, "anthropic", knowledgeForLayout);
+		expect(md).toContain("> [!info]- \u{1F9E0} Knowledge Insights");
+		// Should NOT have ## heading in AI-on mode
+		expect(md).not.toContain("## \u{1F9E0} Knowledge Insights");
+	});
+
+	it("Knowledge Insights renders as open ## heading in no-AI mode", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, sampleGitCommits, sampleCategorized, null, "none", knowledgeForLayout);
+		expect(md).toContain("## \u{1F9E0} Knowledge Insights");
+		expect(md).not.toContain("> [!info]- \u{1F9E0} Knowledge Insights");
+	});
+
+	it("Searches renders as collapsed callout with count", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
+		expect(md).toContain("> [!info]- \u{1F50D} Searches (1)");
+		expect(md).not.toContain("## \u{1F50D} Searches");
+	});
+
+	it("Claude Code renders as collapsed callout with count", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
+		expect(md).toContain("> [!info]- \u{1F916} Claude Code / AI Work (1)");
+		expect(md).not.toContain("## \u{1F916} Claude Code / AI Work");
+	});
+
+	it("Git Activity renders as collapsed callout with count", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, sampleGitCommits, sampleCategorized, sampleAISummary);
+		expect(md).toContain("> [!info]- \u{1F4E6} Git Activity (1 commits)");
+		expect(md).not.toContain("## \u{1F4E6} Git Activity");
+	});
+
+	it("Browser Activity renders as two-level nested collapse", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, sampleAISummary);
+		// Outer callout with total stats
+		expect(md).toContain("> [!info]- \u{1F310} Browser Activity (1 visits, 1 categories)");
+		// Summary line with top domains
+		expect(md).toContain("> - ");
+		expect(md).toContain("github.com");
+		// Nested inner callout
+		expect(md).toContain("> > [!info]-");
+		expect(md).not.toContain("## \u{1F310} Browser Activity");
+	});
+
+	it("Notes section always appears at the end (before footer)", () => {
+		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, sampleGitCommits, sampleCategorized, fullSummary, "anthropic", knowledgeForLayout);
+		const notesIdx = md.indexOf("\u{1F4DD} Notes");
+		const footerIdx = md.indexOf("Generated by Daily Digest");
+		expect(notesIdx).toBeGreaterThan(-1);
+		expect(footerIdx).toBeGreaterThan(-1);
+		expect(notesIdx).toBeLessThan(footerIdx);
+		// Notes should be after all archive sections
+		const gitIdx = md.indexOf("Git Activity");
+		const browserIdx = md.indexOf("Browser Activity");
+		expect(notesIdx).toBeGreaterThan(gitIdx);
+		expect(notesIdx).toBeGreaterThan(browserIdx);
 	});
 });

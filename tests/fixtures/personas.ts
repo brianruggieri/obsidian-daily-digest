@@ -45,11 +45,11 @@ export interface PersonaOutput {
 
 export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 	const config = defaultTimeConfig(date);
-	const visitTs = generateTimeSeries(62, config);  // Real devs: 62 browser visits (was 180)
-	const searchTs = generateTimeSeries(4, config);   // Real devs: 4 searches (was 25)
-	const claudeTs = generateTimeSeries(75, config);  // Real devs: 75-80 Claude sessions (was 12)
+	const visitTs = generateTimeSeries(20, config);   // Real devs: ~20 browser visits
+	const searchTs = generateTimeSeries(4, config);   // Real devs: 3-4 searches
+	const claudeTs = generateTimeSeries(75, config);  // Real devs: 50-75 Claude sessions (split across projects)
 	const codexTs = generateTimeSeries(6, config);    // Codex slightly higher
-	const gitTs = generateTimeSeries(35, config);     // Real devs: 33-37 commits (was 8)
+	const gitTs = generateTimeSeries(21, config);     // Real devs: ~21 commits including merges
 
 	const domains = [
 		...DOMAIN_SETS.webdev.slice(0, 4),  // GitHub, StackOverflow, MDN, Anthropic (less browsing)
@@ -57,37 +57,55 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 		...DOMAIN_SETS.ai_tools,  // claude.ai
 	];
 
+	// Split Claude sessions across multiple projects (real usage pattern)
+	const claudeCodeTs = claudeTs.slice(0, 30);
+	const claudeConvTs = claudeTs.slice(30, 50);
+	const claudeSecondaryTs = claudeTs.slice(50);
+	const claudeCode = generateClaudeSessions({
+		count: 30,
+		promptCategory: "coding",
+		projectName: "obsidian-daily-digest",
+		timestamps: claudeCodeTs,
+	});
+	const claudeConv = generateClaudeSessions({
+		count: 20,
+		promptCategory: "conversational",
+		projectName: "obsidian-daily-digest",
+		timestamps: claudeConvTs,
+	});
+	const claudeSecondary = generateClaudeSessions({
+		count: 25,
+		promptCategory: "coding",
+		projectName: "prompt-review",
+		timestamps: claudeSecondaryTs,
+	});
+
 	return {
 		name: "Software Engineer — Deep Work Day",
-		description: "62 browser visits, 75+ Claude sessions: Morning standup → rubber-ducking OAuth flow → pair-programming session with Claude → debugging race condition → code review → deployment",
-		visits: generateBrowserVisits({ count: 62, domains, timestamps: visitTs }),
+		description: "20 browser visits, 50 Claude sessions across 2 projects: Morning bug fixes → feature implementation → PR reviews → repo maintenance",
+		visits: generateBrowserVisits({ count: 20, domains, timestamps: visitTs }),
 		searches: generateSearchQueries({
 			count: 4,
 			queries: SEARCH_TEMPLATES.webdev,
-			engines: ["google.com"],
+			engines: ["duckduckgo.com", "google.com"],
 			timestamps: searchTs,
 		}),
-		claude: generateClaudeSessions({
-			count: 75,
-			promptCategory: "coding",
-			projectName: "webapp",
-			timestamps: claudeTs,
-		}),
+		claude: [...claudeCode, ...claudeConv, ...claudeSecondary],
 		codex: generateCodexSessions({
 			count: 6,
 			promptCategory: "coding",
-			projectName: "webapp",
+			projectName: "obsidian-daily-digest",
 			timestamps: codexTs,
 		}),
 		git: generateGitCommits({
-			count: 35,
-			templateCategory: "webdev",
+			count: 21,
+			templateCategory: "multiRepo",
 			timestamps: gitTs,
 		}),
-		expectedThemes: ["OAuth", "React", "authentication", "API design", "debugging", "code review"],
+		expectedThemes: ["plugin development", "testing", "PR workflow", "debugging", "code review"],
 		expectedActivityTypes: ["implementation", "debugging", "communication"],
-		expectedFocusRange: [0.02, 0.08],  // Real dev work is scattered across many contexts
-		narrative: "A software developer's day heavy on Claude Code usage. 75 Claude sessions for rubber-ducking, architecture questions, debugging help, and code reviews. Only 62 browser visits to GitHub PRs, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 35 git commits showing progressive implementation across multiple branches. Low focus score (2-8%) reflects context switching between multiple PRs, code reviews, and debugging sessions.",
+		expectedFocusRange: [0.02, 0.10],  // Real dev work is scattered across many contexts
+		narrative: "A software developer's day heavy on Claude Code usage. 50 Claude sessions split across two projects — a mix of coding prompts and short conversational commands (build/test/deploy, PR reviews, branch cleanup). Only 20 browser visits to GitHub, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 21 git commits including merge commits from PR workflow across 3 repos. Low focus score (2-10%) reflects context switching between multiple PRs, code reviews, and debugging sessions.",
 	};
 }
 

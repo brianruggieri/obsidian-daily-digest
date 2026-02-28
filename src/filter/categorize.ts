@@ -1,6 +1,7 @@
 import { BrowserVisit, CategorizedVisits } from "../types";
 
 // Rule-based domain categorization. The AI refines unknowns.
+// Enriched 2026-02 with curated additions for thin categories.
 export const CATEGORY_RULES: Record<string, string[]> = {
 	work: [
 		"notion.so", "linear.app", "jira.", "confluence.", "asana.com",
@@ -11,6 +12,16 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"notion.site", "docs.google.com", "sheets.google.com",
 		"slides.google.com", "drive.google.com", "dropbox.com",
 		"box.com", "sharepoint.com",
+		// CRM / support
+		"salesforce.com", "hubspot.com", "zendesk.com", "freshdesk.com", "intercom.com",
+		// Ops / monitoring
+		"pagerduty.com", "datadog.com", "sentry.io", "newrelic.com",
+		// Scheduling / forms
+		"calendly.com", "typeform.com", "surveymonkey.com",
+		// Microsoft 365
+		"office.com", "onedrive.com",
+		// Password managers (work-adjacent)
+		"bitwarden.com",
 	],
 	dev: [
 		"github.com", "gitlab.com", "bitbucket.org", "stackoverflow.com",
@@ -22,12 +33,26 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"replit.com", "codepen.io", "codesandbox.io", "cursor.sh",
 		"anthropic.com", "openai.com", "huggingface.co", "langchain.com",
 		"docs.", "developer.", "api.",
+		// Playgrounds / tools
+		"jsfiddle.net", "stackblitz.com", "w3schools.com", "caniuse.com",
+		"regex101.com", "jwt.io", "postman.com", "insomnia.rest",
+		"bundlephobia.com", "dbdiagram.io", "devdocs.io",
+		// Docs / reference
+		"gitbook.com", "readthedocs.io",
+		// Databases / hosting
+		"supabase.com", "planetscale.com", "neon.tech", "turso.tech", "upstash.com",
 	],
 	research: [
 		"wikipedia.org", "arxiv.org", "scholar.google.com", "pubmed.ncbi.",
 		"jstor.org", "researchgate.net", "semanticscholar.org",
 		"perplexity.ai", "wolframalpha.com", "britannica.com",
 		"medium.com", "substack.com", "lesswrong.com", "hbr.org",
+		// Academic publishers
+		"springer.com", "nature.com", "sciencedirect.com",
+		// Preprint servers
+		"biorxiv.org", "medrxiv.org",
+		// Working papers / datasets
+		"ssrn.com", "nber.org", "paperswithcode.com",
 	],
 	news: [
 		"nytimes.com", "washingtonpost.com", "theguardian.com", "bbc.",
@@ -36,23 +61,59 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"techcrunch.com", "theverge.com", "arstechnica.com",
 		"news.ycombinator.com", "reddit.com/r/news", "axios.com",
 		"politico.com", "npr.org",
+		// Broadcast / cable
+		"cnn.com", "foxnews.com", "nbcnews.com", "cbsnews.com", "msnbc.com",
+		// Digital-native news
+		"vice.com", "vox.com", "huffpost.com", "newsweek.com",
+		"thehill.com", "propublica.org", "pbs.org",
 	],
 	social: [
 		"twitter.com", "x.com", "reddit.com", "linkedin.com",
 		"facebook.com", "instagram.com", "threads.net", "mastodon.",
 		"discord.com", "telegram.org", "whatsapp.com", "messenger.com",
 		"bluesky.", "bsky.app",
+		// Image / discovery
+		"tumblr.com", "pinterest.com", "snapchat.com", "bereal.com",
+		// Q&A / community
+		"quora.com", "producthunt.com", "nextdoor.com", "flipboard.com",
+		// Dev-focused social
+		"dev.to", "hashnode.com",
 	],
 	media: [
 		"youtube.com", "netflix.com", "spotify.com", "twitch.tv",
 		"hulu.com", "disneyplus.com", "hbomax.com", "max.com",
 		"primevideo.com", "soundcloud.com", "vimeo.com", "tiktok.com",
 		"podcasts.apple.com", "open.spotify.com",
+		// Streaming services
+		"peacocktv.com", "paramountplus.com", "crunchyroll.com", "funimation.com",
+		"sling.com", "fubo.tv", "directv.com", "plex.tv",
+		// Sports
+		"espn.com", "nfl.com", "nba.com", "mlb.com",
+		// Music
+		"bandcamp.com", "tidal.com", "deezer.com", "pandora.com", "iheartradio.com",
+		// Audiobooks / podcasts
+		"audible.com", "dailymotion.com",
 	],
 	shopping: [
 		"amazon.com", "ebay.com", "etsy.com", "shopify.com",
 		"bestbuy.com", "walmart.com", "target.com", "costco.com",
 		"newegg.com", "bhphotovideo.com",
+		// Home / furniture
+		"wayfair.com", "homedepot.com", "lowes.com", "ikea.com", "overstock.com",
+		// Apparel
+		"macys.com", "nordstrom.com", "nordstromrack.com", "gap.com", "oldnavy.com",
+		"hm.com", "zara.com", "uniqlo.com", "asos.com", "revolve.com",
+		"zappos.com", "footlocker.com", "nike.com", "adidas.com",
+		// International / discount
+		"aliexpress.com", "temu.com", "wish.com", "shein.com",
+		// Pet supplies
+		"chewy.com", "petsmart.com", "petco.com",
+		// Electronics / office
+		"adorama.com", "staples.com", "officedepot.com", "microcenter.com",
+		// Gaming retail
+		"gamestop.com",
+		// Auto
+		"autozone.com",
 	],
 	finance: [
 		"chase.com", "bankofamerica.com", "wellsfargo.com", "citibank.com",
@@ -60,16 +121,40 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"coinbase.com", "kraken.com", "mint.com", "ynab.com",
 		"turbotax.com", "hrblock.com", "paypal.com", "stripe.com",
 		"venmo.com", "cashapp.com",
+		// Banks / neobanks
+		"capitalone.com", "discover.com", "americanexpress.com",
+		"sofi.com", "chime.com", "wise.com", "revolut.com",
+		// Brokerage
+		"etrade.com", "wealthfront.com", "betterment.com", "acorns.com",
+		// Personal finance
+		"nerdwallet.com", "bankrate.com", "creditkarma.com",
 	],
 	ai_tools: [
 		"claude.ai", "chat.openai.com", "gemini.google.com",
 		"perplexity.ai", "cursor.sh", "copilot.microsoft.com",
 		"poe.com", "character.ai", "midjourney.com", "runway.ml",
 		"elevenlabs.io", "replicate.com",
+		// Inference providers
+		"mistral.ai", "cohere.com", "together.ai", "groq.com", "ollama.com",
+		// Research / leaderboards
+		"lmsys.org",
+		// Conversational / search AI
+		"pi.ai", "you.com", "phind.com", "aider.chat",
+		// AI dev tools
+		"v0.dev", "bolt.new", "tabnine.com", "codeium.com", "sourcegraph.com",
 	],
 	personal: [
 		"health.", "myfitnesspal.com", "strava.com", "garmin.com",
 		"whoop.com", "oura.com", "calm.com", "headspace.com",
+		// Fitness / weight
+		"fitbit.com", "noom.com", "peloton.com", "cronometer.com",
+		"loseit.com", "alltrails.com", "beachbody.com",
+		// Books / genealogy
+		"goodreads.com", "ancestry.com", "23andme.com",
+		// Mindfulness
+		"insighttimer.com", "wakingup.com", "tenpercent.com",
+		// Habit tracking
+		"habitica.com", "stickk.com",
 	],
 	education: [
 		"coursera.org", "edx.org", "udemy.com", "skillshare.com",
@@ -80,6 +165,12 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"chegg.com", "quizlet.com",
 		"leetcode.com", "hackerrank.com", "codecademy.com",
 		"freecodecamp.org", "theodinproject.com",
+		// Video / lectures
+		"ted.com", "futurelearn.com", "openculture.com",
+		// Data science / ML
+		"datacamp.com", "deeplearning.ai", "fast.ai",
+		// Homework / tutoring
+		"coursehero.com", "desmos.com", "code.org",
 	],
 	gaming: [
 		"store.steampowered.com", "epicgames.com",
@@ -89,12 +180,24 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"igdb.com", "ign.com", "gamespot.com",
 		"pcgamer.com", "kotaku.com", "polygon.com",
 		"speedrun.com", "howlongtobeat.com",
+		// Popular games / publishers
+		"minecraft.net", "mojang.com",
+		"leagueoflegends.com", "valorant.com", "blizzard.com",
+		"rockstargames.com", "activision.com",
+		// Modding / database
+		"nexusmods.com", "protondb.com", "curseforge.com",
+		// Deals
+		"g2a.com", "fanatical.com",
 	],
 	writing: [
 		"grammarly.com", "hemingwayapp.com", "prowritingaid.com",
 		"overleaf.com",
 		"ghost.org", "nanowrimo.org",
 		"ulysses.app",
+		// Publishing / self-pub
+		"reedsy.com", "atticus.io", "wattpad.com", "fictionpress.com",
+		// Writing tools
+		"750words.com", "draft.app", "novelcrafter.com", "dabble.me",
 	],
 	pkm: [
 		"obsidian.md", "forum.obsidian.md", "help.obsidian.md",
@@ -103,6 +206,9 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"mem.ai", "reflect.app",
 		"readwise.io", "raindrop.io", "instapaper.com",
 		"hypothesis.is", "zettelkasten.de",
+		// Additional note-taking / PKM tools
+		"workflowy.com", "craft.do", "anytype.io", "heptabase.com",
+		"supernotes.app",
 	],
 };
 

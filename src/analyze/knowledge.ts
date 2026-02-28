@@ -231,48 +231,73 @@ function buildKnowledgeDeltaLines(patterns: PatternAnalysis): string[] {
 
 // ── Tag Generation ─────────────────────────────────────
 
+const TAG_CAP = 10;
+const TAG_MIN_SCORE = 0.1;
+
+interface ScoredTag {
+	tag: string;
+	score: number;
+}
+
 function generateTags(patterns: PatternAnalysis): string[] {
-	const tags: string[] = [];
+	const scored: ScoredTag[] = [];
 
-	// Activity type tags
-	for (const at of patterns.topActivityTypes.slice(0, 3)) {
-		tags.push(`activity/${at.type}`);
-	}
+	// Activity type tags — always included (top 3 are inherently meaningful).
+	// Collected separately so they are guaranteed to appear in the final list
+	// regardless of how many higher-scored topic/entity/pattern tags exist.
+	const activityTags = patterns.topActivityTypes
+		.slice(0, 3)
+		.map((at) => `activity/${at.type}`);
 
-	// Topic tags from clusters
+	// Topic tags from clusters — score = cluster intensity / max intensity (0–1)
+	const maxIntensity = patterns.temporalClusters.length > 0
+		? Math.max(...patterns.temporalClusters.map((c) => c.intensity))
+		: 1;
 	const topicsSeen = new Set<string>();
 	for (const cluster of patterns.temporalClusters) {
+		const clusterScore = maxIntensity > 0 ? cluster.intensity / maxIntensity : 0;
 		for (const topic of cluster.topics.slice(0, 2)) {
 			const tag = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 			if (tag.length > 2 && !topicsSeen.has(tag)) {
 				topicsSeen.add(tag);
-				tags.push(`topic/${tag}`);
+				scored.push({ tag: `topic/${tag}`, score: clusterScore });
 			}
 		}
 	}
 
-	// Entity tags
+	// Entity tags — score = co-occurrence count / max co-occurrence count (0–1)
+	const maxCooccurrence = patterns.entityRelations.length > 0
+		? Math.max(...patterns.entityRelations.map((r) => r.cooccurrences))
+		: 1;
 	const entitySeen = new Set<string>();
 	for (const rel of patterns.entityRelations.slice(0, 5)) {
+		const relScore = maxCooccurrence > 0 ? rel.cooccurrences / maxCooccurrence : 0;
 		for (const entity of [rel.entityA, rel.entityB]) {
 			const tag = entity.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 			if (tag.length > 2 && !entitySeen.has(tag)) {
 				entitySeen.add(tag);
-				tags.push(`entity/${tag}`);
+				scored.push({ tag: `entity/${tag}`, score: relScore });
 			}
 		}
 	}
 
-	// Recurrence tags
+	// Pattern tags — score = 1.0 (always meaningful, at most 4)
 	const newSignals = patterns.recurrenceSignals.filter((s) => s.trend === "new");
-	if (newSignals.length > 0) tags.push("pattern/new-exploration");
+	if (newSignals.length > 0) scored.push({ tag: "pattern/new-exploration", score: 1.0 });
 
 	const returningSignals = patterns.recurrenceSignals.filter((s) => s.trend === "returning");
-	if (returningSignals.length > 0) tags.push("pattern/returning-interest");
+	if (returningSignals.length > 0) scored.push({ tag: "pattern/returning-interest", score: 1.0 });
 
-	// Focus tag
-	if (patterns.focusScore >= 0.7) tags.push("pattern/deep-focus");
-	else if (patterns.focusScore <= 0.3) tags.push("pattern/scattered");
+	if (patterns.focusScore >= 0.7) scored.push({ tag: "pattern/deep-focus", score: 1.0 });
+	else if (patterns.focusScore <= 0.3) scored.push({ tag: "pattern/scattered", score: 1.0 });
 
-	return tags;
+	// Activity tags always lead; fill remaining slots (up to TAG_CAP) with
+	// scored tags sorted by relevance, skipping any that duplicate an activity tag.
+	const activityTagSet = new Set(activityTags);
+	const otherTags = scored
+		.filter((s) => s.score >= TAG_MIN_SCORE && !activityTagSet.has(s.tag))
+		.sort((a, b) => b.score - a.score)
+		.map((s) => s.tag);
+
+	return [...activityTags, ...otherTags].slice(0, TAG_CAP);
 }

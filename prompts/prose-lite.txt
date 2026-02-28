@@ -1,0 +1,22 @@
+{{tierInstruction}}Write a brief daily note for a personal knowledge base. Return ONLY the sections below with the exact headings shown. Be specific and concrete.{{contextHint}}
+
+Date: {{dateStr}}
+
+<activity_data>
+{{activityData}}
+</activity_data>
+
+## Headline
+One sentence (max 12 words) capturing the day's main focus.
+
+## Day Story
+1-2 sentences describing what was accomplished or worked on today.
+
+## Learnings
+Bullet list. Up to 3 things learned today that can be applied later.
+
+## Remember
+Bullet list. Up to 3 specific things to recall later: commands, configs, resources.
+
+## Questions
+One open question a thoughtful reader would ask about today's activity.

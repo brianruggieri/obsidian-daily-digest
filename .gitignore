@@ -32,6 +32,12 @@ tests/screenshots/vault/
 .mcp.json
 .worktrees/
 
+# AI editor tooling
+.agents/
+.kiro/
+.windsurf/
+skills-lock.json
+
 # IDE / Editor
 .vscode/
 .idea/

@@ -215,7 +215,9 @@ const VPN_PROXY_DOMAINS: string[] = [
 
 const JOB_SEARCH_DOMAINS: string[] = [
 	// Job boards
-	"linkedin.com/jobs", "indeed.com", "glassdoor.com",
+	"linkedin.com/jobs",
+	"linkedin.com/comm/jobs",  // LinkedIn /comm/ redirect variant (email/notification click-throughs)
+	"indeed.com", "glassdoor.com",
 	"ziprecruiter.com", "monster.com", "careerbuilder.com",
 	"dice.com", "hired.com", "angel.co/jobs", "wellfound.com",
 	"levels.fyi", "blind.com", "teamblind.com",

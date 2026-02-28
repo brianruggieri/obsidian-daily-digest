@@ -93,17 +93,29 @@ Domain names                ✓           ✓           ✓           ✗       
 Search query text           ✓           ✓           ✓           ✗           ✗
 Claude prompt text          ✓           ✓           ✓           ✗           ✗
 Git commit messages         ✓           ✓           ✓           ✗           ✗
-Per-event summaries         ✗           ✗           ✗           ✓           ✗
+Rule-based summary text     ✓ (raw)     ✓ (raw)     ✓ (raw)     ✗ (*)       ✗
+Per-event summaries         ✗           ✗           ✗           ✓ (*)       ✗
 Per-event topics            ✗           ✗           ✗           ✓           ✗
 Per-event entities          ✗           ✗           ✗           ✓           ✗
 Activity type labels        ✗           ✗           ✗           ✓           ✓ (counts)
 Topic frequency dist.       ✗           ✗           ✗           ✗           ✓
-Temporal cluster labels     ✗           ✗           ✗           ✗           ✓
+Temporal cluster labels     ✗           ✗           ✗           ✗           ✓ (**)
 Entity co-occurrences       ✗           ✗           ✗           ✗           ✓
 Focus score                 ✗           ✗           ✗           ✗           ✓
 Recurrence trends           ✗           ✗           ✗           ✗           ✓
 Knowledge delta counts      ✗           ✗           ✗           ✗           ✓
 ```
+
+(*) Tier 3 per-event summaries are semantically abstracted:
+- With LLM classification: AI-generated 1-liners (no raw URLs or titles)
+- With rule-based classification (no local model): category-based descriptions
+  e.g., "Browsing social media", "Searched for fashion", "Committed authentication changes"
+- Raw domain+title strings ("airbnb.com - Your trips - Airbnb") are NOT exposed at Tier 3
+
+(**) Tier 4 temporal cluster topic labels are filtered to remove page-title fragments.
+Only semantic vocabulary labels pass through (e.g., "authentication", "job-search",
+"software development"). Raw company names and page-title word fragments are blocked
+by `filterClusterTopics()` in `patterns.ts`.
 
 **Tier caps (Tier 1/standard):**
 - Browser: top 8 domains per category, top 5 titles each
@@ -113,12 +125,14 @@ Knowledge delta counts      ✗           ✗           ✗           ✗       
 
 ---
 
-## 3. Renderer Output Map
+## 3. Renderer Output Map — Three-Layer Layout
 
-What each input produces in the final Obsidian note. Order matches document order top-to-bottom.
+The note is organized into three visual layers for progressive disclosure.
 
 ```
 INPUT                                  OUTPUT IN NOTE
+══════════════════════════════════════════════════════════════════════════════
+                               LAYER 1 — "10-second glance" (always visible)
 ──────────────────────────────────────────────────────────────────────────────
 date                              ──►  frontmatter: date, day
 CategorizedVisits (keys)          ──►  frontmatter: categories[], tags[]
@@ -137,51 +151,65 @@ gitCommits.length                 ──►  │
 categorized key count             ──►  ┘
 
 AISummary.headline                ──►  > [!tip] headline
-AISummary.tldr                    ──►  > [!abstract] tldr
+AISummary.tldr (no work_story)    ──►  plain paragraph (fallback)
+AISummary.work_story              ──►  plain paragraph (primary)
 AISummary.themes                  ──►  **Themes:** `chip` · `chip`
 
 AISummary.notable[]               ──►  ## ✨ Notable
                                        - item
 
-AISummary.category_summaries      ──►  | Category | Activity |
-                                       | --- | --- |
-                                       | label | summary |
+PromptLog[]                       ──►  > [!example]- prompt details (collapsed)
 
-AISummary.work_patterns[]         ──►  ## ⚡ Work Patterns
-                                       - pattern
+                               LAYER 2 — "Curated insights + actionables"
+──────────────────────────────────────────────────────────────────────────────
+AISummary.category_summaries      ──►  > [!abstract]- Activity Overview
+                                       > | Category | Activity |
 
-AISummary.cross_source_connections[] ► ### 🔗 Cross-Source Connections
-                                       > [!note] connection
+AISummary.work_patterns[]         ──►  > [!info]- ⚡ Work Patterns
+AISummary.cross_source_connections[] ► > **🔗 Cross-Source Connections**
 
-AISummary.focus_narrative         ──►  ## 🔭 Cognitive Patterns
-AISummary.meta_insights[]         ──►    ### Insights  - item
-AISummary.quirky_signals[]        ──►    ### 🔎 Unusual Signals  - item
+AISummary.focus_narrative         ──►  > [!example]- 🔭 Cognitive Patterns
+AISummary.meta_insights[]         ──►  > **Insights**  - item
+AISummary.quirky_signals[]        ──►  > **🔎 Unusual Signals**  - item
 
-KnowledgeSections.focusSummary    ──►  ## 🧠 Knowledge Insights
-KnowledgeSections.temporalInsights ─►    ### ⏰ Activity Clusters  - item
-KnowledgeSections.topicMap        ──►    ### 🗺️ Topic Map  - item
-KnowledgeSections.entityGraph     ──►    ### 🔗 Entity Relations  - item
-KnowledgeSections.recurrenceNotes ──►    ### 🔄 Recurrence Patterns  - item
-KnowledgeSections.knowledgeDeltaLines ►  ### 💡 Knowledge Delta  - item
+KnowledgeSections (AI-on)         ──►  > [!info]- 🧠 Knowledge Insights
+                                       > **⏰ Activity Clusters**  - item
+                                       > **🗺️ Topic Map**  - item
+                                       > **🔗 Entity Relations**  - item
+                                       > **🔄 Recurrence Patterns**  - item
+                                       > **💡 Knowledge Delta**  - item
 
-SearchQuery[]                     ──►  ## 🔍 Searches
-                                       - `engine` **query** — HH:MM
+AISummary.learnings[]             ──►  > [!todo]- 📚 Learnings
+AISummary.remember[]              ──►  > [!todo]- 🗒️ Remember
+AISummary.note_seeds[]            ──►  > [!tip]- 🌱 Note Seeds
 
-ClaudeSession[]                   ──►  ## 🤖 Claude Code / AI Work
-                                       - `project` prompt — HH:MM
-
-CategorizedVisits                 ──►  ## 🌐 Browser Activity
-                                       ### emoji Category (N)
-                                       **domain** (N)
-                                         - [title](url) — HH:MM
-
-GitCommit[]                       ──►  ## 📦 Git Activity
-                                       ### repo (N commits)
-                                       - `hash` message (+ins/-del) — HH:MM
-
-AISummary.prompts[]               ──►  ## 🪞 Reflection
+AISummary.prompts[]               ──►  ## 🪞 Reflection  (open, Dataview fields)
                                        ### Question text
                                        answer_slug::
+
+                               LAYER 3 — "Archive" (raw data, collapsed)
+──────────────────────────────────────────────────────────────────────────────
+SearchQuery[]                     ──►  > [!info]- 🔍 Searches (N)
+                                       > - `engine` **query** — HH:MM
+
+articleClusters                   ──►  > [!info]- 📖 Today I Read About
+commitWorkUnits                   ──►  > [!info]- 🔨 Today I Worked On
+claudeTaskSessions                ──►  > [!info]- 🤖 Today I Asked Claude About
+
+ClaudeSession[]                   ──►  > [!info]- 🤖 Claude Code / AI Work (N)
+                                       > - `project` prompt — HH:MM
+
+CategorizedVisits                 ──►  > [!info]- 🌐 Browser Activity (N visits, M cats)
+                                       > - emoji **Category** (N) — top domains
+                                       > > [!info]- emoji Category (N)
+                                       > > **domain** (N)
+                                       > >   - [title](url) — HH:MM
+
+GitCommit[]                       ──►  > [!info]- 📦 Git Activity (N commits)
+                                       > **repo** (N commits)
+                                       > - `hash` message (+ins/-del) — HH:MM
+
+KnowledgeSections (no-AI)         ──►  ## 🧠 Knowledge Insights (open headings)
 
 (static)                          ──►  ## 📝 Notes
                                        > _Add your reflections here_
@@ -246,8 +274,14 @@ Write merged (or new) note to vault
 ─────────────────────────────────────────────────────────
 Generated headings (never treated as user content):
   Notable, Cognitive Patterns, Knowledge Insights,
-  Searches, Claude Code / AI Work, Browser Activity,
-  Git Activity, Reflection, Notes
+  Searches, Today I Read About, Today I Worked On,
+  Today I Asked Claude About, Task Sessions,
+  Claude Code / AI Work, Browser Activity,
+  Git Activity, Learnings, Remember, Note Seeds,
+  Reflection, Notes
+
+Most sections are now collapsed callouts (no ## heading),
+but the set is kept for backward compat with older notes.
 
 Any ## heading NOT in the above set → treated as
 user-authored custom section and preserved.
@@ -316,4 +350,17 @@ provider = "local"      ──► Uses unified prompt with ALL data layers
                              → No privacy escalation — data stays on device
                              → buildUnifiedPrompt() merges raw + classified
                                + patterns into a single prompt
+
+autoAggressiveSanit-    ──► When true AND provider = "anthropic":
+ization = true               → sanitizationLevel is overridden to "aggressive"
+(default: true)              → Strips all URL query strings before cloud calls
+                             → Applies even if sanitizationLevel = "standard"
+
+privacyTierOverride     ──► Bypasses auto-escalation in resolvePromptAndTier()
+= null (default)             → null: auto-select most private available tier
+= 4                          → Always use de-identified (requires patterns)
+= 3                          → Always use classified (requires classification)
+= 2                          → Always use compressed (standard data)
+= 1                          → Always use standard (raw sanitized data)
+                             → Falls back to Tier 1 if required data unavailable
 ```

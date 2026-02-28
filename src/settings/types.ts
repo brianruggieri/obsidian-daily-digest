@@ -54,6 +54,10 @@ export interface DailyDigestSettings {
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 	debugMode: boolean;
+	/** Force a specific privacy tier for Anthropic cloud calls. null = auto-escalate (recommended). */
+	privacyTierOverride: 4 | 3 | 2 | 1 | null;
+	/** Auto-apply aggressive sanitization when provider is Anthropic (recommended: true). */
+	autoAggressiveSanitization: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -96,9 +100,11 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
 	maxVisitsPerDomain: 5,
-	promptStrategy: "monolithic-json" as PromptStrategy,
+	promptStrategy: "single-prose" as PromptStrategy,
 	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 	debugMode: false,
+	privacyTierOverride: null,
+	autoAggressiveSanitization: true,
 };

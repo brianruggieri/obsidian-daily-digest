@@ -454,6 +454,49 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			});
 		}
 
+		// ── Cloud privacy controls ────────────────────
+		new Setting(containerEl)
+			.setName("Auto-aggressive sanitization for cloud")
+			.setDesc(
+				"Always apply aggressive sanitization when sending data to the Anthropic API. " +
+				"Strips all URL query strings and reduces URLs to domain+path only. " +
+				"Recommended when using the cloud provider."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoAggressiveSanitization)
+					.onChange(async (value) => {
+						this.plugin.settings.autoAggressiveSanitization = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Privacy tier override")
+			.setDesc(
+				"Force a specific privacy tier instead of auto-selecting the most private available tier. " +
+				"Auto (recommended): escalates to Tier 4 when patterns are available. " +
+				"Override: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("null", "Auto (recommended)")
+					.addOption("4", "Tier 4 — De-identified (aggregated stats only)")
+					.addOption("3", "Tier 3 — Classified (per-event abstractions)")
+					.addOption("2", "Tier 2 — Compressed (budget-proportional)")
+					.addOption("1", "Tier 1 — Standard (sanitized raw data)")
+					.setValue(
+						this.plugin.settings.privacyTierOverride === null
+							? "null"
+							: String(this.plugin.settings.privacyTierOverride)
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.privacyTierOverride =
+							value === "null" ? null : (parseInt(value) as 1 | 2 | 3 | 4);
+						await this.plugin.saveSettings();
+					})
+			);
+
 		// ── Reset onboarding ──────────────────────────
 		new Setting(containerEl)
 			.setName("Reset privacy onboarding")
