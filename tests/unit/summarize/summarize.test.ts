@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePromptAndTier } from "../../../src/summarize/summarize";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePromptAndTier, summarizeDay } from "../../../src/summarize/summarize";
 import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
 import type { AICallConfig } from "../../../src/summarize/ai-client";
 
@@ -18,6 +18,25 @@ function makeEvent(overrides: Partial<StructuredEvent> = {}): StructuredEvent {
 		...overrides,
 	};
 }
+
+// ── summarizeDay empty-activity guard ────────────────────
+
+describe("summarizeDay empty-activity guard", () => {
+	it("returns empty summary without calling AI when no activity data", async () => {
+		const config: AICallConfig = {
+			provider: "local",
+			localEndpoint: "http://localhost:11434",
+			localModel: "llama3",
+		};
+		const result = await summarizeDay(
+			DATE, {}, [], [], config, ""
+		);
+		expect(result.headline).toBe("");
+		expect(result.tldr).toBe("");
+		expect(result.themes).toEqual([]);
+		expect(result.notable).toEqual([]);
+	});
+});
 
 // ── buildClassifiedPrompt (Phase 2) ─────────────────────
 

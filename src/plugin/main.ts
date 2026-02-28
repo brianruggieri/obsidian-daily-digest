@@ -537,6 +537,12 @@ export default class DailyDigestPlugin extends Plugin {
 
 			// ── AI Summary ───────────────────────
 			let aiSummary = null;
+			const hasActivity = visits.length > 0 || searches.length > 0 ||
+				claudeSessions.length > 0 || gitCommits.length > 0;
+			if (useAI && !hasActivity) {
+				new Notice("Daily Digest: No activity data collected, skipping AI summary.");
+				useAI = false;
+			}
 			if (useAI) {
 				// ── Compress ──────────────────────
 				progressNotice.setMessage("Daily Digest: Compressing activity data\u2026");

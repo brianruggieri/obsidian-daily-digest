@@ -995,6 +995,21 @@ export async function summarizeDay(
 	articleClusters?: ArticleCluster[],
 	privacyTierOverride?: number | null
 ): Promise<AISummary> {
+	// ── Guard: skip AI call when no activity data is available ──
+	const totalVisits = Object.values(categorized).flat().length;
+	const hasActivity = totalVisits > 0 || searches.length > 0 ||
+		claudeSessions.length > 0 || gitCommits.length > 0;
+	if (!hasActivity) {
+		return {
+			headline: "",
+			tldr: "",
+			themes: [],
+			category_summaries: {},
+			notable: [],
+			questions: [],
+		};
+	}
+
 	// ── Prose strategy: heading-delimited markdown output ──
 	if (promptStrategy === "single-prose") {
 		// Resolve privacy tier and filter data layers accordingly
