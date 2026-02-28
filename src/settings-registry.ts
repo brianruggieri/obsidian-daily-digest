@@ -295,6 +295,31 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableSensitivityFilter",
 	},
 	{
+		key: "autoAggressiveSanitization",
+		label: "Auto-aggressive sanitization for cloud",
+		description:
+			"Always apply aggressive sanitization when sending data to the Anthropic API. " +
+			"Strips all URL query strings and reduces URLs to domain+path only. " +
+			"Recommended when using the cloud provider.",
+		section: "Privacy & filtering",
+		type: "boolean",
+		defaultValue: "true",
+		enabledByDefault: true,
+		dependsOn: "enableSanitization",
+	},
+	{
+		key: "privacyTierOverride",
+		label: "Privacy tier override",
+		description:
+			"Force a specific privacy tier instead of auto-selecting the most private available tier. " +
+			"Tiers: 4 (de-identified stats only), 3 (classified abstractions), " +
+			"2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.",
+		section: "Privacy & filtering",
+		type: "select",
+		defaultValue: "null",
+		dependsOn: "enableAI",
+	},
+	{
 		key: "debugMode",
 		label: "Debug mode",
 		description:

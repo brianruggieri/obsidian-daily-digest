@@ -8,7 +8,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 
 - [⚙️ General](#general) (2 settings)
 - [🗄️ Data sources](#data-sources) (10 settings)
-- [🛡️ Privacy & filtering](#privacy-filtering) (10 settings)
+- [🛡️ Privacy & filtering](#privacy-filtering) (12 settings)
 - [✨ AI summarization](#ai-summarization) (8 settings)
 - [🧠 Advanced AI processing](#advanced-ai-processing) (10 settings)
 - [🔧 Meta](#meta) (2 settings)
@@ -224,6 +224,27 @@ Additional domains to filter using exact matching. Subdomains are matched automa
 - **Type:** Text area
 - **Default:** *(empty)*
 - **Visible when:** `enableSensitivityFilter` is enabled
+
+### `autoAggressiveSanitization`
+
+**Auto-aggressive sanitization for cloud**
+
+Always apply aggressive sanitization when sending data to the Anthropic API. Strips all URL query strings and reduces URLs to domain+path only. Recommended when using the cloud provider.
+
+- **Type:** Toggle
+- **Default:** `true`
+- **On by default:** yes
+- **Visible when:** `enableSanitization` is enabled
+
+### `privacyTierOverride`
+
+**Privacy tier override**
+
+Force a specific privacy tier instead of auto-selecting the most private available tier. Tiers: 4 (de-identified stats only), 3 (classified abstractions), 2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.
+
+- **Type:** Dropdown
+- **Default:** `null`
+- **Visible when:** `enableAI` is enabled
 
 ### `debugMode`
 
