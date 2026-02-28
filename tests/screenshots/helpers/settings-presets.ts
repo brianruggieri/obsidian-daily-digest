@@ -10,58 +10,16 @@
  * Each preset is a partial override of DEFAULT_SETTINGS.
  */
 
-import type { DailyDigestSettings } from "../../src/settings/types";
-import type { BrowserInstallConfig, SensitivityCategory } from "../../src/types";
+import { DEFAULT_SETTINGS } from "../../../src/settings/types";
+import type { DailyDigestSettings } from "../../../src/settings/types";
+import type { BrowserInstallConfig, SensitivityCategory } from "../../../src/types";
 
 /**
- * Minimal copy of DEFAULT_SETTINGS to avoid importing Obsidian-dependent code.
- * This must stay in sync with src/settings/types.ts DEFAULT_SETTINGS.
- * The CI check-settings-registry script will catch drift.
+ * Base defaults sourced directly from DEFAULT_SETTINGS to avoid drift.
+ * src/settings/types.ts has no Obsidian dependency, so this import is safe
+ * in the screenshot (WDIO) context.
  */
-export const BASE: DailyDigestSettings = {
-	dailyFolder: "daily",
-	filenameTemplate: "YYYY-MM-DD",
-	promptBudget: 3000,
-	maxVisitsPerDomain: 5,
-	browserConfigs: [],
-	aiModel: "claude-haiku-4-5",
-	profile: "",
-	enableAI: false,
-	aiProvider: "local",
-	localEndpoint: "http://localhost:11434",
-	localModel: "",
-	enableBrowser: false,
-	enableClaude: false,
-	claudeSessionsDir: "~/.claude/projects",
-	enableCodex: false,
-	codexSessionsDir: "~/.codex/sessions",
-	enableClassification: false,
-	classificationModel: "",
-	classificationBatchSize: 8,
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
-	enableSanitization: true,
-	sanitizationLevel: "standard",
-	excludedDomains: "",
-	redactPaths: true,
-	scrubEmails: true,
-	enableSensitivityFilter: false,
-	sensitivityCategories: [],
-	sensitivityCustomDomains: "",
-	sensitivityAction: "exclude",
-	enableGit: false,
-	gitParentDir: "",
-	enablePatterns: false,
-	patternCooccurrenceWindow: 30,
-	patternMinClusterSize: 3,
-	trackRecurrence: true,
-	promptStrategy: "monolithic-json",
-	promptsDir: "",
-	hasCompletedOnboarding: false,
-	privacyConsentVersion: 0,
-	debugMode: false,
-};
+export const BASE: DailyDigestSettings = DEFAULT_SETTINGS;
 
 /** Realistic mock browser profiles for the browser detection screenshot. */
 const MOCK_BROWSER_CONFIGS: BrowserInstallConfig[] = [

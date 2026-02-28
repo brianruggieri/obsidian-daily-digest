@@ -13,9 +13,30 @@ import { SETTINGS_REGISTRY } from "../src/settings-registry";
 import { DEFAULT_SETTINGS } from "../src/settings/types";
 
 const settingsKeys = new Set(Object.keys(DEFAULT_SETTINGS));
-const registryKeys = new Set(SETTINGS_REGISTRY.map((m) => m.key));
+const registryKeyList = SETTINGS_REGISTRY.map((m) => m.key);
+const registryKeys = new Set(registryKeyList);
 
 let ok = true;
+
+// Check for duplicate keys in the registry — Set construction silently
+// deduplicates, so we must scan the raw list to catch duplicates explicitly.
+const seen = new Set<string>();
+const duplicates: string[] = [];
+for (const key of registryKeyList) {
+	if (seen.has(key)) {
+		duplicates.push(key);
+	} else {
+		seen.add(key);
+	}
+}
+if (duplicates.length > 0) {
+	console.error(
+		`❌ Duplicate keys in SETTINGS_REGISTRY (${duplicates.length}):\n` +
+		duplicates.map((k) => `   - ${k}`).join("\n") +
+		"\n\nEach key must appear exactly once in src/settings-registry.ts."
+	);
+	ok = false;
+}
 
 // Check for keys in DailyDigestSettings that are missing from the registry.
 const missing = [...settingsKeys].filter((k) => !registryKeys.has(k));

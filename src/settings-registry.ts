@@ -21,10 +21,10 @@ export type SettingType =
 
 export type SettingSection =
 	| "General"
-	| "Data Sources"
-	| "Privacy & Filtering"
-	| "AI Summarization"
-	| "Advanced AI"
+	| "Data sources"
+	| "Privacy & filtering"
+	| "AI summarization"
+	| "Advanced AI processing"
 	| "Meta";
 
 export interface SettingMeta {
@@ -69,7 +69,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		defaultValue: "YYYY-MM-DD",
 	},
 
-	// ── Data Sources ─────────────────────────────────────────────────────────
+	// ── Data sources ─────────────────────────────────────────────────────────
 	{
 		key: "promptBudget",
 		label: "Prompt detail budget",
@@ -77,7 +77,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Target token budget for the data section of AI prompts. Higher values " +
 			"include more detail but consume more context window. Activity is " +
 			"compressed proportionally to fit within this budget.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "slider",
 		defaultValue: "3000",
 	},
@@ -87,7 +87,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Maximum number of unique page visits shown per domain in the daily note. " +
 			"Higher values give more detail; lower values keep notes concise.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "slider",
 		defaultValue: "5",
 	},
@@ -97,7 +97,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Collect browser history from installed browsers via local SQLite databases. " +
 			"Only reads History files — passwords, cookies, and payment data are never accessed.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "boolean",
 		defaultValue: "false",
 		privacyNote:
@@ -111,7 +111,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Per-browser, per-profile configuration. Populated when the user clicks " +
 			"'Detect Browsers & Profiles'. Each browser can be enabled/disabled " +
 			"independently; individual profiles can be included or excluded.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "internal",
 		defaultValue: "[]",
 	},
@@ -121,7 +121,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Collect Claude Code session summaries from local JSONL files. " +
 			"Reads project names and session summaries only — never the full conversation.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "boolean",
 		defaultValue: "false",
 		privacyNote:
@@ -134,7 +134,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Path to the directory containing Claude Code session logs. " +
 			"Supports ~ for the home directory.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "string",
 		defaultValue: "~/.claude/projects",
 		dependsOn: "enableClaude",
@@ -145,7 +145,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Collect Codex CLI session summaries from local JSONL files. " +
 			"Reads session metadata and summaries only — no API key required.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "boolean",
 		defaultValue: "false",
 		privacyNote:
@@ -158,7 +158,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Path to the directory containing Codex CLI session logs. " +
 			"Supports ~ for the home directory.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "string",
 		defaultValue: "~/.codex/sessions",
 		dependsOn: "enableCodex",
@@ -169,7 +169,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Collect recent git commits from repositories in the configured parent directory. " +
 			"Scans one directory level deep for .git folders.",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "boolean",
 		defaultValue: "false",
 		privacyNote:
@@ -183,13 +183,13 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Parent directory containing your git repositories. The plugin scans one " +
 			"level deep for .git directories. Supports ~ for the home directory " +
 			"(e.g. ~/git or ~/projects).",
-		section: "Data Sources",
+		section: "Data sources",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableGit",
 	},
 
-	// ── Privacy & Filtering ──────────────────────────────────────────────────
+	// ── Privacy & filtering ──────────────────────────────────────────────────
 	{
 		key: "enableSanitization",
 		label: "Enable sanitization",
@@ -197,7 +197,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Scrub sensitive tokens, auth parameters, email addresses, and IP addresses " +
 			"from all collected data before AI processing or vault storage. " +
 			"Highly recommended when using the Anthropic API.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
@@ -208,7 +208,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Standard: strip tokens, sensitive URL parameters, emails, and IP addresses. " +
 			"Aggressive: also reduces URLs to domain + path only, removing all query strings.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "select",
 		defaultValue: "standard",
 		dependsOn: "enableSanitization",
@@ -220,7 +220,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
 			"matches any domain containing that text (mybank.com, us.mybank.com, etc.). " +
 			"For exact domain matching or path-based filtering, use Custom Sensitive Domains instead.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableSanitization",
@@ -230,7 +230,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		label: "Redact file paths",
 		description:
 			"Replace absolute home directory paths (/Users/you/...) with ~/ in all output.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
@@ -240,7 +240,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		key: "scrubEmails",
 		label: "Redact email addresses",
 		description: "Replace email addresses with [EMAIL] in all output.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
@@ -254,7 +254,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"(419+ domains across 11 categories). Works like an adblock list for your " +
 			"daily notes — prevents embarrassing or private domains from appearing in " +
 			"your activity log.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "boolean",
 		defaultValue: "false",
 	},
@@ -264,7 +264,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Exclude: remove matching visits entirely from the note. " +
 			"Redact: keep the visit but replace the URL and title with a category label.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "select",
 		defaultValue: "exclude",
 		dependsOn: "enableSensitivityFilter",
@@ -276,7 +276,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Which categories of sensitive domains to filter. " +
 			"Available categories: adult, gambling, dating, health, drugs, finance, " +
 			"weapons, piracy, vpn_proxy, job_search, social_personal.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "internal",
 		defaultValue: "[]",
 		dependsOn: "enableSensitivityFilter",
@@ -289,7 +289,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Subdomains are matched automatically — adding example.com also matches " +
 			"sub.example.com. Supports path prefixes (e.g. reddit.com/r/subreddit). " +
 			"These domains follow the filter action setting (exclude or redact).",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "textarea",
 		defaultValue: "",
 		dependsOn: "enableSensitivityFilter",
@@ -300,12 +300,12 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
 			"For development use only.",
-		section: "Privacy & Filtering",
+		section: "Privacy & filtering",
 		type: "boolean",
 		defaultValue: "false",
 	},
 
-	// ── AI Summarization ─────────────────────────────────────────────────────
+	// ── AI summarization ─────────────────────────────────────────────────────
 	{
 		key: "enableAI",
 		label: "Enable AI summaries",
@@ -313,7 +313,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Use an AI model to generate daily summaries, themes, and reflections. " +
 			"Choose a local model to keep all data on your machine, or Anthropic's API " +
 			"for cloud-based summarization.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "boolean",
 		defaultValue: "false",
 	},
@@ -323,7 +323,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Context hint for AI summaries (e.g. 'software engineer at a SaaS startup'). " +
 			"Helps the model tailor the summary to your role.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableAI",
@@ -335,7 +335,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Local: runs on your machine via Ollama, LM Studio, or any OpenAI-compatible " +
 			"server — no data leaves your computer. " +
 			"Anthropic: sends sanitized activity data to api.anthropic.com for processing.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "select",
 		defaultValue: "local",
 		dependsOn: "enableAI",
@@ -350,7 +350,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"URL of your local inference server. Ollama defaults to http://localhost:11434, " +
 			"LM Studio to http://localhost:1234. Must expose an OpenAI-compatible " +
 			"/v1/chat/completions endpoint.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "string",
 		defaultValue: "http://localhost:11434",
 		dependsOn: "enableAI",
@@ -361,7 +361,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Model name to use with the local server (e.g. qwen2.5:14b-instruct, llama3.2). " +
 			"Click 'Detect' to query your server for available models.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableAI",
@@ -371,7 +371,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		label: "Anthropic model",
 		description:
 			"Anthropic model to use for summarization when the Anthropic provider is selected.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "select",
 		defaultValue: "claude-haiku-4-5",
 		dependsOn: "enableAI",
@@ -382,7 +382,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Path to a directory containing custom prompt templates " +
 			"(standard.txt, rag.txt, etc.). Leave empty to use the built-in prompts.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableAI",
@@ -394,13 +394,13 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"monolithic-json: sends all activity as a structured JSON object in a single " +
 			"prompt — best for most models. " +
 			"single-prose: sends activity as natural language prose — may suit some models better.",
-		section: "AI Summarization",
+		section: "AI summarization",
 		type: "select",
 		defaultValue: "monolithic-json",
 		dependsOn: "enableAI",
 	},
 
-	// ── Advanced AI ──────────────────────────────────────────────────────────
+	// ── Advanced AI processing ───────────────────────────────────────────────
 	{
 		key: "enableRAG",
 		label: "Enable RAG chunking",
@@ -409,7 +409,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"most relevant context for summarization. Improves quality with large datasets " +
 			"and small context window models. Requires a local model server with an " +
 			"embedding model.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "boolean",
 		defaultValue: "false",
 		dependsOn: "enableAI",
@@ -423,7 +423,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Model for generating embeddings (e.g. nomic-embed-text, all-minilm, " +
 			"mxbai-embed-large). Must be available on your local server.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "string",
 		defaultValue: "nomic-embed-text",
 		dependsOn: "enableRAG",
@@ -434,7 +434,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Number of most-relevant chunks to include in the AI prompt. " +
 			"Higher values provide more context but increase latency. 6–10 is a good range.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "8",
 		dependsOn: "enableRAG",
@@ -447,7 +447,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"topics, entities, intent) using a local LLM. " +
 			"When Anthropic is the AI provider, only these abstractions are sent " +
 			"externally — never raw URLs, search queries, or commands.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "boolean",
 		defaultValue: "false",
 		dependsOn: "enableAI",
@@ -461,7 +461,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Local model for event classification. Leave blank to use the same model " +
 			"as AI summarization. Recommended: qwen2.5:7b-instruct.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableClassification",
@@ -472,7 +472,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Number of events per classification batch. Larger batches are faster " +
 			"but may reduce accuracy.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "8",
 		dependsOn: "enableClassification",
@@ -484,7 +484,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Extract temporal clusters, topic co-occurrences, entity relations, " +
 			"and recurrence signals from classified events. Adds focus scores, " +
 			"topic maps, and knowledge delta analysis to your daily notes.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "boolean",
 		defaultValue: "false",
 		dependsOn: "enableClassification",
@@ -497,7 +497,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Time window in minutes for detecting topic co-occurrences. " +
 			"Events within the same window are considered related.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "30",
 		dependsOn: "enablePatterns",
@@ -508,7 +508,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Minimum number of events required to form a temporal cluster. " +
 			"Lower values detect more clusters but may include noise.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "3",
 		dependsOn: "enablePatterns",
@@ -520,7 +520,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Persist topic history across days to detect recurring interests, " +
 			"returning topics, and rising trends. Stored locally in your vault " +
 			"under .daily-digest/topic-history.json.",
-		section: "Advanced AI",
+		section: "Advanced AI processing",
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
