@@ -1,7 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePromptAndTier, summarizeDay } from "../../../src/summarize/summarize";
 import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
 import type { AICallConfig } from "../../../src/summarize/ai-client";
+
+vi.mock("../../../src/summarize/ai-client", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../../src/summarize/ai-client")>();
+	return { ...actual, callAI: vi.fn() };
+});
 
 const DATE = new Date("2025-06-15T00:00:00");
 
@@ -23,6 +28,9 @@ function makeEvent(overrides: Partial<StructuredEvent> = {}): StructuredEvent {
 
 describe("summarizeDay empty-activity guard", () => {
 	it("returns empty summary without calling AI when no activity data", async () => {
+		const { callAI } = await import("../../../src/summarize/ai-client");
+		vi.mocked(callAI).mockClear();
+
 		const config: AICallConfig = {
 			provider: "local",
 			localEndpoint: "http://localhost:11434",
@@ -35,6 +43,9 @@ describe("summarizeDay empty-activity guard", () => {
 		expect(result.tldr).toBe("");
 		expect(result.themes).toEqual([]);
 		expect(result.notable).toEqual([]);
+		expect(result.category_summaries).toEqual({});
+		expect(result.questions).toEqual([]);
+		expect(callAI).not.toHaveBeenCalled();
 	});
 });
 
