@@ -1,4 +1,4 @@
-import { AISummary, slugifyQuestion } from "../types";
+import { AISummary, ReflectionPrompt, slugifyQuestion } from "../types";
 
 /**
  * Heading-to-AISummary field mapping.
@@ -38,6 +38,31 @@ const LIST_FIELDS = new Set<keyof AISummary>([
 	"topics",
 	"entities",
 ]);
+
+/**
+ * Parse tagged reflections from prose: `- **theme-slug**: Observation. Question?`
+ * Returns ReflectionPrompt[] with theme as id and text as question.
+ */
+const TAGGED_REFLECTION_RE = /^\s*[-*•]\s*\*\*([a-z0-9][-a-z0-9]*)\*\*:\s*(.+)$/;
+
+function parseTaggedReflections(text: string): ReflectionPrompt[] {
+	const prompts: ReflectionPrompt[] = [];
+	const seen = new Set<string>();
+	for (const line of text.split("\n")) {
+		const match = line.match(TAGGED_REFLECTION_RE);
+		if (match) {
+			let id = match[1];
+			const base = id;
+			let n = 2;
+			while (seen.has(id)) {
+				id = `${base}_${n++}`;
+			}
+			seen.add(id);
+			prompts.push({ id, question: match[2].trim() });
+		}
+	}
+	return prompts;
+}
 
 /**
  * Parse a bullet list from markdown text.
@@ -123,8 +148,17 @@ export function parseProseSections(raw: string): AISummary {
 		}
 	}
 
-	// Derive structured prompts from questions (same logic as JSON path)
-	if (summary.questions?.length) {
+	// Derive structured prompts — prefer new "reflections" heading over legacy "questions"
+	const reflectionsContent = sections["reflections"];
+	if (reflectionsContent) {
+		const tagged = parseTaggedReflections(reflectionsContent);
+		if (tagged.length > 0) {
+			summary.prompts = tagged;
+		}
+	}
+
+	if (!summary.prompts && summary.questions?.length) {
+		// Legacy fallback: derive IDs from question text
 		const seen = new Set<string>();
 		summary.prompts = summary.questions.map((q) => {
 			let id = slugifyQuestion(q);
