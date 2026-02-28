@@ -7,10 +7,10 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 ## Table of Contents
 
 - [⚙️ General](#general) (2 settings)
-- [🗄️ Data Sources](#data-sources) (10 settings)
-- [🛡️ Privacy & Filtering](#privacy-filtering) (10 settings)
-- [✨ AI Summarization](#ai-summarization) (8 settings)
-- [🧠 Advanced AI](#advanced-ai) (10 settings)
+- [🗄️ Data sources](#data-sources) (10 settings)
+- [🛡️ Privacy & filtering](#privacy-filtering) (10 settings)
+- [✨ AI summarization](#ai-summarization) (8 settings)
+- [🧠 Advanced AI processing](#advanced-ai-processing) (10 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -33,7 +33,7 @@ Date format for daily note filenames. Supports YYYY, MM, DD tokens (e.g. YYYY-MM
 - **Type:** Text
 - **Default:** `YYYY-MM-DD`
 
-## 🗄️ Data Sources
+## 🗄️ Data sources
 
 ### `promptBudget`
 
@@ -132,7 +132,7 @@ Parent directory containing your git repositories. The plugin scans one level de
 - **Default:** *(empty)*
 - **Visible when:** `enableGit` is enabled
 
-## 🛡️ Privacy & Filtering
+## 🛡️ Privacy & filtering
 
 ### `enableSanitization`
 
@@ -234,7 +234,7 @@ Enables the 'Inspect pipeline stage' command for per-stage data inspection. For 
 - **Type:** Toggle
 - **Default:** `false`
 
-## ✨ AI Summarization
+## ✨ AI summarization
 
 ### `enableAI`
 
@@ -316,7 +316,7 @@ monolithic-json: sends all activity as a structured JSON object in a single prom
 - **Default:** `monolithic-json`
 - **Visible when:** `enableAI` is enabled
 
-## 🧠 Advanced AI
+## 🧠 Advanced AI processing
 
 ### `enableRAG`
 
