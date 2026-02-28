@@ -157,13 +157,14 @@ export class ProviderComparator {
 
 	/**
 	 * Assess whether a focus score is reasonable for a given persona.
+	 * Scores are on the compressed sigmoid scale (0.30-0.98, typical days 55-80%).
 	 *
 	 * Persona-specific ranges (examples):
-	 *   - "focused-dev": 0.7-0.9 is reasonable, 0.5-0.7 is partial, <0.5 is unreasonable
-	 *   - "unfocused-dev": 0.3-0.6 is reasonable, 0.15-0.3 is partial
+	 *   - "focused-dev": 0.75-0.95 is reasonable, 0.60-0.75 is partial, <0.60 is unreasonable
+	 *   - "unfocused-dev": 0.45-0.65 is reasonable, 0.35-0.45 is partial
 	 *   - "productive-dev": 0.75-0.95 is reasonable
 	 *
-	 * For unknown personas, use conservative heuristic: 0.4-0.85 is reasonable.
+	 * For unknown personas, use conservative heuristic: 0.50-0.90 is reasonable.
 	 */
 	private assessFocusScoreReasonableness(
 		focusScore: number,
@@ -171,29 +172,29 @@ export class ProviderComparator {
 	): "reasonable" | "partial" | "unreasonable" {
 		const personaLower = persona.toLowerCase();
 
-		// Persona-specific rules
+		// Persona-specific rules (compressed scale: typical days land in 55-80%)
 		if (personaLower.includes("focused")) {
-			if (focusScore >= 0.7) return "reasonable";
-			if (focusScore >= 0.5) return "partial";
+			if (focusScore >= 0.75) return "reasonable";
+			if (focusScore >= 0.60) return "partial";
 			return "unreasonable";
 		}
 
 		if (personaLower.includes("unfocused")) {
-			if (focusScore >= 0.3 && focusScore <= 0.65) return "reasonable";
-			if (focusScore >= 0.15) return "partial";
+			if (focusScore >= 0.45 && focusScore <= 0.65) return "reasonable";
+			if (focusScore >= 0.35) return "partial";
 			return "unreasonable";
 		}
 
 		if (personaLower.includes("productive")) {
 			if (focusScore >= 0.75) return "reasonable";
-			if (focusScore >= 0.6) return "partial";
+			if (focusScore >= 0.65) return "partial";
 			return "unreasonable";
 		}
 
-		// Default heuristic: 0.4-0.85 is reasonable
-		if (focusScore >= 0.4 && focusScore <= 0.85) return "reasonable";
-		if (focusScore >= 0.2 && focusScore < 0.4) return "partial";
-		if (focusScore > 0.85) return "partial";
+		// Default heuristic: 0.50-0.90 is reasonable (compressed scale)
+		if (focusScore >= 0.50 && focusScore <= 0.90) return "reasonable";
+		if (focusScore >= 0.35 && focusScore < 0.50) return "partial";
+		if (focusScore > 0.90) return "partial";
 		return "unreasonable";
 	}
 

@@ -7,6 +7,7 @@ import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, loadProseTemplate, fillTemplate, PromptCapability } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
 import { PromptStrategy } from "../settings/types";
+import { getFocusLabel } from "../analyze/patterns";
 import * as log from "../plugin/log";
 
 // ── Prompt builder & summarizer ─────────────────────────
@@ -48,7 +49,7 @@ export function buildPrompt(
 	});
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
+		? getFocusLabel(focusScore).toLowerCase()
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -87,7 +88,7 @@ function buildCompressedPrompt(
 	});
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
+		? getFocusLabel(focusScore).toLowerCase()
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -131,7 +132,7 @@ function buildRAGPrompt(
 		.join("\n\n");
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
+		? getFocusLabel(focusScore).toLowerCase()
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -165,7 +166,7 @@ export function buildClassifiedPrompt(
 	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
 
 	const focusLabel = focusScore !== undefined
-		? (focusScore >= 0.7 ? "highly focused" : focusScore >= 0.5 ? "moderately focused" : focusScore >= 0.3 ? "varied" : "widely scattered")
+		? getFocusLabel(focusScore).toLowerCase()
 		: "";
 	const focusHint = focusScore !== undefined
 		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
@@ -320,13 +321,7 @@ export function buildDeidentifiedPrompt(
 		: "unknown";
 
 	// ── Focus label ──
-	const focusLabel = patterns.focusScore >= 0.7
-		? "highly focused"
-		: patterns.focusScore >= 0.5
-			? "moderately focused"
-			: patterns.focusScore >= 0.3
-				? "varied"
-				: "widely scattered";
+	const focusLabel = getFocusLabel(patterns.focusScore).toLowerCase();
 
 	const vars: Record<string, string> = {
 		dateStr,
@@ -422,10 +417,7 @@ export function buildUnifiedPrompt(
 			delta.novelEntities.length > 0 ? `  New entities: ${delta.novelEntities.join(", ")}` : null,
 			delta.connections.length > 0 ? `  Cross-connections: ${delta.connections.join("; ")}` : null,
 		].filter(Boolean).join("\n") || "  None.";
-		const focusLabel = patterns.focusScore >= 0.7 ? "highly focused"
-			: patterns.focusScore >= 0.5 ? "moderately focused"
-			: patterns.focusScore >= 0.3 ? "varied"
-			: "widely scattered";
+		const focusLabel = getFocusLabel(patterns.focusScore).toLowerCase();
 		const peakStr = patterns.peakHours.length > 0
 			? patterns.peakHours.slice(0, 3).map((p) => {
 				const h = p.hour;
@@ -899,10 +891,7 @@ export function buildProsePrompt(
 
 	// Layer 1: Statistical patterns summary
 	if (patterns) {
-		const focusLabel = patterns.focusScore >= 0.7 ? "highly focused"
-			: patterns.focusScore >= 0.5 ? "moderately focused"
-			: patterns.focusScore >= 0.3 ? "varied"
-			: "widely scattered";
+		const focusLabel = getFocusLabel(patterns.focusScore).toLowerCase();
 		const activityDist = patterns.topActivityTypes
 			.map((a) => `  ${a.type}: ${a.count} events (${a.pct}%)`)
 			.join("\n");

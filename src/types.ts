@@ -382,7 +382,7 @@ export interface PatternAnalysis {
 	entityRelations: EntityRelation[];
 	recurrenceSignals: RecurrenceSignal[];
 	knowledgeDelta: KnowledgeDelta;
-	focusScore: number;          // 0.0-1.0, higher = more focused day
+	focusScore: number;          // 0.30-0.98 compressed (0 = empty input sentinel), higher = more focused day
 	activityConcentrationScore: number; // 0.0-1.0 fraction of events in dominant activity type (1.0 = all one type; 0.25 = evenly spread across 4)
 	topActivityTypes: { type: ActivityType; count: number; pct: number }[];
 	peakHours: { hour: number; count: number }[];

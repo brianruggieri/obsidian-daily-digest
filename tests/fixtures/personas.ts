@@ -104,8 +104,8 @@ export function softwareEngineerDeepWork(date?: Date): PersonaOutput {
 		}),
 		expectedThemes: ["plugin development", "testing", "PR workflow", "debugging", "code review"],
 		expectedActivityTypes: ["implementation", "debugging", "communication"],
-		expectedFocusRange: [0.02, 0.10],  // Real dev work is scattered across many contexts
-		narrative: "A software developer's day heavy on Claude Code usage. 50 Claude sessions split across two projects — a mix of coding prompts and short conversational commands (build/test/deploy, PR reviews, branch cleanup). Only 20 browser visits to GitHub, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 21 git commits including merge commits from PR workflow across 3 repos. Low focus score (2-10%) reflects context switching between multiple PRs, code reviews, and debugging sessions.",
+		expectedFocusRange: [0.35, 0.55],  // Scattered topics but concentrated activity types push score up via sigmoid
+		narrative: "A software developer's day heavy on Claude Code usage. 50 Claude sessions split across two projects — a mix of coding prompts and short conversational commands (build/test/deploy, PR reviews, branch cleanup). Only 20 browser visits to GitHub, Stack Overflow, and MDN docs — most problem-solving happens in Claude. 21 git commits including merge commits from PR workflow across 3 repos. Low-moderate focus score (35-55%) reflects context switching between multiple PRs, code reviews, and debugging sessions — blended with category concentration and sigmoid-compressed.",
 	};
 }
 
@@ -207,7 +207,7 @@ export function productManagerMeetings(date?: Date): PersonaOutput {
 		git: [],
 		expectedThemes: ["product strategy", "design review", "user metrics", "meetings", "roadmap"],
 		expectedActivityTypes: ["browsing", "communication", "admin", "planning"],
-		expectedFocusRange: [0.1, 0.35],
+		expectedFocusRange: [0.32, 0.50],  // Many topics + many activity types, sigmoid floor prevents sub-0.30
 		narrative: "A product manager's meeting-heavy day. Morning packed with 1:1s, design reviews, and cross-team syncs. Constant context switching between Figma wireframes, Notion PRDs, Amplitude dashboards, and Slack threads. Quick Amazon shopping at lunch. Afternoon catching up on async work: writing user stories, analyzing funnel data, and prepping the roadmap for next sprint.",
 	};
 }
@@ -263,7 +263,7 @@ export function devopsIncidentDay(date?: Date): PersonaOutput {
 		}),
 		expectedThemes: ["incident response", "Kubernetes", "OOMKilled", "monitoring", "postmortem"],
 		expectedActivityTypes: ["infrastructure", "debugging", "communication"],
-		expectedFocusRange: [0.4, 0.7],
+		expectedFocusRange: [0.45, 0.70],  // Incident response is fairly focused on one activity type
 		narrative: "A DevOps engineer paged at 6am for a production API outage. Morning consumed by incident response: Grafana dashboards, PagerDuty timelines, kubectl commands, CloudWatch logs. Root cause: OOMKilled pods from a memory leak. Afternoon writing the postmortem, deploying a hotfix with increased memory limits, and tuning alerting thresholds. Heavy shell usage throughout — 60 commands. Used Claude for error trace analysis and postmortem drafting.",
 	};
 }
@@ -322,7 +322,7 @@ export function studentExamPrep(date?: Date): PersonaOutput {
 		}),
 		expectedThemes: ["algorithms", "data structures", "exam prep", "dynamic programming", "graph algorithms"],
 		expectedActivityTypes: ["learning", "research", "browsing"],
-		expectedFocusRange: [0.3, 0.6],
+		expectedFocusRange: [0.38, 0.60],  // Fragmented study topics, but learning/research activity types cluster
 		narrative: "A CS student cramming for their algorithms final. Jumping between Khan Academy, GeeksforGeeks, YouTube lectures (MIT 6.006, Abdul Bari), and Quizlet flashcards. LeetCode practice for hands-on coding. Frequent Reddit and Discord breaks for study group coordination. Heavy Claude usage — 15 prompts asking for algorithm explanations, step-by-step walkthroughs, and help with homework problems. Highest visit count (250) reflecting the fragmented nature of exam prep.",
 	};
 }
@@ -397,7 +397,7 @@ export function freelancerMultiProject(date?: Date): PersonaOutput {
 		}),
 		expectedThemes: ["React", "WordPress", "client work", "invoicing", "multi-project"],
 		expectedActivityTypes: ["implementation", "admin", "communication", "writing"],
-		expectedFocusRange: [0.2, 0.5],
+		expectedFocusRange: [0.35, 0.55],  // Multi-project juggling, sigmoid floor prevents sub-0.30
 		narrative: "A freelance developer's typical juggling act across 3 client projects plus a personal blog. Morning heads-down on Client A's React dashboard (SSR hydration fix). After lunch, switches to Client B's WordPress theme update. Evening wraps up with Client C invoicing on FreshBooks and drafting a blog post about React Server Components. Shell history shows 3 distinct project contexts. Claude sessions spread across all projects. Lots of Slack workspace switching.",
 	};
 }

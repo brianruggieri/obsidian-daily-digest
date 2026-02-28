@@ -264,10 +264,10 @@ function validateQualityMetrics(output: ClaudeFixtureOutput, personaName: string
 	if (output.focus_score === undefined) {
 		issues.push("Missing focus_score");
 		score *= 0.9;
-	} else if (output.focus_score < 0.2 && personaName.includes("Deep Work")) {
+	} else if (output.focus_score < 0.50 && personaName.includes("Deep Work")) {
 		issues.push("Focus score suspiciously low for deep work persona");
 		score *= 0.85;
-	} else if (output.focus_score > 0.5 && personaName.includes("Scattered")) {
+	} else if (output.focus_score > 0.65 && personaName.includes("Scattered")) {
 		issues.push("Focus score suspiciously high for scattered persona");
 		score *= 0.85;
 	}

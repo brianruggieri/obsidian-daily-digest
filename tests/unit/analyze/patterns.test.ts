@@ -228,19 +228,22 @@ describe("entity relations", () => {
 
 describe("focus score", () => {
 	it("high focus when all events have same topic", () => {
+		// topicFocus=1.0, categoryConc=1.0 -> blended=1.0, compressed~0.98
 		const events = Array.from({ length: 10 }, () =>
 			makeEvent({ topics: ["React"] })
 		);
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
-		expect(result.focusScore).toBeGreaterThanOrEqual(0.9);
+		expect(result.focusScore).toBeGreaterThanOrEqual(0.95);
 	});
 
 	it("low focus when events have many different topics", () => {
+		// topicFocus~0 (high entropy), categoryConc=1.0 (all same activityType)
+		// blended=0.4, compressed~0.54
 		const events = Array.from({ length: 10 }, (_, i) =>
 			makeEvent({ topics: [`topic-${i}`] })
 		);
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
-		expect(result.focusScore).toBeLessThan(0.3);
+		expect(result.focusScore).toBeLessThan(0.60);
 	});
 
 	it("returns 0 for empty events", () => {
@@ -249,16 +252,15 @@ describe("focus score", () => {
 	});
 
 	it("intermediate focus for mixed topics", () => {
-		// 7 React + 3 DevOps: Shannon entropy ~0.88 out of max log2(2)=1.0
-		// focus = 1 - (0.88/1.0) ≈ 0.12 — still relatively low because only 2 topics
+		// 7 React + 3 DevOps: topicFocus~0.12, categoryConc=1.0 (all "research")
+		// blended~0.47, compressed~0.61
 		const events = [
 			...Array.from({ length: 7 }, () => makeEvent({ topics: ["React"] })),
 			...Array.from({ length: 3 }, () => makeEvent({ topics: ["DevOps"] })),
 		];
 		const result = extractPatterns(makeClassification(events), baseConfig, buildEmptyTopicHistory(), TODAY);
-		// With 2 topics at 70/30 split, entropy is high relative to max; focus is modest
-		expect(result.focusScore).toBeGreaterThan(0.05);
-		expect(result.focusScore).toBeLessThan(0.5);
+		expect(result.focusScore).toBeGreaterThan(0.55);
+		expect(result.focusScore).toBeLessThan(0.70);
 	});
 });
 
