@@ -353,27 +353,6 @@ export function renderMarkdown(
 		lines.push("");
 	}
 
-	// ── Reflection (open heading, Dataview fields) ─
-	if (prompts.length) {
-		lines.push("## \u{1FA9E} Reflection");
-		lines.push("");
-		for (const p of prompts) {
-			lines.push(`### ${escapeForMarkdown(p.question)}`);
-			lines.push(`answer_${p.id}:: `);
-			lines.push("");
-		}
-	} else if (aiSummary?.questions?.length) {
-		// Fallback: plain questions without structured IDs
-		lines.push("## \u{1FA9E} Reflection");
-		lines.push("");
-		for (const q of aiSummary.questions) {
-			const id = slugifyQuestion(q);
-			lines.push(`### ${escapeForMarkdown(q)}`);
-			lines.push(`answer_${id}:: `);
-			lines.push("");
-		}
-	}
-
 	// ══════════════════════════════════════════════
 	// LAYER 3 — "Archive" (all raw data, collapsed)
 	// ══════════════════════════════════════════════
@@ -570,36 +549,6 @@ export function renderMarkdown(
 	// ── Knowledge Insights (no-AI mode: open headings) ─
 	if (knowledge && !aiSummary) {
 		renderKnowledgeInsights(lines, knowledge, false);
-	}
-
-	// ── Learnings ────────────────────────────────
-	if (aiSummary?.learnings?.length) {
-		lines.push("## \u{1F4DA} Learnings");
-		lines.push("");
-		for (const item of aiSummary.learnings) {
-			lines.push(`- ${escapeForMarkdown(item)}`);
-		}
-		lines.push("");
-	}
-
-	// ── Remember ─────────────────────────────────
-	if (aiSummary?.remember?.length) {
-		lines.push("## \u{1F5D2}\uFE0F Remember");
-		lines.push("");
-		for (const item of aiSummary.remember) {
-			lines.push(`- ${escapeForMarkdown(item)}`);
-		}
-		lines.push("");
-	}
-
-	// ── Note Seeds ───────────────────────────────
-	if (aiSummary?.note_seeds?.length) {
-		lines.push("## \u{1F331} Note Seeds");
-		lines.push("");
-		for (const seed of aiSummary.note_seeds) {
-			lines.push(`- [[${escapeForMarkdown(seed)}]]`);
-		}
-		lines.push("");
 	}
 
 	// ── Reflection ───────────────────────────────
