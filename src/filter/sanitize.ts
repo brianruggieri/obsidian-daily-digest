@@ -95,6 +95,19 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 		/\b[0-9a-f]{40,}\b/gi,
 		"[HEX_TOKEN_REDACTED]",
 	],
+	// Credit card numbers (major networks: Visa, MasterCard, Amex, Discover).
+	// Uses network-specific prefixes to avoid false positives on timestamps, build
+	// numbers, and other benign digit sequences.
+	// Ref: https://www.regular-expressions.info/creditcard.html
+	[
+		/\b(?:4\d{3}|5[1-5]\d{2}|6(?:011|5\d{2})|3[47]\d{2}|3(?:0[0-5]|[68]\d)\d)[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b/g,
+		"[CREDIT_CARD_REDACTED]",
+	],
+	// US Social Security Numbers (NNN-NN-NNNN)
+	[
+		/\b\d{3}-\d{2}-\d{4}\b/g,
+		"[SSN_REDACTED]",
+	],
 ];
 
 // ── URL Sanitization ─────────────────────────────────────
@@ -220,7 +233,7 @@ function sanitizeBrowserVisit(
 ): BrowserVisit {
 	return {
 		...visit,
-		url: sanitizeUrl(visit.url),
+		url: scrubSecrets(sanitizeUrl(visit.url)),
 		title: scrubText(visit.title || "", config),
 	};
 }
@@ -263,10 +276,18 @@ function sanitizeClaudeSession(
 	};
 }
 
-function sanitizeGitCommit(commit: GitCommit, _config: SanitizeConfig): GitCommit {
+function sanitizeGitCommit(commit: GitCommit, config: SanitizeConfig): GitCommit {
+	let message = scrubSecrets(commit.message);
+	message = scrubIPs(message);
+	if (config.redactPaths) {
+		message = redactPaths(message);
+	}
+	if (config.scrubEmails) {
+		message = scrubEmails(message);
+	}
 	return {
 		...commit,
-		message: scrubSecrets(commit.message),
+		message,
 	};
 }
 
