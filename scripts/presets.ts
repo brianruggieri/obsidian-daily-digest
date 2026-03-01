@@ -52,6 +52,9 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	sensitivityCategories: ["adult", "gambling", "dating"] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 
+	// Rendering
+	enableTimeline: true,
+
 	// AI
 	promptsDir: "",
 	debugMode: false,
