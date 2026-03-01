@@ -10,7 +10,7 @@ import {
 	SEARCH_ENGINES,
 	EXCLUDE_DOMAINS,
 } from "../types";
-import { deduplicateVisits, DEDUP_DEFAULTS } from "../filter/dedup";
+import { canonicalKey, deduplicateVisits, DEDUP_DEFAULTS } from "../filter/dedup";
 
 function tmpPath(suffix: string): string {
 	return join(tmpdir(), `daily-digest-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`);
@@ -171,6 +171,59 @@ export function unwrapGoogleRedirect(rawUrl: string): string | null {
 	}
 }
 
+// ── Near-Duplicate Collapse ──────────────────────
+
+/**
+ * Round a timestamp to the nearest minute for grouping purposes.
+ * Two visits within the same 60-second window produce the same key suffix.
+ */
+function minuteKey(time: Date | null): number {
+	if (!time) return 0;
+	return Math.floor(time.getTime() / 60_000);
+}
+
+/**
+ * Collapse visits that share the same canonical URL within a 1-minute window.
+ * Keeps the entry with the best (longest cleaned) title.
+ *
+ * This catches duplicates that the exact-URL `seenUrls` check misses:
+ *   - Same path with different query strings or fragments
+ *   - www vs non-www variants
+ *   - Trailing-slash differences
+ *   - Chrome logging multiple visit types for one navigation
+ */
+export function collapseNearDuplicates(visits: BrowserVisit[]): BrowserVisit[] {
+	const groups = new Map<string, BrowserVisit[]>();
+
+	for (const v of visits) {
+		const key = `${canonicalKey(v.url)}|${minuteKey(v.time)}`;
+		const g = groups.get(key);
+		if (g) {
+			g.push(v);
+		} else {
+			groups.set(key, [v]);
+		}
+	}
+
+	const result: BrowserVisit[] = [];
+	for (const g of groups.values()) {
+		// Pick the entry with the best title
+		result.push(g.reduce((best, v) => {
+			const bl = cleanTitle(best.title ?? "").length || (best.title || "").length;
+			const vl = cleanTitle(v.title ?? "").length || (v.title || "").length;
+			if (vl > bl) return v;
+			if (vl === bl) {
+				const bt = best.time?.getTime() ?? Infinity;
+				const vt = v.time?.getTime() ?? Infinity;
+				return vt < bt ? v : best;
+			}
+			return best;
+		}));
+	}
+
+	return result;
+}
+
 // ── Browser History ──────────────────────────────
 
 function chromeEpochToDate(ts: number): Date {
@@ -284,8 +337,7 @@ export async function collectBrowserHistory(
 	const configs = settings.browserConfigs;
 	if (configs.length === 0) return { visits: [], searches: [] };
 
-	const allVisits: BrowserVisit[] = [];
-	const seenUrls = new Set<string>();
+	const rawVisits: BrowserVisit[] = [];
 
 	for (const browserConfig of configs) {
 		if (!browserConfig.enabled) continue;
@@ -295,9 +347,8 @@ export async function collectBrowserHistory(
 		);
 
 		for (const profile of enabledProfiles) {
-			let visits: BrowserVisit[] = [];
-
 			try {
+				let visits: BrowserVisit[] = [];
 				if (browserConfig.browserId === "safari") {
 					visits = await readSafariHistory(profile.historyPath, since);
 				} else if (browserConfig.browserId === "firefox") {
@@ -306,24 +357,25 @@ export async function collectBrowserHistory(
 					// Chromium: chrome, brave, edge
 					visits = await readChromiumHistory(profile.historyPath, since);
 				}
+				rawVisits.push(...visits);
 			} catch {
 				// If one profile fails, continue with others
 				continue;
 			}
-
-			for (const v of visits) {
-				if (!seenUrls.has(v.url)) {
-					seenUrls.add(v.url);
-					allVisits.push(v);
-				}
-			}
 		}
 	}
+
+	// Collapse near-duplicates: same canonical URL within 1-minute window.
+	// This catches dupes from Chrome logging multiple visit types for one
+	// navigation, synced profiles producing identical rows, and URL variants
+	// (query string, fragment, www vs non-www) at the same timestamp.
+	const allVisits = collapseNearDuplicates(rawVisits);
 
 	// Filter and extract searches
 	const clean: BrowserVisit[] = [];
 	const searches: SearchQuery[] = [];
 	const seenQueries = new Set<string>();
+	const seenCanonical = new Set<string>(allVisits.map((v) => canonicalKey(v.url)));
 
 	for (const v of allVisits) {
 		try {
@@ -340,8 +392,9 @@ export async function collectBrowserHistory(
 			// (destination already seen) or preserve the signal with the real URL.
 			const dest = unwrapGoogleRedirect(v.url);
 			if (dest !== null) {
-				if (!seenUrls.has(dest)) {
-					seenUrls.add(dest);
+				const destKey = canonicalKey(dest);
+				if (!seenCanonical.has(destKey)) {
+					seenCanonical.add(destKey);
 					clean.push({ ...v, url: dest });
 				}
 				continue;
