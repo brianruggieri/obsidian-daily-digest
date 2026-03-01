@@ -18,18 +18,19 @@ function tmpPath(suffix: string): string {
 
 // ── SQLite via sql.js (WebAssembly) ──────────────
 // Uses sql.js (SQLite compiled to WASM) — no native binaries, no CLI dependency,
-// works on macOS, Windows, and Linux. The wasm binary is bundled inline by esbuild.
+// works on macOS, Windows, and Linux. The WASM binary is shipped as a separate
+// file (sql-wasm.wasm) alongside main.js rather than inlined in the bundle,
+// keeping main.js ~600 KB smaller.
 
-// esbuild inlines the .wasm via binary loader; tsx scripts fall back to readFileSync.
 let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
 async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
 	if (_wasmBinary) return _wasmBinary;
 	try {
-		// @ts-expect-error — esbuild binary loader resolves .wasm to a Uint8Array default export
-		const { default: wasm } = await import("sql.js/dist/sql-wasm.wasm");
-		_wasmBinary = wasm as Uint8Array;
+		// CJS bundle (plugin context): __dirname is the plugin directory.
+		// sql-wasm.wasm is shipped alongside main.js in the plugin release.
+		_wasmBinary = readFileSync(join(__dirname, "sql-wasm.wasm"));
 	} catch {
-		// tsx scripts: load from disk at runtime
+		// ESM / tsx context (development scripts): fall back to node_modules.
 		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
 	}
 	return _wasmBinary;

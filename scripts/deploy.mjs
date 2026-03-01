@@ -116,6 +116,17 @@ mkdirSync(pluginDir, { recursive: true });
 const files = ["main.js", "manifest.json", "styles.css"];
 let copied = 0;
 
+// sql-wasm.wasm is not bundled into main.js — it is loaded at runtime from
+// the plugin directory. Copy it from node_modules so the plugin can find it.
+const WASM_SRC = join("node_modules", "sql.js", "dist", "sql-wasm.wasm");
+if (existsSync(WASM_SRC)) {
+	copyFileSync(WASM_SRC, join(pluginDir, "sql-wasm.wasm"));
+	console.log(`  sql-wasm.wasm → ${join(pluginDir, "sql-wasm.wasm")}`);
+	copied++;
+} else {
+	console.warn("  WARNING: sql-wasm.wasm not found — browser history collection will fail.");
+}
+
 for (const file of files) {
 	if (existsSync(file)) {
 		copyFileSync(file, join(pluginDir, file));
