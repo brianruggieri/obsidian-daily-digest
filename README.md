@@ -184,8 +184,8 @@ Tier 4 ─── De-identified ──── Only aggregated statistics. Zero per
 Tier 3 ─── Classified ─────── Structured abstractions only.
   │                            Activity types, topics, entities — no raw data.
   │
-Tier 2 ─── RAG ────────────── Selected relevant chunks from your activity.
-  │                            Subset of data, still contains raw content.
+Tier 2 ─── Compressed ─────── Budget-proportional activity summaries.
+  │                            Domain counts, top titles, and queries — no full URLs.
   │
 Tier 1 ─── Standard ────────── Full context (sanitized). All data types included.
             (Least private)     Used only with local models by default.
@@ -249,16 +249,6 @@ With classification enabled, Daily Digest can extract patterns from your day:
 
 All pattern extraction is local and statistical — no LLM calls, just math on the classified events.
 
-### RAG pipeline
-
-For users with local models, the RAG (Retrieval-Augmented Generation) pipeline improves summary quality:
-
-1. Activity data is split into focused chunks (by category, project, or batch)
-2. Chunks are embedded using a local embedding model
-3. The most relevant chunks are selected for the AI prompt
-
-This is especially useful when you have a lot of activity data but a model with a small context window.
-
 ### Dataview integration
 
 Reflection questions are rendered as inline fields:
@@ -319,11 +309,8 @@ All settings live in **Settings > Daily Digest** within Obsidian.
 | Browsers | Chrome, Brave, Firefox, Safari | Which browsers to scan |
 | AI provider | Local | Where AI processing happens |
 | AI model | Claude Haiku 4.5 | Which model to use (if Anthropic) |
-| Sanitization level | Standard | Standard or Aggressive URL cleaning |
 | Sensitivity filter | Off | Domain-level content filtering |
 | Classification | Off | Local LLM event classification |
-| Pattern extraction | Off | Statistical pattern analysis |
-| RAG pipeline | Off | Embedding-based context selection |
 
 See the settings panel for detailed descriptions of each option and inline setup guides for local models.
 

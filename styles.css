@@ -125,7 +125,7 @@
 
 .dd-preview-mono {
 	font-family: var(--font-monospace);
-	font-size: 0.8em !important;
+	font-size: 0.8em;
 }
 
 .dd-preview-excluded {
