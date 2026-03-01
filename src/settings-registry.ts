@@ -354,6 +354,18 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableAI",
 	},
 	{
+		key: "enablePromptPreview",
+		label: "Show prompt preview",
+		description:
+			"Display the exact AI prompt in the data preview modal before sending to " +
+			"Anthropic. The prompt can be reviewed and edited before confirming.",
+		section: "AI summarization",
+		type: "boolean",
+		defaultValue: "true",
+		enabledByDefault: true,
+		dependsOn: "enableAI",
+	},
+	{
 		key: "promptsDir",
 		label: "Prompt templates directory",
 		description:

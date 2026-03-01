@@ -7,7 +7,7 @@ import { readCodexSessions } from "../collect/codex";
 import { readGitHistory } from "../collect/git";
 import { categorizeVisits } from "../filter/categorize";
 import { compressActivity } from "../summarize/compress";
-import { summarizeDay, buildPrompt } from "../summarize/summarize";
+import { summarizeDay, buildPrompt, buildSummaryPrompt, summarizeDayWithPrompt } from "../summarize/summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
 import { AICallConfig } from "../summarize/ai-client";
 import { renderMarkdown } from "../render/renderer";
@@ -545,6 +545,16 @@ export default class DailyDigestPlugin extends Plugin {
 					// Cloud provider: show data preview for explicit consent
 					progressNotice.hide();
 
+					// Build prompt for preview (before showing modal)
+					const summaryPrompt = this.settings.enablePromptPreview
+						? buildSummaryPrompt(
+							targetDate, categorized, searches, claudeSessions, aiConfig,
+							this.settings.profile, classification, extractedPatterns,
+							compressed, gitCommits, this.settings.promptsDir,
+							articleClustersForSemantic, this.settings.privacyTier
+						)
+						: undefined;
+
 					const result = await new DataPreviewModal(this.app, {
 						visitCount: visits.length,
 						searchCount: searches.length,
@@ -565,25 +575,33 @@ export default class DailyDigestPlugin extends Plugin {
 								text: `${c.repo}: ${c.message}`.slice(0, 80),
 							})),
 						},
+						promptText: summaryPrompt?.prompt,
+						promptTier: summaryPrompt?.tier,
+						promptTokenEstimate: summaryPrompt?.tokenEstimate,
 					}).openAndWait();
 
-					if (result === "cancel") {
+					if (result.action === "cancel") {
 						this.statusBarItem.setText("Daily Digest ready");
 						new Notice("Daily Digest: Generation cancelled.");
 						return;
 					}
 
-					if (result === "proceed-with-ai") {
+					if (result.action === "proceed-with-ai") {
 						const aiNotice = new Notice(
 							"Daily Digest: Generating AI summary (Anthropic)\u2026",
 							0
 						);
-						aiSummary = await summarizeDay(
-							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
-							classification, extractedPatterns,
-							compressed, gitCommits, this.settings.promptsDir,
-							articleClustersForSemantic, this.settings.privacyTier
-						);
+						if (result.editedPrompt) {
+							// User edited the prompt — send the edited version directly
+							aiSummary = await summarizeDayWithPrompt(result.editedPrompt, aiConfig);
+						} else {
+							aiSummary = await summarizeDay(
+								targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
+								classification, extractedPatterns,
+								compressed, gitCommits, this.settings.promptsDir,
+								articleClustersForSemantic, this.settings.privacyTier
+							);
+						}
 						aiNotice.hide();
 					} else {
 						useAI = false;

@@ -283,17 +283,25 @@ export interface DataPreviewStats {
 		claude: DataPreviewSample[];
 		git: DataPreviewSample[];
 	};
+	/** The full prompt text that will be sent to the AI provider. */
+	promptText?: string;
+	/** Resolved privacy tier (1-4). */
+	promptTier?: number;
+	/** Estimated token count for the prompt. */
+	promptTokenEstimate?: number;
 }
 
-export type DataPreviewResult =
-	| "proceed-with-ai"
-	| "proceed-without-ai"
-	| "cancel";
+export interface DataPreviewResult {
+	action: "proceed-with-ai" | "proceed-without-ai" | "cancel";
+	/** Set when the user edits the prompt in the preview textarea. */
+	editedPrompt?: string;
+}
 
 export class DataPreviewModal extends Modal {
 	private stats: DataPreviewStats;
 	private resolvePromise: ((result: DataPreviewResult) => void) | null = null;
 	private resolved = false;
+	private promptTextArea: HTMLTextAreaElement | null = null;
 
 	constructor(app: App, stats: DataPreviewStats) {
 		super(app);
@@ -408,6 +416,73 @@ export class DataPreviewModal extends Modal {
 			}
 		}
 
+		// ── Prompt preview section ────────────
+		if (this.stats.promptText) {
+			const promptSection = contentEl.createDiv({ cls: "dd-preview-prompt" });
+
+			// Tier label
+			const tierLabels: Record<number, string> = {
+				1: "Tier 1 — Full sanitized context",
+				2: "Tier 2 — Compressed activity",
+				3: "Tier 3 — Classified abstractions",
+				4: "Tier 4 — Aggregated statistics only",
+			};
+			const tierLabel = this.stats.promptTier
+				? tierLabels[this.stats.promptTier] ?? `Tier ${this.stats.promptTier}`
+				: "";
+
+			// Collapsible toggle (same pattern as sample data)
+			const promptToggle = promptSection.createEl("p", {
+				cls: "dd-preview-toggle",
+				text: `\u25B6 Show prompt that will be sent${tierLabel ? ` (${tierLabel})` : ""}`,
+			});
+			const promptContent = promptSection.createDiv({
+				cls: "dd-preview-prompt-content",
+			});
+			promptContent.style.display = "none";
+
+			promptToggle.addEventListener("click", () => {
+				const visible = promptContent.style.display !== "none";
+				promptContent.style.display = visible ? "none" : "block";
+				promptToggle.textContent = visible
+					? `\u25B6 Show prompt that will be sent${tierLabel ? ` (${tierLabel})` : ""}`
+					: `\u25BC Prompt that will be sent${tierLabel ? ` (${tierLabel})` : ""}`;
+			});
+
+			// Editable textarea
+			const textArea = promptContent.createEl("textarea", {
+				cls: "dd-preview-prompt-text",
+			});
+			textArea.value = this.stats.promptText;
+			textArea.rows = 20;
+			textArea.style.width = "100%";
+			textArea.style.fontFamily = "var(--font-monospace)";
+			textArea.style.fontSize = "12px";
+			textArea.style.maxHeight = "400px";
+			textArea.style.resize = "vertical";
+
+			// Store reference so we can read edited value on submit
+			this.promptTextArea = textArea;
+
+			// Reset button + token estimate
+			const promptFooter = promptContent.createDiv({ cls: "dd-preview-prompt-footer" });
+
+			const resetBtn = promptFooter.createEl("button", {
+				text: "Reset to default",
+				cls: "dd-preview-prompt-reset",
+			});
+			resetBtn.addEventListener("click", () => {
+				textArea.value = this.stats.promptText!;
+			});
+
+			if (this.stats.promptTokenEstimate) {
+				promptFooter.createEl("span", {
+					text: `~${this.stats.promptTokenEstimate.toLocaleString()} tokens`,
+					cls: "dd-preview-token-estimate",
+				});
+			}
+		}
+
 		const destination = contentEl.createDiv({
 			cls: "dd-preview-destination",
 		});
@@ -424,19 +499,24 @@ export class DataPreviewModal extends Modal {
 					.setButtonText("Send to AI & Generate")
 					.setCta()
 					.onClick(() => {
-						this.complete("proceed-with-ai");
+						const editedPrompt = this.promptTextArea?.value;
+						const originalPrompt = this.stats.promptText;
+						this.complete({
+							action: "proceed-with-ai",
+							editedPrompt: editedPrompt !== originalPrompt ? editedPrompt : undefined,
+						});
 						this.close();
 					})
 			)
 			.addButton((btn) =>
 				btn.setButtonText("Generate without AI").onClick(() => {
-					this.complete("proceed-without-ai");
+					this.complete({ action: "proceed-without-ai" });
 					this.close();
 				})
 			)
 			.addButton((btn) =>
 				btn.setButtonText("Cancel").onClick(() => {
-					this.complete("cancel");
+					this.complete({ action: "cancel" });
 					this.close();
 				})
 			);
@@ -444,7 +524,7 @@ export class DataPreviewModal extends Modal {
 
 	onClose(): void {
 		// Escape or click-outside → treat as cancel
-		this.complete("cancel");
+		this.complete({ action: "cancel" });
 		this.contentEl.empty();
 	}
 }
