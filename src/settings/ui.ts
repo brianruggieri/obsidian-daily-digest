@@ -234,9 +234,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
 		];
 
-		// Derive dropdown value from existing settings
+		// Derive dropdown value from existing settings.
+		// Respect an explicit "custom" preset so the dropdown stays on Custom
+		// even when the selected categories happen to match a named preset.
 		const deriveSensitivityPreset = (): SensitivityPreset => {
 			if (!this.plugin.settings.enableSensitivityFilter) return "off";
+			if (this.plugin.settings.sensitivityPreset === "custom") return "custom";
 			const cats = [...this.plugin.settings.sensitivityCategories].sort();
 			const recSorted = [...RECOMMENDED_CATS].sort();
 			const allSorted = [...ALL_CATS].sort();
