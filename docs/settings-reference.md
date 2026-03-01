@@ -294,37 +294,6 @@ Enables the 'Inspect pipeline stage' command for per-stage data inspection. For 
 - **Type:** Toggle
 - **Default:** `false`
 
-### `enableRAG`
-
-**Enable RAG chunking**
-
-Split activity data into focused chunks and use embeddings to select the most relevant context for summarization. Improves quality with large datasets and small context window models. Requires a local model server with an embedding model.
-
-- **Type:** Toggle
-- **Default:** `false`
-- **Visible when:** `enableAI` is enabled
-- **Privacy:** Embeddings are always generated locally, even when Anthropic is the summarization provider. No embedding data is sent externally.
-
-### `embeddingModel`
-
-**Embedding model**
-
-Model for generating embeddings (e.g. nomic-embed-text, all-minilm, mxbai-embed-large). Must be available on your local server.
-
-- **Type:** Text
-- **Default:** `nomic-embed-text`
-- **Visible when:** `enableRAG` is enabled
-
-### `ragTopK`
-
-**Retrieved chunks (Top K)**
-
-Number of most-relevant chunks to include in the AI prompt. Higher values provide more context but increase latency. 6–10 is a good range.
-
-- **Type:** Slider
-- **Default:** `8`
-- **Visible when:** `enableRAG` is enabled
-
 ### `enableClassification`
 
 **Enable event classification**

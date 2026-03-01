@@ -365,45 +365,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableAI",
 	},
 
-	// (Advanced AI settings — enableRAG, enableClassification, patterns, etc.)
-	{
-		key: "enableRAG",
-		label: "Enable RAG chunking",
-		description:
-			"Split activity data into focused chunks and use embeddings to select the " +
-			"most relevant context for summarization. Improves quality with large datasets " +
-			"and small context window models. Requires a local model server with an " +
-			"embedding model.",
-		section: "Advanced",
-		type: "boolean",
-		defaultValue: "false",
-		dependsOn: "enableAI",
-		privacyNote:
-			"Embeddings are always generated locally, even when Anthropic is the " +
-			"summarization provider. No embedding data is sent externally.",
-	},
-	{
-		key: "embeddingModel",
-		label: "Embedding model",
-		description:
-			"Model for generating embeddings (e.g. nomic-embed-text, all-minilm, " +
-			"mxbai-embed-large). Must be available on your local server.",
-		section: "Advanced",
-		type: "string",
-		defaultValue: "nomic-embed-text",
-		dependsOn: "enableRAG",
-	},
-	{
-		key: "ragTopK",
-		label: "Retrieved chunks (Top K)",
-		description:
-			"Number of most-relevant chunks to include in the AI prompt. " +
-			"Higher values provide more context but increase latency. 6–10 is a good range.",
-		section: "Advanced",
-		type: "slider",
-		defaultValue: "8",
-		dependsOn: "enableRAG",
-	},
+	// (Advanced AI settings — classification, patterns, etc.)
 	{
 		key: "enableClassification",
 		label: "Enable event classification",

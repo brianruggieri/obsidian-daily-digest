@@ -28,9 +28,6 @@ export interface DailyDigestSettings {
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
-	enableRAG: boolean;
-	embeddingModel: string;
-	ragTopK: number;
 	excludedDomains: string;
 	enableSensitivityFilter: boolean;
 	sensitivityPreset: SensitivityPreset;
@@ -75,9 +72,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
 	excludedDomains: "",
 	enableSensitivityFilter: false,
 	sensitivityPreset: "off" as SensitivityPreset,

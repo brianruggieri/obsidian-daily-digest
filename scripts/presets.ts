@@ -63,9 +63,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	aiModel: "claude-haiku-4-5-20251001",
 
 	// Advanced AI
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
 	enableClassification: false,
 	classificationModel: "qwen2.5:7b-instruct",
 	classificationBatchSize: 8,
@@ -118,7 +115,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: false,
 			enableClassification: true,
 		},
 	},
@@ -130,7 +126,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: true,
 			enableClassification: false,
 		},
 	},
@@ -142,7 +137,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: false,
 			enableClassification: false,
 		},
 	},
@@ -160,7 +154,6 @@ export const PRESETS: Preset[] = [
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
 			enableClassification: true,
-			enableRAG: false,
 			privacyTier: 4,
 		},
 	},
@@ -174,7 +167,6 @@ export const PRESETS: Preset[] = [
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
 			enableClassification: true,
-			enableRAG: false,
 			privacyTier: 3,
 		},
 	},
@@ -187,7 +179,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: true,
 			enableClassification: false,
 			privacyTier: 2,
 		},
@@ -218,7 +209,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: false,
 			enableClassification: false,
 			privacyTier: 1,
 		},
@@ -232,7 +222,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
-			enableRAG: false,
 			enableClassification: false,
 			privacyTier: 1,
 		},

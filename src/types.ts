@@ -417,15 +417,6 @@ export interface EmbeddedChunk extends ActivityChunk {
 	embedding: number[];
 }
 
-export interface RAGConfig {
-	enabled: boolean;
-	embeddingEndpoint: string;
-	embeddingModel: string;
-	topK: number;
-	minChunkTokens: number;
-	maxChunkTokens: number;
-}
-
 // ── Article Clustering Types ─────────────────────────────
 
 /**

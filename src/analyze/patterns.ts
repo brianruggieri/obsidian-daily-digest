@@ -124,24 +124,108 @@ function extractTemporalClusters(
 }
 
 /**
- * Filters raw page-title fragment topics from cluster labels.
- * Removes topics that are clearly derived from raw page titles
- * rather than semantic concepts:
+ * Leading words that carry no topical meaning — stripped before quality checks.
+ * Includes pronouns, demonstratives, articles, and possessives that frequently
+ * leak from Claude prompt text into extracted topics.
+ */
+const LEADING_NOISE = new Set([
+	"the", "a", "an", "this", "that", "these", "those",
+	"my", "our", "your", "his", "her", "its", "their",
+	"some", "any", "all", "each", "every",
+]);
+
+/**
+ * Common English stopwords. A topic composed mostly of stopwords
+ * (e.g. "these last few") carries no knowledge value.
+ */
+const STOPWORDS = new Set([
+	"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+	"of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+	"have", "has", "had", "do", "does", "did", "will", "would", "could",
+	"should", "can", "may", "might", "shall", "must",
+	"this", "that", "these", "those", "it", "its",
+	"i", "we", "you", "he", "she", "they", "me", "us", "him", "her", "them",
+	"my", "our", "your", "his", "their",
+	"what", "which", "who", "whom", "where", "when", "how", "why",
+	"not", "no", "so", "if", "then", "than", "just", "also", "very",
+	"about", "up", "out", "into", "over", "after", "before",
+	"some", "any", "all", "each", "every", "few", "more", "most",
+	"other", "last", "first", "next", "new", "old", "same",
+	"thing", "things", "stuff", "way", "lot",
+]);
+
+/**
+ * Clean a raw topic string: strip leading noise words and trim.
+ * Returns the cleaned string (may be empty if the topic was all noise).
+ * Exported for testing.
+ */
+export function cleanTopic(raw: string): string {
+	const words = raw.trim().split(/\s+/);
+
+	// Strip leading noise words
+	let start = 0;
+	while (start < words.length && LEADING_NOISE.has(words[start].toLowerCase())) {
+		start++;
+	}
+
+	return words.slice(start).join(" ");
+}
+
+/**
+ * Returns the fraction of words in a topic that are stopwords (0.0–1.0).
+ * A topic with high stopword ratio carries no knowledge value.
+ */
+function stopwordRatio(topic: string): number {
+	const words = topic.toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.length === 0) return 1;
+	const stopCount = words.filter((w) => STOPWORDS.has(w)).length;
+	return stopCount / words.length;
+}
+
+/**
+ * Filters and cleans extracted topic strings for cluster labels.
+ *
+ * Rejection criteria:
  *   - Contains dots (domain separators: "specright.isolvedhire")
  *   - Multi-word all-capitalized words (company name fragments)
  *   - Contains URL/slug characters
+ *   - Fewer than 2 characters after cleaning
+ *   - 50% or more stopwords after cleaning (conversational fragments)
+ *
+ * Cleaning steps:
+ *   - Strip leading pronouns/demonstratives/articles
+ *
+ * Exported for testing.
  */
-function filterClusterTopics(topics: string[]): string[] {
-	return topics.filter((t) => {
+export function filterClusterTopics(topics: string[]): string[] {
+	const result: string[] = [];
+
+	for (const raw of topics) {
 		// Reject topics containing domain separators
-		if (t.includes(".")) return false;
-		// Reject multi-word topics where all words start with a capital (company name fragments)
-		const words = t.split(/\s+/);
-		if (words.length >= 2 && words.every((w) => /^[A-Z]/.test(w))) return false;
+		if (raw.includes(".")) continue;
+		// Reject multi-word ProperCase topics (company name fragments like "Some Company Name").
+		// Allow all-caps/mixed-case acronym pairs (e.g. "OAuth PKCE", "CSS HTML") by only
+		// rejecting when at least one word has ProperCase shape (uppercase + lowercase).
+		const rawWords = raw.split(/\s+/);
+		if (rawWords.length >= 2
+			&& rawWords.every((w) => /^[A-Z]/.test(w))
+			&& rawWords.some((w) => /^[A-Z][a-z]/.test(w))) continue;
 		// Reject topics with URL/slug characters
-		if (/[/\\?=&]/.test(t)) return false;
-		return true;
-	});
+		if (/[/\\?=&]/.test(raw)) continue;
+
+		// Clean: strip leading noise words
+		const cleaned = cleanTopic(raw);
+
+		// Reject if too short after cleaning
+		if (cleaned.length < 2) continue;
+
+		// Reject if half or more words are stopwords (conversational fragments)
+		if (stopwordRatio(cleaned) >= 0.5) continue;
+
+		result.push(cleaned);
+	}
+
+	return result;
 }
 
 function buildCluster(

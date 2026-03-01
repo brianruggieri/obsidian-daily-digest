@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readGitHistory, parseGitLogOutput } from "../../../src/collect/git";
+import { readGitHistory, parseGitLogOutput, isStashCommit } from "../../../src/collect/git";
 import type { DailyDigestSettings } from "../../../src/settings/types";
 
 // ── parseGitLogOutput tests ─────────────────────────────
@@ -162,6 +162,116 @@ describe("parseGitLogOutput", () => {
 		const commits = parseGitLogOutput(raw, "repo");
 		expect(commits[0].hash).toBe("iii9999");
 		expect(commits[0].message).toBe("fix: patch");
+	});
+});
+
+// ── isStashCommit tests ─────────────────────────────────
+
+describe("isStashCommit", () => {
+	it("matches 'On <branch>:' stash messages (custom message)", () => {
+		expect(isStashCommit("On main: WIP save")).toBe(true);
+		expect(isStashCommit("On feat/login: stash changes")).toBe(true);
+		expect(isStashCommit("On fix/v1-data-quality: quick save")).toBe(true);
+	});
+
+	it("matches 'WIP on <branch>:' stash messages (auto stash, no custom message)", () => {
+		expect(isStashCommit("WIP on test/privacy-adversary-prompts: c8c7cbe feat: add unified cross-source timeline")).toBe(true);
+		expect(isStashCommit("WIP on main: abc1234 some commit")).toBe(true);
+		expect(isStashCommit("WIP on feat/auth: def5678 fix auth")).toBe(true);
+	});
+
+	it("matches 'index on <branch>:' stash messages", () => {
+		expect(isStashCommit("index on main: abc1234 some commit message")).toBe(true);
+		expect(isStashCommit("index on feat/login: def5678 fix auth")).toBe(true);
+	});
+
+	it("matches 'untracked files on <branch>:' stash messages", () => {
+		expect(isStashCommit("untracked files on main: abc1234 some commit")).toBe(true);
+		expect(isStashCommit("untracked files on feat/auth: def5678 WIP")).toBe(true);
+	});
+
+	it("does not match regular commit messages", () => {
+		expect(isStashCommit("feat: Add OAuth PKCE flow")).toBe(false);
+		expect(isStashCommit("fix: Handle null token edge case")).toBe(false);
+		expect(isStashCommit("Merge branch 'main' into feature")).toBe(false);
+		expect(isStashCommit("chore: Update dependencies")).toBe(false);
+	});
+
+	it("does not match messages that contain stash-like text mid-string", () => {
+		expect(isStashCommit("fix: Based On main: fix logic")).toBe(false);
+		expect(isStashCommit("docs: Note about index on main: usage")).toBe(false);
+	});
+});
+
+// ── parseGitLogOutput stash filtering ───────────────────
+
+describe("parseGitLogOutput stash filtering", () => {
+	it("filters out stash commits from parsed output", () => {
+		const raw = [
+			"aaa1111||On main: WIP save|2026-02-20T10:00:00+00:00",
+			"",
+			"5\t0\tsrc/file.ts",
+			"",
+			"bbb2222||feat: Real commit|2026-02-20T10:05:00+00:00",
+			"",
+			"10\t3\tsrc/auth.ts",
+			"",
+			"ccc3333||index on main: aaa1111 WIP save|2026-02-20T10:00:00+00:00",
+			"",
+			"5\t0\tsrc/file.ts",
+			"",
+			"ddd4444||untracked files on main: aaa1111 WIP save|2026-02-20T10:00:00+00:00",
+			"",
+			"-\t-\tnew-file.txt",
+		].join("\n");
+
+		const commits = parseGitLogOutput(raw, "my-repo");
+		expect(commits).toHaveLength(1);
+		expect(commits[0].hash).toBe("bbb2222");
+		expect(commits[0].message).toBe("feat: Real commit");
+	});
+
+	it("preserves all commits when none are stash entries", () => {
+		const raw = [
+			"abc1234||feat: Add feature|2026-02-20T10:00:00+00:00",
+			"",
+			"5\t0\tsrc/feature.ts",
+			"",
+			"def5678||fix: Fix bug|2026-02-20T11:00:00+00:00",
+			"",
+			"2\t1\tsrc/bug.ts",
+		].join("\n");
+
+		const commits = parseGitLogOutput(raw, "repo");
+		expect(commits).toHaveLength(2);
+	});
+
+	it("returns empty array when all commits are stash entries", () => {
+		const raw = [
+			"aaa1111||On main: stash 1|2026-02-20T10:00:00+00:00",
+			"",
+			"bbb2222||index on main: aaa1111 stash 1|2026-02-20T10:00:00+00:00",
+			"",
+		].join("\n");
+
+		const commits = parseGitLogOutput(raw, "repo");
+		expect(commits).toHaveLength(0);
+	});
+
+	it("filters 'WIP on' auto-stash commits", () => {
+		const raw = [
+			"aaa1111||WIP on test/branch: c8c7cbe feat: some feature|2026-02-20T10:00:00+00:00",
+			"",
+			"5\t0\tsrc/file.ts",
+			"",
+			"bbb2222||feat: Real work|2026-02-20T10:05:00+00:00",
+			"",
+			"10\t3\tsrc/auth.ts",
+		].join("\n");
+
+		const commits = parseGitLogOutput(raw, "repo");
+		expect(commits).toHaveLength(1);
+		expect(commits[0].hash).toBe("bbb2222");
 	});
 });
 

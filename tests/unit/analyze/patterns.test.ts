@@ -7,6 +7,8 @@ import {
 	computeKnowledgeDelta,
 	ENTITY_BEARING_CATEGORIES,
 	getFocusLabel,
+	filterClusterTopics,
+	cleanTopic,
 } from "../../../src/analyze/patterns";
 import {
 	StructuredEvent,
@@ -604,6 +606,95 @@ describe("ENTITY_BEARING_CATEGORIES gate", () => {
 		expect(result.temporalClusters.length).toBeGreaterThan(0);
 		// But entity relations should be empty (gated out)
 		expect(result.entityRelations).toHaveLength(0);
+	});
+});
+
+// ── cleanTopic ──────────────────────────────────────────
+
+describe("cleanTopic", () => {
+	it("strips leading pronouns and demonstratives", () => {
+		expect(cleanTopic("these testing steps")).toBe("testing steps");
+		expect(cleanTopic("those API endpoints")).toBe("API endpoints");
+		expect(cleanTopic("the authentication flow")).toBe("authentication flow");
+		expect(cleanTopic("my project setup")).toBe("project setup");
+		expect(cleanTopic("our deployment pipeline")).toBe("deployment pipeline");
+	});
+
+	it("strips multiple leading noise words", () => {
+		expect(cleanTopic("the some testing")).toBe("testing");
+	});
+
+	it("preserves topics that start with meaningful words", () => {
+		expect(cleanTopic("React hooks")).toBe("React hooks");
+		expect(cleanTopic("OAuth PKCE flow")).toBe("OAuth PKCE flow");
+		expect(cleanTopic("testing")).toBe("testing");
+	});
+
+	it("returns empty string for all-noise input", () => {
+		expect(cleanTopic("the")).toBe("");
+		expect(cleanTopic("these those")).toBe("");
+	});
+});
+
+// ── filterClusterTopics ─────────────────────────────────
+
+describe("filterClusterTopics", () => {
+	it("rejects conversational fragments from Claude prompts", () => {
+		const topics = [
+			"these last testing",        // Claude prompt fragment
+			"how do we do these",        // question fragment
+			"that other thing",          // vague reference
+			"some more stuff",           // vague
+		];
+		const result = filterClusterTopics(topics);
+		expect(result).toHaveLength(0);
+	});
+
+	it("preserves meaningful technical topics", () => {
+		const topics = ["React hooks", "OAuth PKCE", "TypeScript generics", "testing"];
+		const result = filterClusterTopics(topics);
+		expect(result).toEqual(["React hooks", "OAuth PKCE", "TypeScript generics", "testing"]);
+	});
+
+	it("strips leading noise words from topics that have meaningful content", () => {
+		const topics = ["the authentication flow", "our API endpoints"];
+		const result = filterClusterTopics(topics);
+		expect(result).toContain("authentication flow");
+		expect(result).toContain("API endpoints");
+	});
+
+	it("rejects domain-separator topics", () => {
+		expect(filterClusterTopics(["specright.isolvedhire"])).toEqual([]);
+	});
+
+	it("rejects URL-character topics", () => {
+		expect(filterClusterTopics(["path/to/file"])).toEqual([]);
+	});
+
+	it("rejects multi-word all-capitalized topics", () => {
+		expect(filterClusterTopics(["Some Company Name"])).toEqual([]);
+	});
+
+	it("rejects topics that become too short after cleaning", () => {
+		// "the" + "a" → stripped → empty
+		expect(filterClusterTopics(["the a"])).toEqual([]);
+		// "my" → stripped → empty
+		expect(filterClusterTopics(["my"])).toEqual([]);
+	});
+
+	it("handles mixed quality topics correctly", () => {
+		const topics = [
+			"React",                        // good
+			"these last few steps",          // conversational fragment → rejected
+			"deployment",                    // good
+			"our.company.domain",            // domain separator → rejected
+			"the testing framework",         // cleaned → "testing framework" → kept
+		];
+		const result = filterClusterTopics(topics);
+		expect(result).toContain("React");
+		expect(result).toContain("deployment");
+		expect(result).toContain("testing framework");
+		expect(result).toHaveLength(3);
 	});
 });
 

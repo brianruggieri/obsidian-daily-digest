@@ -755,67 +755,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 			}
 
-			// ── RAG pipeline ─────────────────────────
-			new Setting(advContent)
-				.setName("Enable RAG chunking")
-				.setDesc(
-					"Split activity data into focused chunks and use embeddings " +
-					"to select the most relevant context for summarization. " +
-					"Requires a local model server with an embedding model."
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.enableRAG)
-						.onChange(async (value) => {
-							this.plugin.settings.enableRAG = value;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
-
-			if (this.plugin.settings.enableRAG) {
-				new Setting(advContent)
-					.setName("Embedding model")
-					.setDesc(
-						"Model for generating embeddings (e.g. nomic-embed-text). " +
-						"Must be available on your local server."
-					)
-					.addText((text) =>
-						text
-							.setPlaceholder("nomic-embed-text")
-							.setValue(this.plugin.settings.embeddingModel)
-							.onChange(async (value) => {
-								this.plugin.settings.embeddingModel = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(advContent)
-					.setName("Retrieved chunks (Top K)")
-					.setDesc(
-						"Number of most-relevant chunks to include in the AI prompt. " +
-						"Higher = more context but slower. 6-10 is a good range."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(4, 15, 1)
-							.setValue(this.plugin.settings.ragTopK)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.ragTopK = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				const ragCallout = advContent.createDiv({
-					cls: "dd-settings-callout dd-settings-callout-info",
-				});
-				ragCallout.createEl("p", {
-					text:
-						"Embeddings are always generated locally, even when Anthropic " +
-						"is the summarization provider. No embedding data is sent externally.",
-				});
-			}
 
 			// ── Prompt templates ─────────────────────
 			new Setting(advContent)

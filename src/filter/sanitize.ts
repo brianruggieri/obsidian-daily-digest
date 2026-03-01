@@ -99,7 +99,7 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 
 // ── URL Sanitization ─────────────────────────────────────
 
-/** Always strips to protocol + hostname + pathname (no query strings, no fragments). */
+/** Always strips to protocol + host (includes port) + pathname (no query strings, no fragments). */
 export function sanitizeUrl(rawUrl: string): string {
 	try {
 		const url = new URL(rawUrl);
@@ -109,7 +109,12 @@ export function sanitizeUrl(rawUrl: string): string {
 		if (!url.protocol.startsWith("http")) {
 			return `${url.protocol}[REDACTED]`;
 		}
-		return `${url.protocol}//${url.hostname}${url.pathname}`;
+		// Reduce to protocol + host (includes port) + path only.
+		// Query strings never carry useful signal after collection (search queries
+		// are extracted earlier from raw URLs), and stripping them removes tracking
+		// params, auth tokens, and session IDs in one shot.
+		// Userinfo (user:password@host) is also dropped since we build from parts.
+		return `${url.protocol}//${url.host}${url.pathname}`;
 	} catch {
 		// Invalid URL — return redacted placeholder
 		return "[INVALID_URL]";

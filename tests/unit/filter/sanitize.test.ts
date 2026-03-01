@@ -134,6 +134,7 @@ describe("sanitizeUrl", () => {
 	it("strips userinfo (user:pass@host)", () => {
 		const result = sanitizeUrl("https://admin:password@example.com/path");
 		expect(result).not.toContain("password");
+		expect(result).not.toContain("admin");
 		expect(result).toBe("https://example.com/path");
 	});
 
@@ -145,13 +146,33 @@ describe("sanitizeUrl", () => {
 	it("strips all query strings including tracking params", () => {
 		const url = "https://example.com/page?utm_source=email&utm_medium=newsletter&page=2";
 		const result = sanitizeUrl(url);
+		expect(result).not.toContain("utm_source");
 		expect(result).toBe("https://example.com/page");
 	});
 
-	it("returns clean URLs with path preserved", () => {
+	it("strips LinkedIn tracking params", () => {
+		const url = "https://www.linkedin.com/jobs/view/123/?trk=eml-digest&trackingId=abc";
+		const result = sanitizeUrl(url);
+		expect(result).toBe("https://www.linkedin.com/jobs/view/123/");
+	});
+
+	it("strips ad click IDs", () => {
+		const url = "https://example.com/product?fbclid=IwAR0abc&gclid=Cj0abc&color=blue";
+		const result = sanitizeUrl(url);
+		expect(result).not.toContain("fbclid");
+		expect(result).not.toContain("gclid");
+		expect(result).toBe("https://example.com/product");
+	});
+
+	it("returns clean URLs unchanged", () => {
 		const clean = "https://github.com/myorg/repo";
 		const result = sanitizeUrl(clean);
 		expect(result).toBe("https://github.com/myorg/repo");
+	});
+
+	it("preserves non-default ports (e.g. local model servers)", () => {
+		const result = sanitizeUrl("http://localhost:11434/v1/chat/completions?model=qwen");
+		expect(result).toBe("http://localhost:11434/v1/chat/completions");
 	});
 
 	it("handles invalid URLs", () => {
