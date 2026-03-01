@@ -589,7 +589,7 @@ export function renderMarkdown(
 
 		if (aiSummary.quirky_signals?.length) {
 			lines.push(`> `);
-			lines.push(`> **\u{1F50E} Unusual Signals**`);
+			lines.push(`> **\u{1F50E} Voice & Vernacular**`);
 			for (const signal of aiSummary.quirky_signals) {
 				lines.push(`> - ${escapeForMarkdown(signal)}`);
 			}

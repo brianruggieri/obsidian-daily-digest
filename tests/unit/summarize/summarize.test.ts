@@ -513,3 +513,20 @@ describe("buildProsePrompt Layer 0", () => {
 		expect(layer0Pos).toBeLessThan(layer1Pos);
 	});
 });
+
+// ── Prose template includes voice & vernacular instructions ──
+
+describe("prose template voice signals", () => {
+	it("includes Voice & Vernacular section in the prose prompt", () => {
+		const prompt = buildProsePrompt(DATE, "", {});
+		expect(prompt).toContain("## Voice & Vernacular");
+		expect(prompt).toContain("verbal tics");
+		expect(prompt).toContain("Misspellings");
+	});
+
+	it("includes Cognitive Patterns section in the prose prompt", () => {
+		const prompt = buildProsePrompt(DATE, "", {});
+		expect(prompt).toContain("## Cognitive Patterns");
+		expect(prompt).toContain("Research spirals");
+	});
+});

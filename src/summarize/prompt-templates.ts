@@ -309,6 +309,26 @@ Example format:
 
 ## Note Seeds
 Bullet list. 2-4 topics from today that deserve their own permanent note — concepts that came up repeatedly or represent key learning moments.
+
+## Voice & Vernacular
+Bullet list. 1-3 observations about how this person writes, searches, and communicates today — not what they did, but how they expressed it. Look for:
+- Repeated phrases or verbal tics in search queries and AI prompts (e.g., "how do I...", "why does X keep...", "just need to...")
+- Enthusiasm or frustration markers (exclamation marks, caps, rapid-fire questions, trailing ellipses)
+- Hedging vs. confidence language ("maybe I should..." vs. "just do X")
+- Misspellings or autocorrect artifacts in search queries — note them with warmth, not judgment
+- Question style: do they ask "how" questions (procedural) or "why" questions (conceptual)?
+- Shift in tone over the day (terse morning queries vs. verbose evening explorations)
+Skip this section entirely if the data doesn't contain enough search queries or AI prompts to observe patterns (e.g., stats-only or classified data with no raw text).
+
+## Cognitive Patterns
+Bullet list. 2-3 observations about cognitive and behavioral patterns:
+- Research spirals (same topic from multiple angles)
+- Implementation momentum (sustained uninterrupted building)
+- Context-switching costs (fragmented attention across many topics)
+- Unformalized knowledge (topics revisited but never documented)
+- Contradictions between stated focus and actual behavior
+- Unexpected cross-domain connections
+Skip this section entirely if only statistical patterns are available with no meaningful signals.
 `,
 
 };
