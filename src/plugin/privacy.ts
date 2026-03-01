@@ -499,11 +499,15 @@ export class DataPreviewModal extends Modal {
 					.setButtonText("Send to AI & Generate")
 					.setCta()
 					.onClick(() => {
-						const editedPrompt = this.promptTextArea?.value;
-						const originalPrompt = this.stats.promptText;
+						const currentText = this.promptTextArea?.value;
+						const originalText = this.stats.promptText;
+						// Pass editedPrompt when the user modified the textarea content
+						const wasEdited = currentText !== undefined
+							&& originalText !== undefined
+							&& currentText !== originalText;
 						this.complete({
 							action: "proceed-with-ai",
-							editedPrompt: editedPrompt !== originalPrompt ? editedPrompt : undefined,
+							editedPrompt: wasEdited ? currentText : undefined,
 						});
 						this.close();
 					})
