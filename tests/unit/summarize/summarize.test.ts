@@ -529,4 +529,27 @@ describe("prose template voice signals", () => {
 		expect(prompt).toContain("## Cognitive Patterns");
 		expect(prompt).toContain("Research spirals");
 	});
+
+	it("includes Focus Narrative section in the prose prompt", () => {
+		const prompt = buildProsePrompt(DATE, "", {});
+		expect(prompt).toContain("## Focus Narrative");
+		expect(prompt).toContain("cognitive character");
+	});
+
+	it("includes tier instruction at Tier 4", () => {
+		const prompt = buildProsePrompt(DATE, "", {}, undefined, "balanced", 4);
+		expect(prompt).toContain("statistical patterns only");
+		expect(prompt).toContain("Do not invent");
+	});
+
+	it("includes tier instruction at Tier 3", () => {
+		const prompt = buildProsePrompt(DATE, "", {}, undefined, "balanced", 3);
+		expect(prompt).toContain("classified activity abstractions");
+		expect(prompt).toContain("Do not invent specific URLs");
+	});
+
+	it("omits tier instruction at Tier 1", () => {
+		const prompt = buildProsePrompt(DATE, "", {}, undefined, "balanced", 1);
+		expect(prompt).not.toContain("Do not invent");
+	});
 });

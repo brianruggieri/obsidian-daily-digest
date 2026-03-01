@@ -270,7 +270,7 @@ Reflections: Return 1-3 reflection prompts depending on the day's complexity. Ea
 
 Write for someone rereading this note 3 months from now. Be specific and concrete — prefer "debugged the OAuth callback race condition" over "did some dev work."{{contextHint}}
 
-Date: {{dateStr}}
+{{tierInstruction}}Date: {{dateStr}}
 
 <activity_data>
 {{activityData}}
@@ -329,6 +329,9 @@ Bullet list. 2-3 observations about cognitive and behavioral patterns:
 - Contradictions between stated focus and actual behavior
 - Unexpected cross-domain connections
 Skip this section entirely if only statistical patterns are available with no meaningful signals.
+
+## Focus Narrative
+1-2 sentences characterizing the day's cognitive character — was it a deep-dive day, a context-switching day, a research day, an execution day? What does the overall shape of activity suggest about how well this person directed their attention?
 `,
 
 };
