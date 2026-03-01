@@ -212,7 +212,7 @@ function assertNoRegexLeaks(prompt: string, personaName: string, tier: PrivacyTi
 		[/\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/, "IPv4 address"],
 		[/(?:\/Users\/[^/\s]+|\/home\/[^/\s]+)/, "Home directory path"],
 		[/\b\d{3}-\d{2}-\d{4}\b/, "SSN"],
-		[/\b(?:4\d{3}|5[1-5]\d{2}|6(?:011|5\d{2})|3[47]\d{2})\d{8,12}\b/, "Credit card number"],
+		[/\b(?:4\d{3}(?:[ -]?\d{4}){3}|5[1-5]\d{2}(?:[ -]?\d{4}){3}|3[47]\d{2}[ -]?\d{6}[ -]?\d{5})\b/, "Credit card number"],
 	];
 
 	for (const [regex, label] of patterns) {
@@ -298,7 +298,7 @@ describe("privacy prompt audit — buildProsePrompt()", () => {
 					const activityStart = prompt.indexOf("Focus:");
 					if (activityStart > -1) {
 						const activitySection = prompt.slice(activityStart);
-						expect(activitySection).not.toMatch(/https?:\/\/[^\s"<>]+\.(com|org|net|io|dev)/);
+						expect(activitySection).not.toMatch(/https?:\/\/[^\s"<>]+/);
 					}
 				});
 

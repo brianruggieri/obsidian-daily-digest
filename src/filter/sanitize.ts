@@ -95,12 +95,13 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 		/\b[0-9a-f]{40,}\b/gi,
 		"[HEX_TOKEN_REDACTED]",
 	],
-	// Credit card numbers (major networks: Visa, MasterCard, Amex, Discover).
-	// Uses network-specific prefixes to avoid false positives on timestamps, build
-	// numbers, and other benign digit sequences.
+	// Credit card numbers (major networks: Visa, MasterCard, Amex, Discover, Diners).
+	// Uses network-specific prefixes and grouping to avoid false positives on timestamps,
+	// build numbers, and other benign digit sequences. Supports AmEx 4-6-5 grouping
+	// as well as standard 4-4-4-4 and contiguous digit forms.
 	// Ref: https://www.regular-expressions.info/creditcard.html
 	[
-		/\b(?:4\d{3}|5[1-5]\d{2}|6(?:011|5\d{2})|3[47]\d{2}|3(?:0[0-5]|[68]\d)\d)[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b/g,
+		/\b(?:4\d{3}(?:[ -]?\d{4}){3}|5[1-5]\d{2}(?:[ -]?\d{4}){3}|6(?:011|5\d{2})(?:[ -]?\d{4}){3}|3[47]\d{2}[ -]?\d{6}[ -]?\d{5}|3(?:0[0-5]|[68]\d)\d[ -]?\d{6}[ -]?\d{4})\b/g,
 		"[CREDIT_CARD_REDACTED]",
 	],
 	// US Social Security Numbers (NNN-NN-NNNN)
@@ -277,17 +278,9 @@ function sanitizeClaudeSession(
 }
 
 function sanitizeGitCommit(commit: GitCommit, config: SanitizeConfig): GitCommit {
-	let message = scrubSecrets(commit.message);
-	message = scrubIPs(message);
-	if (config.redactPaths) {
-		message = redactPaths(message);
-	}
-	if (config.scrubEmails) {
-		message = scrubEmails(message);
-	}
 	return {
 		...commit,
-		message,
+		message: scrubText(commit.message, config),
 	};
 }
 
