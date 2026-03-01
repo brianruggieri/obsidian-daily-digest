@@ -73,9 +73,16 @@ function parseArgs(): CLIArgs {
 					process.exit(1);
 				}
 				break;
-			case "--categories":
-				result.categories = args[++i].split(",").map((s) => s.trim());
+			case "--categories": {
+				const value = args[i + 1];
+				if (value === undefined || value.trim() === "") {
+					console.error("Missing --categories value (e.g. --categories shopping,gaming)");
+					process.exit(1);
+				}
+				i++;
+				result.categories = value.split(",").map((s) => s.trim());
 				break;
+			}
 			default:
 				console.error(`Unknown argument: ${args[i]}`);
 				process.exit(1);

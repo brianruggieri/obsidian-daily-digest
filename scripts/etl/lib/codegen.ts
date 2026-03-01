@@ -69,10 +69,9 @@ export function generateCategorizeTS(
 
 			// Format entries in rows of 4 for readability
 			const rows = chunkArray(etl.map((e) => `"${e.domain}"`), 4);
-			for (let i = 0; i < rows.length; i++) {
-				const isLast = i === rows.length - 1;
-				const line = rows[i].join(", ");
-				arrayBody += `\t\t${line}${isLast ? "," : ","}\n`;
+			for (const row of rows) {
+				const line = row.join(", ");
+				arrayBody += `\t\t${line},\n`;
 			}
 		}
 

@@ -2,10 +2,11 @@ import { BrowserVisit, CategorizedVisits } from "../types";
 
 // ── Domain-to-category rules ─────────────────────────────────
 //
-// Three-layer categorization:
+// Four-layer categorization:
 //   Layer 1: Domain pattern matching (CATEGORY_RULES) — fast, deterministic
-//   Layer 2: URL path + page title heuristics (PATH_HINTS, TITLE_HINTS)
-//   Layer 3: TLD / subdomain inference (TLD_HINTS)
+//   Layer 2: URL path heuristics (PATH_HINTS)
+//   Layer 3: Page title heuristics (TITLE_HINTS)
+//   Layer 4: TLD / subdomain inference (TLD_HINTS)
 //
 // Domain data sources:
 //   - Hand-curated rules for mainstream sites
@@ -81,7 +82,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		// Cloud providers
 		"aws.amazon.com", "console.cloud.google.com", "portal.azure.com",
 		"cloudflare.com", "digitalocean.com", "linode.com", "vultr.com",
-		"oracle.com/cloud", "hetzner.com", "scaleway.com",
+		"oracle.com", "hetzner.com", "scaleway.com",
 		// Observability
 		"grafana.com", "datadog.com", "sentry.io", "newrelic.com",
 		"honeycomb.io", "lightstep.com", "jaegertracing.io",
@@ -232,7 +233,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"peacocktv.com", "paramountplus.com", "appletv.apple.com",
 		"crunchyroll.com", "funimation.com", "plex.tv",
 		"sling.com", "fubo.tv", "directv.com", "tubitv.com",
-		"pluto.tv", "roku.com/en-us/streaming", "curiositystream.com",
+		"pluto.tv", "roku.com", "curiositystream.com",
 		// Short-form video
 		"tiktok.com", "vimeo.com", "dailymotion.com",
 		// Music
@@ -392,7 +393,6 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		// Travel
 		"tripadvisor.com", "booking.com", "airbnb.com",
 		"kayak.com", "expedia.com", "hotels.com",
-		"google.com/travel", "google.com/flights",
 		"skyscanner.com", "hopper.com", "rome2rio.com",
 		// Weather
 		"weather.com", "weather.gov", "accuweather.com",
@@ -406,7 +406,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 	education: [
 		// MOOC / online learning
 		"coursera.org", "edx.org", "udemy.com", "skillshare.com",
-		"linkedin.com/learning", "pluralsight.com", "udacity.com",
+		"pluralsight.com", "udacity.com",
 		"khanacademy.org", "brilliant.org", "masterclass.com",
 		// Language learning
 		"duolingo.com", "babbel.com", "rosettastone.com", "busuu.com",
@@ -419,7 +419,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		// Universities
 		"mit.edu", "stanford.edu", "harvard.edu", "ocw.mit.edu",
 		"berkeley.edu", "yale.edu", "columbia.edu", "princeton.edu",
-		".edu/",
+		".edu",
 		// LMS
 		"canvas.", "blackboard.", "moodle.", "instructure.com",
 		// Lectures / talks
@@ -539,6 +539,9 @@ const PATH_HINTS: Array<[RegExp, string]> = [
 	[/\/cooking\//i, "personal"],
 	[/\/pricing\/?$/i, "work"],
 	[/\/plans\/?$/i, "work"],
+	[/\/travel/i, "personal"],
+	[/\/flights/i, "personal"],
+	[/\/learning/i, "education"],
 ];
 
 // ── Layer 3: Page title keyword heuristics ───────────────────

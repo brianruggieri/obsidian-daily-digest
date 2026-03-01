@@ -75,8 +75,8 @@ const MAJOR_PLATFORM_ROOTS = new Set([
 
 export function isSubdomainOfMajorPlatform(domain: string): boolean {
 	for (const platform of MAJOR_PLATFORM_ROOTS) {
-		// Exact match is fine (the platform itself), but subdomains are not
-		if (domain === platform) return true;
+		// Exact match is fine (the platform itself) — only reject subdomains
+		if (domain === platform) continue;
 		if (domain.endsWith(`.${platform}`)) return true;
 	}
 	return false;

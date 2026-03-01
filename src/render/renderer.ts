@@ -472,7 +472,7 @@ export function renderMarkdown(
 		const sorted = Object.entries(byProject).sort((a, b) => b[1].length - a[1].length);
 		for (const [project, sessions] of sorted) {
 			lines.push(`>`);
-			lines.push(`> **${project}** (${sessions.length})`);
+			lines.push(`> **${escapeForMarkdown(project)}** (${sessions.length})`);
 			for (const e of sessions) {
 				const ts = formatTime(e.time);
 				const prompt = escapeForMarkdown(e.prompt.replace(/\n/g, " ").trim());
