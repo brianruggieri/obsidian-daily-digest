@@ -574,8 +574,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							.onChange(async (value) => {
 								const tier = value === "null" ? null : (Number(value) as 4 | 3 | 2 | 1);
 								this.plugin.settings.privacyTier = tier;
-								// Auto-enable classification for Tier 3+ (requires abstractions)
-								if (tier !== null && tier >= 3 && !this.plugin.settings.enableClassification) {
+								// Auto-enable classification for Tier 3 (requires abstractions).
+								// Tier 4 uses aggregated statistics only — classification not required.
+								if (tier === 3 && !this.plugin.settings.enableClassification) {
 									this.plugin.settings.enableClassification = true;
 								}
 								await this.plugin.saveSettings();
@@ -586,8 +587,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				// Tier description callout
 				const tierValue = this.plugin.settings.privacyTier;
 				const tierDescriptions: Record<string, string> = {
-					"null": "Auto mode selects the most private tier your configuration supports. " +
-						"With classification enabled: Tier 3. Without: Tier 4 (statistics only).",
+					"null": "Auto mode selects the most private tier your data supports. " +
+						"Pattern extraction always runs, so Auto resolves to Tier 4 (statistics only). " +
+						"Select Tier 3 explicitly to send classification abstractions instead.",
 					"4": "Only aggregated statistics (visit counts, category distributions, time patterns) " +
 						"are sent. No domains, titles, URLs, or queries reach Anthropic.",
 					"3": "Per-event classified abstractions (activity type, topics, entities) are sent. " +
@@ -697,6 +699,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.enableClassification)
 						.onChange(async (value) => {
 							this.plugin.settings.enableClassification = value;
+							// Disabling classification while Tier 3 is selected would
+							// produce a prompt expecting abstractions with none available.
+							// Downgrade to Auto (which resolves to Tier 4).
+							if (!value && this.plugin.settings.privacyTier === 3) {
+								this.plugin.settings.privacyTier = null;
+							}
 							await this.plugin.saveSettings();
 							this.display();
 						})

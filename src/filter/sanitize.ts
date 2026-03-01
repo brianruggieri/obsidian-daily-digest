@@ -103,6 +103,12 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 export function sanitizeUrl(rawUrl: string): string {
 	try {
 		const url = new URL(rawUrl);
+		// Non-hierarchical schemes (mailto:, about:, data:, etc.) don't have
+		// a meaningful hostname — redact them entirely rather than producing
+		// malformed output like "about://blank".
+		if (!url.protocol.startsWith("http")) {
+			return `${url.protocol}[REDACTED]`;
+		}
 		return `${url.protocol}//${url.hostname}${url.pathname}`;
 	} catch {
 		// Invalid URL — return redacted placeholder

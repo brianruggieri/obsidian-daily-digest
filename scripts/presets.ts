@@ -46,7 +46,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	enableSensitivityFilter: true,
 	sensitivityPreset: "recommended" as SensitivityPreset,
 	sensitivityAction: "exclude",
-	sensitivityCategories: ["adult", "gambling", "dating"] as SensitivityCategory[],
+	sensitivityCategories: ["adult", "gambling", "dating", "health", "drugs"] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 
 	// Rendering
