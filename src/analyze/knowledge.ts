@@ -143,7 +143,7 @@ function buildTopicMap(patterns: PatternAnalysis): string[] {
 			.sort((a, b) => b[1] - a[1])
 			.slice(0, 8);
 		for (const [topic, count] of sorted) {
-			lines.push(`\u2022 ${topic} (${count} mentions)`);
+			lines.push(`${topic} (${count} mentions)`);
 		}
 	}
 
