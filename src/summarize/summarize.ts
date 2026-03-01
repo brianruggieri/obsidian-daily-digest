@@ -527,7 +527,7 @@ export function resolvePrivacyTier(
 }
 
 /** Data options object passed to buildProsePrompt. */
-type ProseOptions = {
+export type ProseOptions = {
 	categorized?: CategorizedVisits;
 	searches?: SearchQuery[];
 	claudeSessions?: ClaudeSession[];
