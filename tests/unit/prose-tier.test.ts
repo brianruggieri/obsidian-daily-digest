@@ -12,7 +12,7 @@ import {
 	buildTierFilteredOptions,
 } from "../../src/summarize/summarize";
 import type { AICallConfig } from "../../src/summarize/ai-client";
-import type { ClassificationResult, PatternAnalysis, RAGConfig } from "../../src/types";
+import type { ClassificationResult, PatternAnalysis } from "../../src/types";
 
 // ── Fixtures ─────────────────────────────────────────────
 
@@ -34,7 +34,6 @@ const localConfig: AICallConfig = {
 
 const mockClassification = { events: [{ activityType: "browsing", summary: "test", topics: [], entities: [], source: "browser", sentiment: "neutral" as const }] } as ClassificationResult;
 const mockPatterns = { focusScore: 0.7, temporalClusters: [], topActivityTypes: [], topicCooccurrence: [], entityClusters: [], recurrenceSignals: [], commitWorkUnits: [], claudeTaskSessions: [], knowledgeDelta: "" } as unknown as PatternAnalysis;
-const mockRAGConfig: RAGConfig = { enabled: true, embeddingEndpoint: "", embeddingModel: "", topK: 5 };
 
 const fullOptions = {
 	categorized: { dev: [] },
@@ -50,32 +49,28 @@ const fullOptions = {
 // ── resolvePrivacyTier ───────────────────────────────────
 
 describe("resolvePrivacyTier", () => {
-	it("returns 4 when patterns available + anthropic", () => {
-		expect(resolvePrivacyTier(anthropicConfig, mockClassification, mockPatterns)).toBe(4);
+	it("defaults to tier 4 for anthropic with no explicit tier", () => {
+		expect(resolvePrivacyTier(anthropicConfig)).toBe(4);
 	});
 
-	it("returns 3 when classification available but no patterns + anthropic", () => {
-		expect(resolvePrivacyTier(anthropicConfig, mockClassification, undefined)).toBe(3);
+	it("returns 1 for local provider regardless of tier setting", () => {
+		expect(resolvePrivacyTier(localConfig)).toBe(1);
+		expect(resolvePrivacyTier(localConfig, 4)).toBe(1);
 	});
 
-	it("returns 2 when RAG enabled + anthropic + no classification/patterns", () => {
-		expect(resolvePrivacyTier(anthropicConfig, undefined, undefined, mockRAGConfig)).toBe(2);
+	it("honours explicit tier for anthropic", () => {
+		expect(resolvePrivacyTier(anthropicConfig, 2)).toBe(2);
+		expect(resolvePrivacyTier(anthropicConfig, 1)).toBe(1);
+		expect(resolvePrivacyTier(anthropicConfig, 3)).toBe(3);
 	});
 
-	it("returns 1 when nothing available + anthropic", () => {
-		expect(resolvePrivacyTier(anthropicConfig, undefined, undefined, undefined)).toBe(1);
+	it("ignores null tier and defaults to 4 for anthropic", () => {
+		expect(resolvePrivacyTier(anthropicConfig, null)).toBe(4);
 	});
 
-	it("returns 1 for local provider regardless of patterns", () => {
-		expect(resolvePrivacyTier(localConfig, mockClassification, mockPatterns)).toBe(1);
-	});
-
-	it("honours explicit override over auto-escalation", () => {
-		expect(resolvePrivacyTier(anthropicConfig, mockClassification, mockPatterns, undefined, 2)).toBe(2);
-	});
-
-	it("ignores null override and falls through to auto-escalation", () => {
-		expect(resolvePrivacyTier(anthropicConfig, mockClassification, mockPatterns, undefined, null)).toBe(4);
+	it("clamps out-of-range values", () => {
+		expect(resolvePrivacyTier(anthropicConfig, 0)).toBe(1);
+		expect(resolvePrivacyTier(anthropicConfig, 5)).toBe(4);
 	});
 });
 

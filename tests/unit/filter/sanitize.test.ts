@@ -119,79 +119,77 @@ describe("scrubSecrets", () => {
 // ── URL Sanitization ────────────────────────────────────
 
 describe("sanitizeUrl", () => {
-	it("strips sensitive query params (standard)", () => {
+	it("reduces to protocol+host+path (strips all query strings)", () => {
+		const result = sanitizeUrl("https://example.com/path?q=hello&page=2");
+		expect(result).toBe("https://example.com/path");
+	});
+
+	it("strips sensitive query params", () => {
 		const url = "https://example.com/callback?code=abc123&state=xyz&name=test";
-		const result = sanitizeUrl(url, "standard");
-		// URL API encodes brackets: [REDACTED] → %5BREDACTED%5D
+		const result = sanitizeUrl(url);
 		expect(result).not.toContain("abc123");
 		expect(result).not.toContain("xyz");
-		expect(result).toContain("name=test"); // non-sensitive param kept
-		expect(result).toContain("REDACTED");
+		expect(result).toBe("https://example.com/callback");
 	});
 
 	it("strips access_token param", () => {
-		const result = sanitizeUrl("https://api.example.com?access_token=secret123", "standard");
+		const result = sanitizeUrl("https://api.example.com?access_token=secret123");
 		expect(result).not.toContain("secret123");
-		expect(result).toContain("REDACTED");
+		expect(result).toBe("https://api.example.com/");
 	});
 
 	it("strips userinfo (user:pass@host)", () => {
-		const result = sanitizeUrl("https://admin:password@example.com/path", "standard");
+		const result = sanitizeUrl("https://admin:password@example.com/path");
 		expect(result).not.toContain("password");
+		expect(result).not.toContain("admin");
 	});
 
-	it("strips fragments with tokens", () => {
-		const result = sanitizeUrl("https://example.com/page#access_token=abc", "standard");
+	it("strips fragments", () => {
+		const result = sanitizeUrl("https://example.com/page#access_token=abc");
 		expect(result).not.toContain("access_token=abc");
-	});
-
-	it("aggressive mode reduces to protocol+host+path", () => {
-		const result = sanitizeUrl("https://example.com/path?q=hello&page=2", "aggressive");
-		expect(result).toBe("https://example.com/path");
+		expect(result).toBe("https://example.com/page");
 	});
 
 	it("strips UTM tracking params", () => {
 		const url = "https://example.com/page?utm_source=email&utm_medium=newsletter&page=2";
-		const result = sanitizeUrl(url, "standard");
+		const result = sanitizeUrl(url);
 		expect(result).not.toContain("utm_source");
-		expect(result).not.toContain("utm_medium");
-		expect(result).toContain("page=2");
+		expect(result).toBe("https://example.com/page");
 	});
 
-	it("strips LinkedIn tracking params entirely", () => {
-		const url = "https://www.linkedin.com/jobs/view/123/?trk=eml-digest&trackingId=abc&refId=xyz&midToken=tok&eid=e&otpToken=otp";
-		const result = sanitizeUrl(url, "standard");
+	it("strips LinkedIn tracking params", () => {
+		const url = "https://www.linkedin.com/jobs/view/123/?trk=eml-digest&trackingId=abc";
+		const result = sanitizeUrl(url);
 		expect(result).toBe("https://www.linkedin.com/jobs/view/123/");
 	});
 
-	it("strips ad click IDs (fbclid, gclid) but keeps semantic params", () => {
+	it("strips ad click IDs", () => {
 		const url = "https://example.com/product?fbclid=IwAR0abc&gclid=Cj0abc&color=blue";
-		const result = sanitizeUrl(url, "standard");
+		const result = sanitizeUrl(url);
 		expect(result).not.toContain("fbclid");
 		expect(result).not.toContain("gclid");
-		expect(result).toContain("color=blue");
+		expect(result).toBe("https://example.com/product");
 	});
 
-	it("returns clean URLs unchanged (standard)", () => {
+	it("returns clean URLs unchanged", () => {
 		const clean = "https://github.com/myorg/repo";
-		const result = sanitizeUrl(clean, "standard");
-		expect(result).toContain("github.com/myorg/repo");
+		const result = sanitizeUrl(clean);
+		expect(result).toBe("https://github.com/myorg/repo");
+	});
+
+	it("preserves non-default ports (e.g. local model servers)", () => {
+		const result = sanitizeUrl("http://localhost:11434/v1/chat/completions?model=qwen");
+		expect(result).toBe("http://localhost:11434/v1/chat/completions");
 	});
 
 	it("handles invalid URLs", () => {
-		expect(sanitizeUrl("not-a-url", "standard")).toBe("[INVALID_URL]");
+		expect(sanitizeUrl("not-a-url")).toBe("[INVALID_URL]");
 	});
 
-	it("handles URLs with multiple sensitive params", () => {
-		const url = "https://auth.example.com/cb?code=abc&state=def&token=ghi&csrf=jkl&page=1";
-		const result = sanitizeUrl(url, "standard");
-		expect(result).not.toContain("=abc");
-		expect(result).not.toContain("=def");
-		expect(result).not.toContain("=ghi");
-		expect(result).not.toContain("=jkl");
-		expect(result).toContain("page=1");
-		// Count REDACTED occurrences (URL-encoded as %5BREDACTED%5D)
-		expect((result.match(/REDACTED/g) || []).length).toBe(4);
+	it("preserves path structure", () => {
+		const url = "https://auth.example.com/cb?code=abc&state=def&token=ghi";
+		const result = sanitizeUrl(url);
+		expect(result).toBe("https://auth.example.com/cb");
 	});
 });
 
@@ -311,7 +309,6 @@ describe("filterExcludedDomains", () => {
 describe("sanitizeCollectedData", () => {
 	const disabledConfig: SanitizeConfig = {
 		enabled: false,
-		level: "standard",
 		excludedDomains: [],
 		redactPaths: true,
 		scrubEmails: true,
@@ -319,7 +316,6 @@ describe("sanitizeCollectedData", () => {
 
 	const fullConfig: SanitizeConfig = {
 		enabled: true,
-		level: "standard",
 		excludedDomains: ["bank"],
 		redactPaths: true,
 		scrubEmails: true,
@@ -367,7 +363,6 @@ describe("sanitizeCollectedData", () => {
 describe("sanitizeClaudeSession – XML artifact stripping", () => {
 	const fullConfig: SanitizeConfig = {
 		enabled: true,
-		level: "standard",
 		excludedDomains: [],
 		redactPaths: true,
 		scrubEmails: true,

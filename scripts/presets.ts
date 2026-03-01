@@ -43,7 +43,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 
 	// Privacy & sanitization
 	enableSanitization: true,
-	sanitizationLevel: "standard",
 	excludedDomains: "",
 	redactPaths: false,
 	scrubEmails: true,
@@ -66,9 +65,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	aiModel: "claude-haiku-4-5-20251001",
 
 	// Advanced AI
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
 	enableClassification: false,
 	classificationModel: "qwen2.5:7b-instruct",
 	classificationBatchSize: 8,
@@ -80,7 +76,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,
 	privacyTier: null,
-	autoAggressiveSanitization: true,
 };
 
 // Presets are ordered from most private (rank 1) to least private (rank 11).
@@ -122,7 +117,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: false,
 			enableClassification: true,
 		},
 	},
@@ -134,7 +128,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: true,
 			enableClassification: false,
 		},
 	},
@@ -146,7 +139,6 @@ export const PRESETS: Preset[] = [
 		settings: {
 			enableAI: true,
 			aiProvider: "local",
-			enableRAG: false,
 			enableClassification: false,
 		},
 	},
@@ -164,8 +156,6 @@ export const PRESETS: Preset[] = [
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
 			enableClassification: true,
-			enableRAG: false,
-			sanitizationLevel: "aggressive",
 			privacyTier: 4,
 		},
 	},
@@ -179,7 +169,6 @@ export const PRESETS: Preset[] = [
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
 			enableClassification: true,
-			enableRAG: false,
 			privacyTier: 3,
 		},
 	},
@@ -192,7 +181,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: true,
 			enableClassification: false,
 			privacyTier: 2,
 		},
@@ -206,7 +194,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
-			sanitizationLevel: "aggressive",
 			sensitivityCategories: [
 				"adult", "gambling", "dating", "health", "drugs",
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
@@ -224,7 +211,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-haiku-4-5-20251001",
-			enableRAG: false,
 			enableClassification: false,
 			privacyTier: 1,
 		},
@@ -238,7 +224,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
-			enableRAG: false,
 			enableClassification: false,
 			privacyTier: 1,
 		},

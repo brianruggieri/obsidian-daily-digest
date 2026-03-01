@@ -262,11 +262,8 @@ export const EXCLUDE_DOMAINS = new Set([
 
 // ── Sanitization Types ───────────────────────────────────
 
-export type SanitizationLevel = "standard" | "aggressive";
-
 export interface SanitizeConfig {
 	enabled: boolean;
-	level: SanitizationLevel;
 	excludedDomains: string[];
 	redactPaths: boolean;
 	scrubEmails: boolean;
@@ -421,15 +418,6 @@ export interface ActivityChunk {
 
 export interface EmbeddedChunk extends ActivityChunk {
 	embedding: number[];
-}
-
-export interface RAGConfig {
-	enabled: boolean;
-	embeddingEndpoint: string;
-	embeddingModel: string;
-	topK: number;
-	minChunkTokens: number;
-	maxChunkTokens: number;
 }
 
 // ── Article Clustering Types ─────────────────────────────

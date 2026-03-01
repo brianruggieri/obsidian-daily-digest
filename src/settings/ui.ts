@@ -1,7 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, setIcon, ToggleComponent } from "obsidian";
 import type DailyDigestPlugin from "../plugin/main";
 import { PRIVACY_DESCRIPTIONS } from "../plugin/privacy";
-import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "../types";
+import { BrowserInstallConfig, SensitivityCategory } from "../types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "../filter/sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../collect/browser-profiles";
 import * as log from "../plugin/log";
@@ -260,23 +260,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		if (this.plugin.settings.enableSanitization) {
 			new Setting(containerEl)
-				.setName("Sanitization level")
-				.setDesc(
-					"Standard: strip tokens, sensitive URL params, emails, IPs. " +
-					"Aggressive: also reduce URLs to domain+path only (removes all query strings)."
-				)
-				.addDropdown((dropdown) =>
-					dropdown
-						.addOption("standard", "Standard")
-						.addOption("aggressive", "Aggressive")
-						.setValue(this.plugin.settings.sanitizationLevel)
-						.onChange(async (value) => {
-							this.plugin.settings.sanitizationLevel = value as SanitizationLevel;
-							await this.plugin.saveSettings();
-						})
-				);
-
-			new Setting(containerEl)
 				.setName("Excluded domains")
 				.setDesc(
 					"Always-exclude list using simple pattern matching. A pattern like " +
@@ -467,22 +450,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		}
 
 		// ── Cloud privacy controls ────────────────────
-		new Setting(containerEl)
-			.setName("Auto-aggressive sanitization for cloud")
-			.setDesc(
-				"Always apply aggressive sanitization when sending data to the Anthropic API. " +
-				"Strips all URL query strings and reduces URLs to domain+path only. " +
-				"Recommended when using the cloud provider."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.autoAggressiveSanitization)
-					.onChange(async (value) => {
-						this.plugin.settings.autoAggressiveSanitization = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		new Setting(containerEl)
 			.setName("Privacy tier")
 			.setDesc(
@@ -768,93 +735,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				.setName("Advanced AI processing")
 				.setHeading();
 			this.prependIcon(advAiHeading.nameEl, "cpu");
-
-			// RAG pipeline
-			new Setting(containerEl)
-				.setName("Enable RAG chunking")
-				.setDesc(
-					"Split activity data into focused chunks and use embeddings " +
-					"to select the most relevant context for summarization. " +
-					"Improves quality with large datasets and small context models. " +
-					"Requires a local model server with an embedding model."
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.enableRAG)
-						.onChange(async (value) => {
-							this.plugin.settings.enableRAG = value;
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
-
-			if (this.plugin.settings.enableRAG) {
-				new Setting(containerEl)
-					.setName("Embedding model")
-					.setDesc(
-						"Model for generating embeddings (e.g. nomic-embed-text, " +
-						"all-minilm, mxbai-embed-large). Must be available on your " +
-						"local server."
-					)
-					.addText((text) =>
-						text
-							.setPlaceholder("nomic-embed-text")
-							.setValue(this.plugin.settings.embeddingModel)
-							.onChange(async (value) => {
-								this.plugin.settings.embeddingModel = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Retrieved chunks (Top K)")
-					.setDesc(
-						"Number of most-relevant chunks to include in the AI prompt. " +
-						"Higher = more context but slower. 6–10 is a good range."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(4, 15, 1)
-							.setValue(this.plugin.settings.ragTopK)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.ragTopK = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				const ragCallout = containerEl.createDiv({
-					cls: "dd-settings-callout dd-settings-callout-info",
-				});
-				ragCallout.createEl("p", {
-					text:
-						"Embeddings are always generated locally using your local server " +
-						"endpoint, even when Anthropic is selected for summarization. " +
-						"No embedding data is sent externally.",
-				});
-
-				const ragPullHint = containerEl.createDiv({
-					cls: "dd-settings-callout",
-				});
-				const pullP = ragPullHint.createEl("p");
-				pullP.createEl("span", { text: "Pull an embedding model: " });
-				pullP.createEl("code", { text: "ollama pull nomic-embed-text" });
-
-				// Warn if Anthropic selected but no local endpoint
-				if (
-					this.plugin.settings.aiProvider === "anthropic" &&
-					!this.plugin.settings.localEndpoint
-				) {
-					const warnCallout = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-warn",
-					});
-					warnCallout.createEl("p", {
-						text:
-							"RAG requires a local model server for embedding generation. " +
-							"Configure a local server endpoint above.",
-					});
-				}
-			}
 
 			// Event classification
 			new Setting(containerEl)

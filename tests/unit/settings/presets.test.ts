@@ -56,7 +56,6 @@ describe("local LLM presets", () => {
     const settings = resolvePreset(preset);
     expect(settings.aiProvider).toBe("local");
     expect(settings.enableClassification).toBe(true);
-    expect(settings.enableRAG).toBe(false);
   });
 
   it("local-llm-rag resolves correctly", () => {
@@ -64,10 +63,7 @@ describe("local LLM presets", () => {
     expect(preset).toBeDefined();
     const settings = resolvePreset(preset);
     expect(settings.aiProvider).toBe("local");
-    expect(settings.enableRAG).toBe(true);
     expect(settings.enableClassification).toBe(false);
-    expect(settings.ragTopK).toBe(8);
-    expect(settings.embeddingModel).toBe("nomic-embed-text");
   });
 
   it("local-llm-basic resolves correctly", () => {
@@ -75,7 +71,6 @@ describe("local LLM presets", () => {
     expect(preset).toBeDefined();
     const settings = resolvePreset(preset);
     expect(settings.aiProvider).toBe("local");
-    expect(settings.enableRAG).toBe(false);
     expect(settings.enableClassification).toBe(false);
   });
 });

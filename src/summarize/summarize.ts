@@ -1,7 +1,7 @@
 import { CATEGORY_LABELS } from "../filter/categorize";
 import { estimateTokens } from "./chunker";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, GitCommit, ArticleCluster } from "../types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, SearchQuery, ClaudeSession, StructuredEvent, GitCommit, ArticleCluster } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, loadProseTemplate, fillTemplate, PromptCapability } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
@@ -503,40 +503,27 @@ export type PrivacyTier = 1 | 2 | 3 | 4;
 // ── Privacy tier helpers ─────────────────────────────────
 
 /**
- * Resolve the privacy tier based on available data and explicit tier setting.
+ * Resolve the privacy tier for a given AI call.
  * This is the sole tier-routing function — both the main plugin and the
  * matrix script call this to determine what data reaches the AI prompt.
+ *
+ * Patterns always run (free, on-device), so all 4 tiers are always available.
+ * - Anthropic + explicit tier → use it (1-4)
+ * - Anthropic + null (auto)  → default to 4 (most private)
+ * - Local provider           → always 1 (data stays on machine)
  */
 export function resolvePrivacyTier(
 	config: AICallConfig,
-	classification?: ClassificationResult,
-	patterns?: PatternAnalysis,
-	ragConfig?: RAGConfig,
 	privacyTier?: number | null
 ): 1 | 2 | 3 | 4 {
-	// Determine the highest privacy tier actually supported by available data.
-	const maxAvailableTier: 1 | 2 | 3 | 4 = (() => {
-		if (patterns) return 4;
-		if (classification?.events?.length) return 3;
-		if (ragConfig?.enabled) return 2;
-		return 1;
-	})();
+	if (config.provider !== "anthropic") return 1;
 
 	if (privacyTier !== null && privacyTier !== undefined) {
-		const requested = privacyTier as 1 | 2 | 3 | 4;
-		// If the requested tier requires data that is not available, warn and
-		// fall back to the most private tier that *is* supported.
-		if (requested > maxAvailableTier) {
-			log.warn(
-				`Daily Digest: resolvePrivacyTier: requested privacy tier ${requested} but only tier ${maxAvailableTier} data is available; falling back to ${maxAvailableTier}.`
-			);
-			return maxAvailableTier;
-		}
-		return requested;
+		const clamped = Math.max(1, Math.min(4, privacyTier)) as 1 | 2 | 3 | 4;
+		return clamped;
 	}
 
-	if (config.provider !== "anthropic") return 1;
-	return maxAvailableTier;
+	return 4;
 }
 
 /** Data options object passed to buildProsePrompt. */
@@ -767,7 +754,6 @@ export async function summarizeDay(
 	claudeSessions: ClaudeSession[],
 	config: AICallConfig,
 	profile: string,
-	ragConfig?: RAGConfig,
 	classification?: ClassificationResult,
 	patterns?: PatternAnalysis,
 	compressed?: CompressedActivity,
@@ -792,7 +778,7 @@ export async function summarizeDay(
 	}
 
 	// Resolve privacy tier and filter data layers accordingly
-	const tier = resolvePrivacyTier(config, classification, patterns, ragConfig, privacyTier);
+	const tier = resolvePrivacyTier(config, privacyTier);
 	const proseOptions = buildTierFilteredOptions(tier, {
 		categorized, searches, claudeSessions, gitCommits,
 		compressed, classification, patterns, articleClusters,
