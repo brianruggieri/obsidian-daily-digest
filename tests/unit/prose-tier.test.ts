@@ -149,10 +149,10 @@ describe("buildTierFilteredOptions — tier 3 (classified abstractions)", () => 
 	});
 });
 
-describe("buildTierFilteredOptions — tier 2 (RAG chunks)", () => {
+describe("buildTierFilteredOptions — tier 2 (compressed activity)", () => {
 	const result = buildTierFilteredOptions(2, fullOptions);
 
-	it("includes compressed (RAG-selected content)", () => {
+	it("includes compressed activity", () => {
 		expect(result.compressed).toBeDefined();
 	});
 
@@ -173,10 +173,23 @@ describe("buildTierFilteredOptions — tier 2 (RAG chunks)", () => {
 	});
 });
 
-describe("buildTierFilteredOptions — tier 1 (full context)", () => {
+describe("buildTierFilteredOptions — tier 1 (full raw context)", () => {
 	const result = buildTierFilteredOptions(1, fullOptions);
 
-	it("passes through all fields unchanged", () => {
-		expect(result).toEqual(fullOptions);
+	it("includes raw categorized visits", () => {
+		expect(result.categorized).toBeDefined();
+	});
+
+	it("includes raw searches", () => {
+		expect(result.searches).toBeDefined();
+	});
+
+	it("includes classification and patterns", () => {
+		expect(result.classification).toBeDefined();
+		expect(result.patterns).toBeDefined();
+	});
+
+	it("excludes compressed to force raw-array rendering", () => {
+		expect(result.compressed).toBeUndefined();
 	});
 });

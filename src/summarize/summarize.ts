@@ -583,8 +583,19 @@ export function buildTierFilteredOptions(
 			articleClusters: full.articleClusters,
 		};
 	}
-	// Tier 1: everything
-	return full;
+	// Tier 1: raw arrays (full granularity) + classification + patterns
+	// Excludes `compressed` so the prompt builder renders raw arrays
+	// instead of budget-compressed text — this is what distinguishes
+	// Tier 1 (full detail) from Tier 2 (budget-compressed).
+	return {
+		categorized: full.categorized,
+		searches: full.searches,
+		claudeSessions: full.claudeSessions,
+		gitCommits: full.gitCommits,
+		classification: full.classification,
+		patterns: full.patterns,
+		articleClusters: full.articleClusters,
+	};
 }
 
 /**
