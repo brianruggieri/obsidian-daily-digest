@@ -347,24 +347,32 @@ export async function collectBrowserHistory(
 				continue;
 			}
 
-			clean.push(v);
-
-			// Extract search queries
+			// Extract search queries — if a URL is a search engine results page
+			// with a query param, record the search and skip the visit so it
+			// only appears in the Searches section, not Browser Activity.
+			let isSearchHit = false;
 			for (const [eng, param] of Object.entries(SEARCH_ENGINES)) {
 				if (domain.includes(eng)) {
 					const q = url.searchParams.get(param);
 					// Skip redirect/click-through URLs stored in the query param
 					// (e.g. Google stores LinkedIn email-click URLs in `q`)
-					if (q && q.trim() && !seenQueries.has(q.trim()) && !q.trim().startsWith("http")) {
-						seenQueries.add(q.trim());
-						searches.push({
-							query: decodeURIComponent(q.trim()),
-							time: v.time,
-							engine: eng,
-						});
+					if (q && q.trim() && !q.trim().startsWith("http")) {
+						isSearchHit = true;
+						if (!seenQueries.has(q.trim())) {
+							seenQueries.add(q.trim());
+							searches.push({
+								query: decodeURIComponent(q.trim()),
+								time: v.time,
+								engine: eng,
+							});
+						}
 					}
 					break;
 				}
+			}
+
+			if (!isSearchHit) {
+				clean.push(v);
 			}
 		} catch {
 			// skip invalid URLs
