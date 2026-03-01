@@ -7,8 +7,16 @@
 
 const PREFIX = "Daily Digest";
 
-/** Debug-level logging — useful during development. */
+let _debugEnabled = false;
+
+/** Call from main.ts onload() and after settings changes to sync the debug gate. */
+export function setDebugEnabled(enabled: boolean): void {
+	_debugEnabled = enabled;
+}
+
+/** Debug-level logging — gated behind settings.debugMode. */
 export function debug(...args: unknown[]): void {
+	if (!_debugEnabled) return;
 	console.debug(`${PREFIX}:`, ...args);
 }
 

@@ -7,8 +7,9 @@ import { DailyDigestSettings } from "../settings/types";
  * Bump this to re-trigger the onboarding modal for all users.
  * v1 → v2: updated for cross-platform browser profile detection.
  * v2 → v3: added explicit disclosure of Git data source collection and usage.
+ * v3 → v4: added explicit disclosure of Codex CLI data source.
  */
-export const CURRENT_PRIVACY_VERSION = 3;
+export const CURRENT_PRIVACY_VERSION = 4;
 
 export const PRIVACY_DESCRIPTIONS = {
 	browser: {
@@ -104,6 +105,7 @@ export class OnboardingModal extends Modal {
 	private localToggles: {
 		enableBrowser: boolean;
 		enableClaude: boolean;
+		enableCodex: boolean;
 		enableGit: boolean;
 		enableAI: boolean;
 	};
@@ -119,6 +121,7 @@ export class OnboardingModal extends Modal {
 		this.localToggles = {
 			enableBrowser: settings.enableBrowser,
 			enableClaude: settings.enableClaude,
+			enableCodex: settings.enableCodex,
 			enableGit: settings.enableGit,
 			enableAI: settings.enableAI,
 		};
@@ -182,6 +185,17 @@ export class OnboardingModal extends Modal {
 			);
 
 		new Setting(contentEl)
+			.setName(PRIVACY_DESCRIPTIONS.codex.label)
+			.setDesc(PRIVACY_DESCRIPTIONS.codex.access)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.localToggles.enableCodex)
+					.onChange((v) => {
+						this.localToggles.enableCodex = v;
+					})
+			);
+
+		new Setting(contentEl)
 			.setName(PRIVACY_DESCRIPTIONS.git.label)
 			.setDesc(PRIVACY_DESCRIPTIONS.git.access)
 			.addToggle((toggle) =>
@@ -239,6 +253,7 @@ export class OnboardingModal extends Modal {
 				.onClick(async () => {
 					this.settings.enableBrowser = this.localToggles.enableBrowser;
 					this.settings.enableClaude = this.localToggles.enableClaude;
+					this.settings.enableCodex = this.localToggles.enableCodex;
 					this.settings.enableGit = this.localToggles.enableGit;
 					this.settings.enableAI = this.localToggles.enableAI;
 					this.settings.hasCompletedOnboarding = true;
