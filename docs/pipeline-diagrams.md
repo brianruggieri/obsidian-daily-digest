@@ -290,15 +290,14 @@ Filter = false               ⚠ Private domains may reach AI prompt if disabled
 
 promptBudget            ──► Controls token budget for compressActivity()
 = 3000 (default)             → CompressedActivity always built when AI enabled
-                              → standardPrompt() uses compressed if available
-                                (Tier 2: buildCompressedPrompt())
-                              → Falls back to buildPrompt() if compressed absent
-                                (Tier 1: fixed-cap slicing)
+                              → buildProsePrompt() uses compressed data at Tier 2
+                              → buildTierFilteredOptions() selects data per tier
 
-enableClassification    ──► Stage 4: classify.ts runs
-= false                      → ClassificationResult is undefined
-                              → Tier 3 (classified prompt) is unavailable
-                              → Anthropic falls back to Tier 2 or Tier 1
+enableClassification    ──► Stage 4: classify.ts LLM enrichment
+= false                      → Rule-based classification still runs
+                                (classifyEventsRuleOnly produces basic events)
+                              → LLM-enriched classification is unavailable
+                              → Tier 3 uses rule-based abstractions instead
 
 (patterns always run)   ──► Stage 5+6: patterns.ts + knowledge.ts are invoked
                               → PatternAnalysis populated when there is activity to analyze

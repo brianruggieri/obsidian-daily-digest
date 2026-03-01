@@ -103,17 +103,12 @@ export function sanitizeUrl(rawUrl: string): string {
 	try {
 		const url = new URL(rawUrl);
 
-		// Strip userinfo (user:password@host)
-		if (url.username || url.password) {
-			url.username = "";
-			url.password = "[REDACTED]";
-		}
-
-		// Reduce to protocol + host + path only.
+		// Reduce to protocol + host (includes port) + path only.
 		// Query strings never carry useful signal after collection (search queries
 		// are extracted earlier from raw URLs), and stripping them removes tracking
 		// params, auth tokens, and session IDs in one shot.
-		return `${url.protocol}//${url.hostname}${url.pathname}`;
+		// Userinfo (user:password@host) is also dropped since we build from parts.
+		return `${url.protocol}//${url.host}${url.pathname}`;
 	} catch {
 		// Invalid URL — return redacted placeholder
 		return "[INVALID_URL]";

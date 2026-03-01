@@ -177,6 +177,11 @@ describe("sanitizeUrl", () => {
 		expect(result).toBe("https://github.com/myorg/repo");
 	});
 
+	it("preserves non-default ports (e.g. local model servers)", () => {
+		const result = sanitizeUrl("http://localhost:11434/v1/chat/completions?model=qwen");
+		expect(result).toBe("http://localhost:11434/v1/chat/completions");
+	});
+
 	it("handles invalid URLs", () => {
 		expect(sanitizeUrl("not-a-url")).toBe("[INVALID_URL]");
 	});
