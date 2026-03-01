@@ -396,27 +396,6 @@ export interface PatternConfig {
 	trackRecurrence: boolean;    // persist topic history for recurrence detection
 }
 
-// ── RAG Types ───────────────────────────────────────────
-
-export interface ActivityChunk {
-	id: string;
-	date: string;
-	type: "browser" | "search" | "claude" | "git";
-	category?: string;
-	text: string;
-	metadata: {
-		itemCount: number;
-		domains?: string[];
-		projects?: string[];
-		timeRange?: { start: string; end: string };
-	};
-	embedding?: number[];
-}
-
-export interface EmbeddedChunk extends ActivityChunk {
-	embedding: number[];
-}
-
 // ── Article Clustering Types ─────────────────────────────
 
 /**

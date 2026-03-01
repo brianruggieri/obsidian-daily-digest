@@ -88,6 +88,11 @@ export default class DailyDigestPlugin extends Plugin {
 		}
 	}
 
+	onunload(): void {
+		// Obsidian calls this on plugin disable / app quit.
+		// No persistent resources to tear down currently.
+	}
+
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 		await this.migrateLegacyBrowserSettings();
