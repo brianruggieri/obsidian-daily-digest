@@ -70,9 +70,9 @@ export const PRESETS = {
 		hasCompletedOnboarding: true,
 	},
 
-	/** Sanitization section expanded. */
+	/** Privacy section with excluded domains visible. */
 	sanitizationExpanded: {
-		enableSanitization: true,
+		excludedDomains: "mybank.com, internal.corp.com",
 		hasCompletedOnboarding: true,
 	},
 

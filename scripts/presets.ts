@@ -1,4 +1,4 @@
-import type { DailyDigestSettings } from "../src/settings/types";
+import type { DailyDigestSettings, SensitivityPreset } from "../src/settings/types";
 import type { SensitivityCategory } from "../src/types";
 
 export type PresetOverride = Partial<DailyDigestSettings>;
@@ -42,12 +42,9 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	gitParentDir: "~/git",
 
 	// Privacy & sanitization
-	enableSanitization: true,
-	sanitizationLevel: "standard",
 	excludedDomains: "",
-	redactPaths: false,
-	scrubEmails: true,
 	enableSensitivityFilter: true,
+	sensitivityPreset: "recommended" as SensitivityPreset,
 	sensitivityAction: "exclude",
 	sensitivityCategories: ["adult", "gambling", "dating"] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
@@ -80,7 +77,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,
 	privacyTier: null,
-	autoAggressiveSanitization: true,
 };
 
 // Presets are ordered from most private (rank 1) to least private (rank 11).
@@ -165,7 +161,6 @@ export const PRESETS: Preset[] = [
 			aiModel: "claude-haiku-4-5-20251001",
 			enableClassification: true,
 			enableRAG: false,
-			sanitizationLevel: "aggressive",
 			privacyTier: 4,
 		},
 	},
@@ -206,7 +201,6 @@ export const PRESETS: Preset[] = [
 			enableAI: true,
 			aiProvider: "anthropic",
 			aiModel: "claude-sonnet-4-6",
-			sanitizationLevel: "aggressive",
 			sensitivityCategories: [
 				"adult", "gambling", "dating", "health", "drugs",
 				"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",

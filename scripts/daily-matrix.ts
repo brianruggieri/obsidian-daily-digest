@@ -162,19 +162,11 @@ async function runPreset(
 	}
 
 	// ── 3. Sanitize ──────────────────────────────────────
-	// Auto-upgrade to aggressive for Anthropic when enabled (mirrors main.ts).
-	const effectiveSanitizationLevel =
-		settings.autoAggressiveSanitization && settings.aiProvider === "anthropic"
-			? "aggressive"
-			: settings.sanitizationLevel;
+	// Sanitization is always on — secrets, paths, emails, IPs.
 	const sanitizeConfig: SanitizeConfig = {
-		enabled: settings.enableSanitization,
-		level: effectiveSanitizationLevel,
 		excludedDomains: settings.excludedDomains
 			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
 			: [],
-		redactPaths: settings.redactPaths,
-		scrubEmails: settings.scrubEmails,
 	};
 
 	const sanitized = sanitizeCollectedData(

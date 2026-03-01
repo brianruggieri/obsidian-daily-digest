@@ -20,18 +20,18 @@ const OUTPUT_PATH = path.join(ROOT, "docs", "settings-reference.md");
 const SECTION_ORDER: SettingSection[] = [
 	"General",
 	"Data sources",
-	"Privacy & filtering",
+	"Privacy",
 	"AI summarization",
-	"Advanced AI processing",
+	"Advanced",
 	"Meta",
 ];
 
 const SECTION_ICONS: Record<SettingSection, string> = {
 	"General": "⚙️",
 	"Data sources": "🗄️",
-	"Privacy & filtering": "🛡️",
+	"Privacy": "🛡️",
 	"AI summarization": "✨",
-	"Advanced AI processing": "🧠",
+	"Advanced": "🧠",
 	"Meta": "🔧",
 };
 
