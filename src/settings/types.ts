@@ -1,4 +1,4 @@
-import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "../types";
+import { BrowserInstallConfig, SensitivityCategory } from "../types";
 
 /** Secret ID used in Obsidian's shared SecretStorage (>=1.11.4). */
 export const SECRET_ID = "anthropic-api-key";
@@ -27,11 +27,7 @@ export interface DailyDigestSettings {
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
-	enableRAG: boolean;
-	embeddingModel: string;
-	ragTopK: number;
 	enableSanitization: boolean;
-	sanitizationLevel: SanitizationLevel;
 	excludedDomains: string;
 	redactPaths: boolean;
 	scrubEmails: boolean;
@@ -52,8 +48,6 @@ export interface DailyDigestSettings {
 	debugMode: boolean;
 	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select based on available data layers. */
 	privacyTier: 4 | 3 | 2 | 1 | null;
-	/** Auto-apply aggressive sanitization when provider is Anthropic (recommended: true). */
-	autoAggressiveSanitization: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -77,11 +71,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
-	enableRAG: false,
-	embeddingModel: "nomic-embed-text",
-	ragTopK: 8,
 	enableSanitization: true,
-	sanitizationLevel: "standard" as SanitizationLevel,
 	excludedDomains: "",
 	redactPaths: true,
 	scrubEmails: true,
@@ -100,5 +90,4 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	privacyConsentVersion: 0,
 	debugMode: false,
 	privacyTier: null,
-	autoAggressiveSanitization: true,
 };

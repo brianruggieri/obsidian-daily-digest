@@ -883,7 +883,6 @@ async function runPipeline(
 
 	const sanitizeConfig: SanitizeConfig = {
 		enabled: settings.enableSanitization,
-		level: settings.sanitizationLevel,
 		excludedDomains: settings.excludedDomains
 			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
 			: [],

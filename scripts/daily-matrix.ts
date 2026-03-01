@@ -162,14 +162,8 @@ async function runPreset(
 	}
 
 	// ── 3. Sanitize ──────────────────────────────────────
-	// Auto-upgrade to aggressive for Anthropic when enabled (mirrors main.ts).
-	const effectiveSanitizationLevel =
-		settings.autoAggressiveSanitization && settings.aiProvider === "anthropic"
-			? "aggressive"
-			: settings.sanitizationLevel;
 	const sanitizeConfig: SanitizeConfig = {
 		enabled: settings.enableSanitization,
-		level: effectiveSanitizationLevel,
 		excludedDomains: settings.excludedDomains
 			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
 			: [],
@@ -327,11 +321,8 @@ async function runPreset(
 			localEndpoint: settings.localEndpoint,
 			localModel: settings.localModel,
 		};
-		const ragConfigPreview = settings.enableRAG
-			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
-			: undefined;
 		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
-		const mockTier = resolvePrivacyTier(aiCallConfig, classification, patterns, ragConfigPreview, settings.privacyTier);
+		const mockTier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
 		const mockOptions = buildTierFilteredOptions(mockTier, {
 			categorized, searches, claudeSessions, gitCommits,
 			compressed, classification, patterns, articleClusters,
@@ -364,10 +355,7 @@ async function runPreset(
 		console.log(`[${presetId}] Compressed: ~${compressed.tokenEstimate} tokens (budget: ${settings.promptBudget})`);
 
 		// Log the prompt and tier that will be used.
-		const ragConfigPreview = settings.enableRAG
-			? { enabled: true, embeddingEndpoint: settings.localEndpoint, embeddingModel: settings.embeddingModel, topK: settings.ragTopK, minChunkTokens: 100, maxChunkTokens: 500 }
-			: undefined;
-		const previewTier = resolvePrivacyTier(aiCallConfig, classification, patterns, ragConfigPreview, settings.privacyTier);
+		const previewTier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
 		const previewOptions = buildTierFilteredOptions(previewTier, {
 			categorized, searches, claudeSessions, gitCommits,
 			compressed, classification, patterns, articleClusters,
@@ -388,7 +376,7 @@ async function runPreset(
 		aiSummary = await summarizeDay(
 			date, categorized, searches, claudeSessions,
 			aiCallConfig, settings.profile,
-			ragConfigPreview, classification, patterns,
+			classification, patterns,
 			compressed, gitCommits,
 			settings.promptsDir,
 			articleClusters, settings.privacyTier

@@ -203,17 +203,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		enabledByDefault: true,
 	},
 	{
-		key: "sanitizationLevel",
-		label: "Sanitization level",
-		description:
-			"Standard: strip tokens, sensitive URL parameters, emails, and IP addresses. " +
-			"Aggressive: also reduces URLs to domain + path only, removing all query strings.",
-		section: "Privacy & filtering",
-		type: "select",
-		defaultValue: "standard",
-		dependsOn: "enableSanitization",
-	},
-	{
 		key: "excludedDomains",
 		label: "Excluded domains",
 		description:
@@ -293,19 +282,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		type: "textarea",
 		defaultValue: "",
 		dependsOn: "enableSensitivityFilter",
-	},
-	{
-		key: "autoAggressiveSanitization",
-		label: "Auto-aggressive sanitization for cloud",
-		description:
-			"Always apply aggressive sanitization when sending data to the Anthropic API. " +
-			"Strips all URL query strings and reduces URLs to domain+path only. " +
-			"Recommended when using the cloud provider.",
-		section: "Privacy & filtering",
-		type: "boolean",
-		defaultValue: "true",
-		enabledByDefault: true,
-		dependsOn: "enableSanitization",
 	},
 	{
 		key: "privacyTier",
@@ -414,44 +390,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 	},
 
 	// ── Advanced AI processing ───────────────────────────────────────────────
-	{
-		key: "enableRAG",
-		label: "Enable RAG chunking",
-		description:
-			"Split activity data into focused chunks and use embeddings to select the " +
-			"most relevant context for summarization. Improves quality with large datasets " +
-			"and small context window models. Requires a local model server with an " +
-			"embedding model.",
-		section: "Advanced AI processing",
-		type: "boolean",
-		defaultValue: "false",
-		dependsOn: "enableAI",
-		privacyNote:
-			"Embeddings are always generated locally, even when Anthropic is the " +
-			"summarization provider. No embedding data is sent externally.",
-	},
-	{
-		key: "embeddingModel",
-		label: "Embedding model",
-		description:
-			"Model for generating embeddings (e.g. nomic-embed-text, all-minilm, " +
-			"mxbai-embed-large). Must be available on your local server.",
-		section: "Advanced AI processing",
-		type: "string",
-		defaultValue: "nomic-embed-text",
-		dependsOn: "enableRAG",
-	},
-	{
-		key: "ragTopK",
-		label: "Retrieved chunks (Top K)",
-		description:
-			"Number of most-relevant chunks to include in the AI prompt. " +
-			"Higher values provide more context but increase latency. 6–10 is a good range.",
-		section: "Advanced AI processing",
-		type: "slider",
-		defaultValue: "8",
-		dependsOn: "enableRAG",
-	},
 	{
 		key: "enableClassification",
 		label: "Enable event classification",

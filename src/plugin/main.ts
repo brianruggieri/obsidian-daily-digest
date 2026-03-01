@@ -16,7 +16,7 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
+import { SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
 import { sanitizeCollectedData } from "../filter/sanitize";
 import { classifyEvents, classifyEventsRuleOnly } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
@@ -150,7 +150,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 		const sanitized = sanitizeCollectedData(
 			rawVisits, rawSearches, rawClaude, rawGit,
-			{ enabled: true, level: "standard", excludedDomains: [], redactPaths: false, scrubEmails: true }
+			{ enabled: true, excludedDomains: [], redactPaths: false, scrubEmails: true }
 		);
 		if (stage === "sanitized") {
 			return {
@@ -234,30 +234,11 @@ export default class DailyDigestPlugin extends Plugin {
 			localModel: this.settings.localModel,
 		};
 
-		// Build RAG config if enabled
-		let ragConfig: RAGConfig | undefined;
-		if (this.settings.enableRAG && useAI) {
-			ragConfig = {
-				enabled: true,
-				embeddingEndpoint: this.settings.localEndpoint,
-				embeddingModel: this.settings.embeddingModel,
-				topK: this.settings.ragTopK,
-				minChunkTokens: 100,
-				maxChunkTokens: 1500,
-			};
-		}
-
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
-		// Build sanitization config — auto-upgrade to aggressive for Anthropic
-		const effectiveSanitizationLevel =
-			this.settings.autoAggressiveSanitization && this.settings.aiProvider === "anthropic"
-				? "aggressive"
-				: this.settings.sanitizationLevel;
 		const sanitizeConfig: SanitizeConfig = {
 			enabled: this.settings.enableSanitization,
-			level: effectiveSanitizationLevel,
 			excludedDomains: this.settings.excludedDomains
 				.split(",")
 				.map((d) => d.trim())
@@ -596,18 +577,12 @@ export default class DailyDigestPlugin extends Plugin {
 
 					if (result === "proceed-with-ai") {
 						const aiNotice = new Notice(
-							extractedPatterns
-								? "Daily Digest: Analyzing de-identified patterns (Anthropic)\u2026"
-								: classification
-									? "Daily Digest: Summarizing classified abstractions (Anthropic)\u2026"
-									: ragConfig?.enabled
-										? "Daily Digest: Chunking, embedding & summarizing (Anthropic)\u2026"
-										: "Daily Digest: Generating AI summary (Anthropic)\u2026",
+							"Daily Digest: Generating AI summary (Anthropic)\u2026",
 							0
 						);
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
-							ragConfig, classification, extractedPatterns,
+							classification, extractedPatterns,
 							compressed, gitCommits, this.settings.promptsDir,
 							articleClustersForSemantic, this.settings.privacyTier
 						);
@@ -617,14 +592,10 @@ export default class DailyDigestPlugin extends Plugin {
 					}
 				} else {
 					// Local provider: no consent needed, data stays on machine
-					progressNotice.setMessage(
-						ragConfig?.enabled
-							? "Daily Digest: Chunking, embedding & summarizing (local)\u2026"
-							: "Daily Digest: Generating AI summary (local)\u2026"
-					);
+					progressNotice.setMessage("Daily Digest: Generating AI summary (local)\u2026");
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
-						ragConfig, classification, extractedPatterns,
+						classification, extractedPatterns,
 						compressed, gitCommits, this.settings.promptsDir,
 						articleClustersForSemantic, this.settings.privacyTier
 					);

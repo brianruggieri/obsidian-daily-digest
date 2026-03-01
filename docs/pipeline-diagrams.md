@@ -39,42 +39,18 @@ summarizeDay() called
          │         │
          │         └─ NO
          │
-         ├─ ragConfig.enabled?
-         │         │
-         │         ├─ YES ── chunks > 2 AND totalTokens > 500?
-         │         │                │
-         │         │         ┌─ YES ┴── NO ───────────┐
-         │         │         │                         │
-         │         │  retrieveRelevantChunks()    standardPrompt()
-         │         │  succeeds?                        │
-         │         │         │                         │
-         │         │  ┌─ YES ┴── NO (error) ──┐       │
-         │         │  │                       │       │
-         │         │  RAG               standardPrompt()
-         │         │  buildRAGPrompt()                │
-         │         │  Top-K chunks only.              │
-         │         │                                   │
-         │         └─ NO ─────────────────────────────┘
-         │
-         └─ else (fallback)
+         └─ else (Tier 2 or 1)
                    │
-                   └─ standardPrompt()
-                      compressed data available?
-                             │
-                      ┌─ YES ┴── NO ──────────┐
-                      │                        │
-               Tier 2: compressed       Tier 1: standard
-               buildCompressedPrompt()  buildPrompt()
-               Budget-proportional.     Fixed-cap slicing.
+                   └─ buildProsePrompt()
+                      Tier 2: budget-compressed domains/titles
+                      Tier 1: raw sanitized arrays (full granularity)
 
 Notes:
-  - Anthropic privacy escalation: Tier 4 > Tier 3 > (RAG or standard).
-    RAG is NOT part of the Anthropic escalation chain — it is a
-    separate opt-in path that applies when neither patterns nor
-    classification are available.
+  - Anthropic privacy tiers: 4 (stats) > 3 (abstractions) > 2 (compressed) > 1 (full).
+  - Tier is set by user in settings (default: 4 for Anthropic, 1 for local).
   - "compressed" is always built when AI is enabled, using the
-    promptBudget setting. standardPrompt() prefers it when available.
-  - Local provider receives ALL data layers in a single unified prompt.
+    promptBudget setting.
+  - Local provider always uses Tier 1 — data stays on device.
 ```
 
 ---
@@ -84,26 +60,26 @@ Notes:
 What data is present (✓) or absent (✗) at each privacy tier.
 
 ```
-                          Tier 1      Tier 2       RAG        Tier 3      Tier 4
-                         standard   compressed     rag       classified  deidentified
-                        ─────────  ──────────  ──────────  ──────────  ────────────
-Raw URLs                    ✓           ✓           ✓           ✗           ✗
-Page titles                 ✓           ✓           ✓           ✗           ✗
-Domain names                ✓           ✓           ✓           ✗           ✗
-Search query text           ✓           ✓           ✓           ✗           ✗
-Claude prompt text          ✓           ✓           ✓           ✗           ✗
-Git commit messages         ✓           ✓           ✓           ✗           ✗
-Rule-based summary text     ✓ (raw)     ✓ (raw)     ✓ (raw)     ✗ (*)       ✗
-Per-event summaries         ✗           ✗           ✗           ✓ (*)       ✗
-Per-event topics            ✗           ✗           ✗           ✓           ✗
-Per-event entities          ✗           ✗           ✗           ✓           ✗
-Activity type labels        ✗           ✗           ✗           ✓           ✓ (counts)
-Topic frequency dist.       ✗           ✗           ✗           ✗           ✓
-Temporal cluster labels     ✗           ✗           ✗           ✗           ✓ (**)
-Entity co-occurrences       ✗           ✗           ✗           ✗           ✓
-Focus score                 ✗           ✗           ✗           ✗           ✓
-Recurrence trends           ✗           ✗           ✗           ✗           ✓
-Knowledge delta counts      ✗           ✗           ✗           ✗           ✓
+                          Tier 1      Tier 2      Tier 3      Tier 4
+                         standard   compressed  classified  deidentified
+                        ─────────  ──────────  ──────────  ────────────
+Raw URLs                    ✓           ✓           ✗           ✗
+Page titles                 ✓           ✓           ✗           ✗
+Domain names                ✓           ✓           ✗           ✗
+Search query text           ✓           ✓           ✗           ✗
+Claude prompt text          ✓           ✓           ✗           ✗
+Git commit messages         ✓           ✓           ✗           ✗
+Rule-based summary text     ✓ (raw)     ✓ (raw)     ✗ (*)       ✗
+Per-event summaries         ✗           ✗           ✓ (*)       ✗
+Per-event topics            ✗           ✗           ✓           ✗
+Per-event entities          ✗           ✗           ✓           ✗
+Activity type labels        ✗           ✗           ✓           ✓ (counts)
+Topic frequency dist.       ✗           ✗           ✗           ✓
+Temporal cluster labels     ✗           ✗           ✗           ✓ (**)
+Entity co-occurrences       ✗           ✗           ✗           ✓
+Focus score                 ✗           ✗           ✗           ✓
+Recurrence trends           ✗           ✗           ✗           ✓
+Knowledge delta counts      ✗           ✗           ✗           ✓
 ```
 
 (*) Tier 3 per-event summaries are semantically abstracted:
@@ -322,43 +298,31 @@ promptBudget            ──► Controls token budget for compressActivity()
 enableClassification    ──► Stage 4: classify.ts runs
 = false                      → ClassificationResult is undefined
                               → Tier 3 (classified prompt) is unavailable
-                              → Anthropic falls back to standard (not RAG)
+                              → Anthropic falls back to Tier 2 or Tier 1
 
 (patterns always run)   ──► Stage 5+6: patterns.ts + knowledge.ts are invoked
                               → PatternAnalysis populated when there is activity to analyze
                               → Knowledge sections added to notes when patterns produce output
                               → Privacy tier controls what reaches AI prompt
 
-enableRAG = false       ──► RAG path skipped in summarize.ts
-                             → even if chunks available, standard used
-                             → NOTE: RAG is independent of Anthropic
-                               escalation chain — it applies only when
-                               neither patterns nor classification matched
-
 enableAI = false        ──► summarizeDay() not called
                              → AISummary is null
                              → headline, tldr, themes, notable, category
                                summaries, work patterns, reflection all absent
 
-provider = "anthropic"  ──► Privacy escalation chain active
-                             → deidentified > classified > standard
-                             → RAG is NOT part of this chain; it is a
-                               separate opt-in path below classified
+provider = "anthropic"  ──► Privacy tier chain active
+                             → Tier resolved by resolvePrivacyTier()
+                             → Sanitization always strips to domain+path
 provider = "local"      ──► Uses unified prompt with ALL data layers
                              → No privacy escalation — data stays on device
                              → buildUnifiedPrompt() merges raw + classified
                                + patterns into a single prompt
 
-autoAggressiveSanit-    ──► When true AND provider = "anthropic":
-ization = true               → sanitizationLevel is overridden to "aggressive"
-(default: true)              → Strips all URL query strings before cloud calls
-                             → Applies even if sanitizationLevel = "standard"
-
 privacyTier             ──► Explicit tier selection in resolvePrivacyTier()
-= null (default)             → null: auto-select highest available tier
-= 4                          → Aggregated statistics only (requires patterns)
-= 3                          → Classified abstractions (requires classification)
+= null (default)             → null: defaults to Tier 4 for Anthropic
+= 4                          → Aggregated statistics only
+= 3                          → Classified abstractions
 = 2                          → Budget-compressed data
 = 1                          → Full sanitized context
-                             → Clamps to highest available if requested > available
+                             → Clamped to 1–4 range
 ```

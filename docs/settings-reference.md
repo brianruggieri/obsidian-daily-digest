@@ -8,9 +8,9 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 
 - [⚙️ General](#general) (2 settings)
 - [🗄️ Data sources](#data-sources) (10 settings)
-- [🛡️ Privacy & filtering](#privacy-filtering) (12 settings)
+- [🛡️ Privacy & filtering](#privacy-filtering) (9 settings)
 - [✨ AI summarization](#ai-summarization) (7 settings)
-- [🧠 Advanced AI processing](#advanced-ai-processing) (9 settings)
+- [🧠 Advanced AI processing](#advanced-ai-processing) (6 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -144,16 +144,6 @@ Scrub sensitive tokens, auth parameters, email addresses, and IP addresses from 
 - **Default:** `true`
 - **On by default:** yes
 
-### `sanitizationLevel`
-
-**Sanitization level**
-
-Standard: strip tokens, sensitive URL parameters, emails, and IP addresses. Aggressive: also reduces URLs to domain + path only, removing all query strings.
-
-- **Type:** Dropdown
-- **Default:** `standard`
-- **Visible when:** `enableSanitization` is enabled
-
 ### `excludedDomains`
 
 **Excluded domains**
@@ -224,17 +214,6 @@ Additional domains to filter using exact matching. Subdomains are matched automa
 - **Type:** Text area
 - **Default:** *(empty)*
 - **Visible when:** `enableSensitivityFilter` is enabled
-
-### `autoAggressiveSanitization`
-
-**Auto-aggressive sanitization for cloud**
-
-Always apply aggressive sanitization when sending data to the Anthropic API. Strips all URL query strings and reduces URLs to domain+path only. Recommended when using the cloud provider.
-
-- **Type:** Toggle
-- **Default:** `true`
-- **On by default:** yes
-- **Visible when:** `enableSanitization` is enabled
 
 ### `privacyTier`
 
@@ -321,44 +300,13 @@ Anthropic model to use for summarization when the Anthropic provider is selected
 
 **Prompt templates directory**
 
-Path to a directory containing custom prompt templates (standard.txt, rag.txt, etc.). Leave empty to use the built-in prompts.
+Path to a directory containing custom prompt templates (standard.txt, classified.txt, etc.). Leave empty to use the built-in prompts.
 
 - **Type:** Text
 - **Default:** *(empty)*
 - **Visible when:** `enableAI` is enabled
 
 ## 🧠 Advanced AI processing
-
-### `enableRAG`
-
-**Enable RAG chunking**
-
-Split activity data into focused chunks and use embeddings to select the most relevant context for summarization. Improves quality with large datasets and small context window models. Requires a local model server with an embedding model.
-
-- **Type:** Toggle
-- **Default:** `false`
-- **Visible when:** `enableAI` is enabled
-- **Privacy:** Embeddings are always generated locally, even when Anthropic is the summarization provider. No embedding data is sent externally.
-
-### `embeddingModel`
-
-**Embedding model**
-
-Model for generating embeddings (e.g. nomic-embed-text, all-minilm, mxbai-embed-large). Must be available on your local server.
-
-- **Type:** Text
-- **Default:** `nomic-embed-text`
-- **Visible when:** `enableRAG` is enabled
-
-### `ragTopK`
-
-**Retrieved chunks (Top K)**
-
-Number of most-relevant chunks to include in the AI prompt. Higher values provide more context but increase latency. 6–10 is a good range.
-
-- **Type:** Slider
-- **Default:** `8`
-- **Visible when:** `enableRAG` is enabled
 
 ### `enableClassification`
 

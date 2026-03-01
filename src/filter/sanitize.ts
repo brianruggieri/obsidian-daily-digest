@@ -3,7 +3,6 @@ import {
 	SearchQuery,
 	ClaudeSession,
 	GitCommit,
-	SanitizationLevel,
 	SanitizeConfig,
 } from "../types";
 import { stripAnsi } from "../render/escape";
@@ -100,35 +99,7 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 
 // ── URL Sanitization ─────────────────────────────────────
 
-const SENSITIVE_URL_PARAMS = new Set([
-	"token", "key", "secret", "auth", "access_token", "refresh_token",
-	"code", "state", "nonce", "password", "jwt", "session", "sessionid",
-	"session_id", "api_key", "apikey", "client_secret", "redirect_uri",
-	"samlrequest", "samlresponse", "id_token", "csrf", "xsrf",
-	"authorization", "bearer", "credential",
-]);
-
-// Tracking/analytics params that carry no semantic meaning about what the
-// user was doing — they only identify the ad campaign, email send, or click
-// event that referred the visit. Stripping them makes URLs canonical and
-// readable without losing any content signal.
-const TRACKING_PARAMS = new Set([
-	// UTM campaign tracking
-	"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-	// Ad click IDs
-	"fbclid", "gclid", "msclkid", "twclid", "dclid",
-	// LinkedIn email tracking
-	"trk", "trkemail", "trackingid", "refid", "lipi",
-	"midtoken", "midsig", "eid", "otptoken",
-	// Google redirect / Gmail
-	"ust", "usg",
-	// HubSpot
-	"_hsenc", "_hsmi",
-	// Mailchimp
-	"mc_eid", "mc_cid",
-]);
-
-export function sanitizeUrl(rawUrl: string, level: SanitizationLevel): string {
+export function sanitizeUrl(rawUrl: string): string {
 	try {
 		const url = new URL(rawUrl);
 
@@ -138,31 +109,11 @@ export function sanitizeUrl(rawUrl: string, level: SanitizationLevel): string {
 			url.password = "[REDACTED]";
 		}
 
-		// Strip tracking/analytics params (no semantic content)
-		for (const param of [...url.searchParams.keys()]) {
-			if (TRACKING_PARAMS.has(param.toLowerCase())) {
-				url.searchParams.delete(param);
-			}
-		}
-
-		// Strip sensitive query params
-		for (const param of [...url.searchParams.keys()]) {
-			if (SENSITIVE_URL_PARAMS.has(param.toLowerCase())) {
-				url.searchParams.set(param, "[REDACTED]");
-			}
-		}
-
-		// Strip fragment if it contains token-like content
-		if (url.hash && /(?:access_token|token|key|auth|secret)/i.test(url.hash)) {
-			url.hash = "";
-		}
-
-		// Aggressive mode: reduce to protocol + host + path only
-		if (level === "aggressive") {
-			return `${url.protocol}//${url.hostname}${url.pathname}`;
-		}
-
-		return url.toString();
+		// Reduce to protocol + host + path only.
+		// Query strings never carry useful signal after collection (search queries
+		// are extracted earlier from raw URLs), and stripping them removes tracking
+		// params, auth tokens, and session IDs in one shot.
+		return `${url.protocol}//${url.hostname}${url.pathname}`;
 	} catch {
 		// Invalid URL — return redacted placeholder
 		return "[INVALID_URL]";
@@ -274,7 +225,7 @@ function sanitizeBrowserVisit(
 ): BrowserVisit {
 	return {
 		...visit,
-		url: sanitizeUrl(visit.url, config.level),
+		url: sanitizeUrl(visit.url),
 		title: scrubText(visit.title || "", config),
 	};
 }
