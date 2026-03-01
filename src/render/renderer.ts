@@ -458,14 +458,26 @@ export function renderMarkdown(
 		// Placeholder: Task Sessions section is reserved for cross-source fusion output.
 	}
 
-	// ── Claude Code sessions (collapsed callout) ─
+	// ── Claude Code sessions (collapsed callout, grouped by project) ─
 	if (claudeSessions.length) {
 		lines.push(`> [!info]- \u{1F916} Claude Code / AI Work (${claudeSessions.length})`);
+
+		const byProject: Record<string, typeof claudeSessions> = {};
 		for (const e of claudeSessions) {
-			const ts = formatTime(e.time);
-			const project = e.project ? `\`${e.project}\`` : "";
-			const prompt = escapeForMarkdown(e.prompt.replace(/\n/g, " ").trim());
-			lines.push(`> - ${project} ${prompt}` + (ts ? ` \u2014 ${ts}` : ""));
+			const p = e.project || "unknown";
+			if (!byProject[p]) byProject[p] = [];
+			byProject[p].push(e);
+		}
+
+		const sorted = Object.entries(byProject).sort((a, b) => b[1].length - a[1].length);
+		for (const [project, sessions] of sorted) {
+			lines.push(`>`);
+			lines.push(`> **${project}** (${sessions.length})`);
+			for (const e of sessions) {
+				const ts = formatTime(e.time);
+				const prompt = escapeForMarkdown(e.prompt.replace(/\n/g, " ").trim());
+				lines.push(`> - ${prompt}` + (ts ? ` \u2014 ${ts}` : ""));
+			}
 		}
 		lines.push("");
 	}
@@ -508,13 +520,14 @@ export function renderMarkdown(
 
 			const sorted = Object.entries(byDomain).sort((a, b) => b[1].length - a[1].length);
 			for (const [domain, dvs] of sorted) {
+				lines.push(`> >`);
 				lines.push(`> > **${domain}** (${dvs.length})`);
 				for (const v of dvs.slice(0, 5)) {
 					const ts = formatTime(v.time);
 					let title = (v.title || "").trim() || v.url;
 					if (title.length > 75) title = title.slice(0, 75) + "\u2026";
 					const displayUrl = cleanUrlForDisplay(v.url).replace(/\)/g, "%29");
-					lines.push(`> >   - [${escapeForLinkText(title)}](${displayUrl})` + (ts ? ` \u2014 ${ts}` : ""));
+					lines.push(`> > - [${escapeForLinkText(title)}](${displayUrl})` + (ts ? ` \u2014 ${ts}` : ""));
 				}
 			}
 		}
