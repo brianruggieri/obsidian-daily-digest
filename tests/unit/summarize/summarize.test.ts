@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePrivacyTier, summarizeDay } from "../../../src/summarize/summarize";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, buildSummaryPrompt, resolvePrivacyTier, summarizeDay, summarizeDayWithPrompt } from "../../../src/summarize/summarize";
 import { ClassificationResult, StructuredEvent, PatternAnalysis, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
 import type { AICallConfig } from "../../../src/summarize/ai-client";
 
@@ -511,6 +511,141 @@ describe("buildProsePrompt Layer 0", () => {
 		expect(layer0Pos).toBeGreaterThan(-1);
 		expect(layer1Pos).toBeGreaterThan(-1);
 		expect(layer0Pos).toBeLessThan(layer1Pos);
+	});
+});
+
+// ── buildSummaryPrompt ──────────────────────────────────
+
+describe("buildSummaryPrompt", () => {
+	const classification: ClassificationResult = {
+		events: [
+			makeEvent({ activityType: "research", topics: ["OAuth"], entities: ["GitHub"], summary: "Researching OAuth" }),
+		],
+		totalProcessed: 1,
+		llmClassified: 1,
+		ruleClassified: 0,
+		processingTimeMs: 50,
+	};
+
+	it("returns prompt string, tier, capability, and token estimate", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5",
+		};
+		const result = buildSummaryPrompt(
+			DATE, {}, [], [], config, "developer",
+			classification, makeMockPatterns(), undefined, [], undefined, [], 4
+		);
+		expect(result.prompt).toBeTruthy();
+		expect(typeof result.prompt).toBe("string");
+		expect(result.tier).toBe(4);
+		expect(result.capability).toBe("balanced");
+		expect(result.tokenEstimate).toBeGreaterThan(0);
+	});
+
+	it("resolves tier from config when privacyTier is null", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5",
+		};
+		const result = buildSummaryPrompt(
+			DATE, {}, [], [], config, "", undefined, undefined, undefined, [], undefined, [], null
+		);
+		// anthropic + null → tier 4
+		expect(result.tier).toBe(4);
+	});
+
+	it("returns tier 1 for local provider", () => {
+		const config: AICallConfig = {
+			provider: "local",
+			localEndpoint: "http://localhost:11434",
+			localModel: "llama3",
+		};
+		const result = buildSummaryPrompt(
+			DATE, {}, [], [], config, ""
+		);
+		expect(result.tier).toBe(1);
+	});
+
+	it("resolves Sonnet/Opus to high capability", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-sonnet-4-5-20250929",
+		};
+		const result = buildSummaryPrompt(
+			DATE, {}, [], [], config, "", undefined, undefined, undefined, [], undefined, [], 2
+		);
+		expect(result.capability).toBe("high");
+	});
+
+	it("tier 4 excludes raw data from the prompt", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5",
+		};
+		const categorized = {
+			development: [{
+				url: "https://github.com/test",
+				domain: "github.com",
+				title: "Test Repo",
+				time: new Date(),
+			}],
+		};
+		const result = buildSummaryPrompt(
+			DATE, categorized, [], [], config, "",
+			undefined, makeMockPatterns(), undefined, [], undefined, [], 4
+		);
+		// Tier 4 = stats only, should NOT include raw domain data
+		expect(result.prompt).not.toContain("github.com");
+		expect(result.tier).toBe(4);
+	});
+
+	it("tier 1 includes raw data in the prompt", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5",
+		};
+		const categorized = {
+			development: [{
+				url: "https://github.com/test",
+				domain: "github.com",
+				title: "Test Repo",
+				time: new Date(),
+			}],
+		};
+		const result = buildSummaryPrompt(
+			DATE, categorized, [], [], config, "",
+			undefined, undefined, undefined, [], undefined, [], 1
+		);
+		expect(result.prompt).toContain("github.com");
+		expect(result.tier).toBe(1);
+	});
+});
+
+// ── summarizeDayWithPrompt ──────────────────────────────
+
+describe("summarizeDayWithPrompt", () => {
+	it("calls callAI with the provided prompt and parses response", async () => {
+		const { callAI } = await import("../../../src/summarize/ai-client");
+		vi.mocked(callAI).mockResolvedValueOnce(
+			"## Headline\nA productive day\n\n## TLDR\nGot stuff done\n\n## Themes\n- coding\n"
+		);
+
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5",
+		};
+		const result = await summarizeDayWithPrompt("my custom prompt", config);
+		expect(callAI).toHaveBeenCalledWith("my custom prompt", config, 1500, undefined, false);
+		expect(result.headline).toBe("A productive day");
+		expect(result.tldr).toBe("Got stuff done");
+		expect(result.themes).toContain("coding");
 	});
 });
 

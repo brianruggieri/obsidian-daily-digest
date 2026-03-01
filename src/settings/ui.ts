@@ -607,6 +607,22 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				tierCallout.createEl("p", {
 					text: tierDescriptions[tierKey] ?? "",
 				});
+
+				// ── Prompt preview (Anthropic only) ──
+				new Setting(containerEl)
+					.setName("Show prompt preview")
+					.setDesc(
+						"Display the exact prompt in the data preview modal before sending " +
+						"to Anthropic. You can review and edit it before confirming."
+					)
+					.addToggle((toggle) =>
+						toggle
+							.setValue(this.plugin.settings.enablePromptPreview)
+							.onChange(async (value) => {
+								this.plugin.settings.enablePromptPreview = value;
+								await this.plugin.saveSettings();
+							})
+					);
 			}
 
 			// Prompt detail budget (moved here from Data Sources — only relevant for AI)

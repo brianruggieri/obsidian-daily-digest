@@ -49,6 +49,8 @@ export interface DailyDigestSettings {
 	enableTimeline: boolean;
 	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select based on available data layers. */
 	privacyTier: 4 | 3 | 2 | 1 | null;
+	/** Show the AI prompt in the data preview modal before sending to Anthropic. Default: true. */
+	enablePromptPreview: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -90,4 +92,5 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	debugMode: false,
 	enableTimeline: false,
 	privacyTier: null,
+	enablePromptPreview: true,
 };

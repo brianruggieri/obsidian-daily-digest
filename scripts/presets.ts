@@ -74,6 +74,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,
 	privacyTier: null,
+	enablePromptPreview: true,
 };
 
 // Presets are ordered from most private (rank 1) to least private (rank 11).

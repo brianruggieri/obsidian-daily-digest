@@ -745,6 +745,63 @@ export function buildProsePrompt(
 	return fillTemplate(loadProseTemplate(capability, promptsDir), vars);
 }
 
+// ── Prompt builder (extract for preview) ────────────────
+
+export interface SummaryPromptResult {
+	prompt: string;
+	tier: 1 | 2 | 3 | 4;
+	capability: PromptCapability;
+	tokenEstimate: number;
+}
+
+/**
+ * Build the AI prompt without sending it. Returns the prompt string,
+ * resolved tier, capability level, and estimated token count.
+ * Used by the prompt preview modal to show what will be sent.
+ */
+export function buildSummaryPrompt(
+	date: Date,
+	categorized: CategorizedVisits,
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	config: AICallConfig,
+	profile: string,
+	classification?: ClassificationResult,
+	patterns?: PatternAnalysis,
+	compressed?: CompressedActivity,
+	gitCommits?: GitCommit[],
+	promptsDir?: string,
+	articleClusters?: ArticleCluster[],
+	privacyTier?: number | null
+): SummaryPromptResult {
+	const tier = resolvePrivacyTier(config, privacyTier);
+	const proseOptions = buildTierFilteredOptions(tier, {
+		categorized, searches, claudeSessions, gitCommits: gitCommits ?? [],
+		compressed, classification, patterns, articleClusters,
+	});
+	const modelName = config.provider === "anthropic" ? config.anthropicModel : config.localModel;
+	const capability = resolvePromptCapability(modelName, config.provider);
+	const prompt = buildProsePrompt(date, profile, proseOptions, promptsDir, capability, tier);
+	return {
+		prompt,
+		tier,
+		capability,
+		tokenEstimate: estimateTokens(prompt),
+	};
+}
+
+/**
+ * Send a pre-built prompt to the AI and parse the response.
+ * Used when the user edits the prompt in the preview modal.
+ */
+export async function summarizeDayWithPrompt(
+	prompt: string,
+	config: AICallConfig,
+): Promise<AISummary> {
+	const raw = await callAI(prompt, config, 1500, undefined, false);
+	return parseProseSections(raw);
+}
+
 // ── Main summarization entry point ──────────────────────
 
 export async function summarizeDay(
@@ -777,23 +834,17 @@ export async function summarizeDay(
 		};
 	}
 
-	// Resolve privacy tier and filter data layers accordingly
-	const tier = resolvePrivacyTier(config, privacyTier);
-	const proseOptions = buildTierFilteredOptions(tier, {
-		categorized, searches, claudeSessions, gitCommits,
-		compressed, classification, patterns, articleClusters,
-	});
-
-	const modelName = config.provider === "anthropic" ? config.anthropicModel : config.localModel;
-	const capability = resolvePromptCapability(modelName, config.provider);
-	const prompt = buildProsePrompt(date, profile, proseOptions, promptsDir, capability, tier);
+	const { prompt, tier, capability, tokenEstimate } = buildSummaryPrompt(
+		date, categorized, searches, claudeSessions, config, profile,
+		classification, patterns, compressed, gitCommits, promptsDir,
+		articleClusters, privacyTier
+	);
 
 	log.debug(
 		`Daily Digest: Summarizing ` +
 		`(tier=${tier}, capability=${capability}, ` +
-		`~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
+		`~${tokenEstimate} prompt tokens, provider=${config.provider})`
 	);
 
-	const raw = await callAI(prompt, config, 1500, undefined, false);
-	return parseProseSections(raw);
+	return summarizeDayWithPrompt(prompt, config);
 }

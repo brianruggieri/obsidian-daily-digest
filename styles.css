@@ -283,3 +283,39 @@
 	border-radius: 3px;
 	font-size: 0.85em;
 }
+
+/* ── Prompt Preview (Data Preview Modal) ── */
+
+.dd-preview-prompt {
+	margin-top: 12px;
+}
+
+.dd-preview-prompt-content {
+	margin-top: 8px;
+}
+
+.dd-preview-prompt-text {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 8px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	tab-size: 2;
+}
+
+.dd-preview-prompt-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 8px;
+}
+
+.dd-preview-prompt-reset {
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.dd-preview-token-estimate {
+	font-size: 12px;
+	color: var(--text-muted);
+}

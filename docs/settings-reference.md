@@ -9,7 +9,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 - [⚙️ General](#general) (3 settings)
 - [🗄️ Data sources](#data-sources) (9 settings)
 - [🛡️ Privacy](#privacy) (4 settings)
-- [✨ AI summarization](#ai-summarization) (9 settings)
+- [✨ AI summarization](#ai-summarization) (10 settings)
 - [🧠 Advanced](#advanced) (9 settings)
 - [🔧 Meta](#meta) (2 settings)
 
@@ -252,6 +252,17 @@ Anthropic model to use for summarization when the Anthropic provider is selected
 
 - **Type:** Dropdown
 - **Default:** `claude-haiku-4-5`
+- **Visible when:** `enableAI` is enabled
+
+### `enablePromptPreview`
+
+**Show prompt preview**
+
+Display the exact AI prompt in the data preview modal before sending to Anthropic. The prompt can be reviewed and edited before confirming. Only applies to the Anthropic provider (local models don't show a consent modal).
+
+- **Type:** Toggle
+- **Default:** `true`
+- **On by default:** yes
 - **Visible when:** `enableAI` is enabled
 
 ### `promptsDir`
