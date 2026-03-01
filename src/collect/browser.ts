@@ -174,8 +174,12 @@ export function unwrapGoogleRedirect(rawUrl: string): string | null {
 // ── Near-Duplicate Collapse ──────────────────────
 
 /**
- * Round a timestamp to the nearest minute for grouping purposes.
- * Two visits within the same 60-second window produce the same key suffix.
+ * Bucket a timestamp by minute boundary (floor to calendar minute).
+ * Two visits in the same calendar minute produce the same key suffix.
+ * Note: visits 1 second apart that straddle a minute boundary (e.g.
+ * 10:00:59 and 10:01:00) will land in different buckets — this is
+ * acceptable because the downstream canonical-URL dedup in dedup.ts
+ * catches any remaining near-duplicates regardless of timestamp.
  */
 function minuteKey(time: Date | null): number {
 	if (!time) return 0;

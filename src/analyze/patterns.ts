@@ -204,7 +204,8 @@ export function filterClusterTopics(topics: string[]): string[] {
 		// Reject topics containing domain separators
 		if (raw.includes(".")) continue;
 		// Reject multi-word ProperCase topics (company name fragments like "Some Company Name").
-		// Allow topics where every word is an UPPERCASE acronym (e.g. "OAuth PKCE").
+		// Allow all-caps/mixed-case acronym pairs (e.g. "OAuth PKCE", "CSS HTML") by only
+		// rejecting when at least one word has ProperCase shape (uppercase + lowercase).
 		const rawWords = raw.split(/\s+/);
 		if (rawWords.length >= 2
 			&& rawWords.every((w) => /^[A-Z]/.test(w))
