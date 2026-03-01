@@ -324,12 +324,10 @@ enableClassification    ──► Stage 4: classify.ts runs
                               → Tier 3 (classified prompt) is unavailable
                               → Anthropic falls back to standard (not RAG)
 
-enablePatterns          ──► Stage 5+6: patterns.ts + knowledge.ts run
-= false                      → PatternAnalysis is undefined
-                              → Tier 4 (deidentified prompt) is unavailable
-                              → Knowledge Insights section absent from note
-                              → focus_score absent from frontmatter
-                              → Anthropic falls back to classified or standard
+(patterns always run)   ──► Stage 5+6: patterns.ts + knowledge.ts are invoked
+                              → PatternAnalysis populated when there is activity to analyze
+                              → Knowledge sections added to notes when patterns produce output
+                              → Privacy tier controls what reaches AI prompt
 
 enableRAG = false       ──► RAG path skipped in summarize.ts
                              → even if chunks available, standard used
@@ -356,11 +354,11 @@ ization = true               → sanitizationLevel is overridden to "aggressive"
 (default: true)              → Strips all URL query strings before cloud calls
                              → Applies even if sanitizationLevel = "standard"
 
-privacyTierOverride     ──► Bypasses auto-escalation in resolvePromptAndTier()
-= null (default)             → null: auto-select most private available tier
-= 4                          → Always use de-identified (requires patterns)
-= 3                          → Always use classified (requires classification)
-= 2                          → Always use compressed (standard data)
-= 1                          → Always use standard (raw sanitized data)
-                             → Falls back to Tier 1 if required data unavailable
+privacyTier             ──► Explicit tier selection in resolvePrivacyTier()
+= null (default)             → null: auto-select highest available tier
+= 4                          → Aggregated statistics only (requires patterns)
+= 3                          → Classified abstractions (requires classification)
+= 2                          → Budget-compressed data
+= 1                          → Full sanitized context
+                             → Clamps to highest available if requested > available
 ```

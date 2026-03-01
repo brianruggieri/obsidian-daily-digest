@@ -4,8 +4,6 @@ import { BrowserInstallConfig, SanitizationLevel, SensitivityCategory } from "..
 export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
-export type PromptStrategy = "monolithic-json" | "single-prose";
-
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
@@ -43,19 +41,17 @@ export interface DailyDigestSettings {
 	sensitivityAction: "exclude" | "redact";
 	enableGit: boolean;
 	gitParentDir: string;
-	enablePatterns: boolean;
 	patternCooccurrenceWindow: number;
 	patternMinClusterSize: number;
 	trackRecurrence: boolean;
 	/** Max unique pages shown per domain in the daily note. Default: 5. Range: 1-20. */
 	maxVisitsPerDomain: number;
-	promptStrategy: PromptStrategy;
 	promptsDir: string;
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 	debugMode: boolean;
-	/** Force a specific privacy tier for Anthropic cloud calls. null = auto-escalate (recommended). */
-	privacyTierOverride: 4 | 3 | 2 | 1 | null;
+	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select based on available data layers. */
+	privacyTier: 4 | 3 | 2 | 1 | null;
 	/** Auto-apply aggressive sanitization when provider is Anthropic (recommended: true). */
 	autoAggressiveSanitization: boolean;
 }
@@ -95,16 +91,14 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityAction: "exclude" as "exclude" | "redact",
 	enableGit: false,
 	gitParentDir: "",
-	enablePatterns: false,
 	patternCooccurrenceWindow: 30,
 	patternMinClusterSize: 3,
 	trackRecurrence: true,
 	maxVisitsPerDomain: 5,
-	promptStrategy: "single-prose" as PromptStrategy,
 	promptsDir: "",
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 	debugMode: false,
-	privacyTierOverride: null,
+	privacyTier: null,
 	autoAggressiveSanitization: true,
 };

@@ -472,11 +472,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Privacy tier override")
+			.setName("Privacy tier")
 			.setDesc(
-				"Force a specific privacy tier instead of auto-selecting the most private available tier. " +
-				"Auto (recommended): escalates to Tier 4 when patterns are available. " +
-				"Override: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
+				"Select the privacy tier for Anthropic cloud calls. " +
+				"Auto (recommended): uses the most private tier supported by available data. " +
+				"Manual: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
 			)
 			.addDropdown((dropdown) =>
 				dropdown
@@ -486,12 +486,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.addOption("2", "Tier 2 — Compressed (budget-proportional)")
 					.addOption("1", "Tier 1 — Standard (sanitized raw data)")
 					.setValue(
-						this.plugin.settings.privacyTierOverride === null
+						this.plugin.settings.privacyTier === null
 							? "null"
-							: String(this.plugin.settings.privacyTierOverride)
+							: String(this.plugin.settings.privacyTier)
 					)
 					.onChange(async (value) => {
-						this.plugin.settings.privacyTierOverride =
+						this.plugin.settings.privacyTier =
 							value === "null" ? null : (parseInt(value) as 1 | 2 | 3 | 4);
 						await this.plugin.saveSettings();
 					})
@@ -922,85 +922,66 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					});
 				}
 
-				// Pattern extraction (requires classification)
+				// Pattern extraction settings (patterns always run — free, on-device)
 				new Setting(containerEl)
-					.setName("Enable pattern extraction")
+					.setName("Co-occurrence window")
 					.setDesc(
-						"Extract temporal clusters, topic co-occurrences, entity relations, " +
-						"and recurrence signals from classified events. Adds focus scores, " +
-						"topic maps, and knowledge delta analysis to your daily notes."
+						"Time window in minutes for detecting topic co-occurrences. " +
+						"Events within the same window are considered related."
 					)
-					.addToggle((toggle) =>
-						toggle
-							.setValue(this.plugin.settings.enablePatterns)
+					.addSlider((slider) =>
+						slider
+							.setLimits(10, 120, 10)
+							.setValue(this.plugin.settings.patternCooccurrenceWindow)
+							.setDynamicTooltip()
 							.onChange(async (value) => {
-								this.plugin.settings.enablePatterns = value;
+								this.plugin.settings.patternCooccurrenceWindow = value;
 								await this.plugin.saveSettings();
-								this.display();
 							})
 					);
 
-				if (this.plugin.settings.enablePatterns) {
-					new Setting(containerEl)
-						.setName("Co-occurrence window")
-						.setDesc(
-							"Time window in minutes for detecting topic co-occurrences. " +
-							"Events within the same window are considered related."
-						)
-						.addSlider((slider) =>
-							slider
-								.setLimits(10, 120, 10)
-								.setValue(this.plugin.settings.patternCooccurrenceWindow)
-								.setDynamicTooltip()
-								.onChange(async (value) => {
-									this.plugin.settings.patternCooccurrenceWindow = value;
-									await this.plugin.saveSettings();
-								})
-						);
+				new Setting(containerEl)
+					.setName("Minimum cluster size")
+					.setDesc(
+						"Minimum number of events to form a temporal cluster. " +
+						"Lower values detect more clusters but may include noise."
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(2, 10, 1)
+							.setValue(this.plugin.settings.patternMinClusterSize)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								this.plugin.settings.patternMinClusterSize = value;
+								await this.plugin.saveSettings();
+							})
+					);
 
-					new Setting(containerEl)
-						.setName("Minimum cluster size")
-						.setDesc(
-							"Minimum number of events to form a temporal cluster. " +
-							"Lower values detect more clusters but may include noise."
-						)
-						.addSlider((slider) =>
-							slider
-								.setLimits(2, 10, 1)
-								.setValue(this.plugin.settings.patternMinClusterSize)
-								.setDynamicTooltip()
-								.onChange(async (value) => {
-									this.plugin.settings.patternMinClusterSize = value;
-									await this.plugin.saveSettings();
-								})
-						);
+				new Setting(containerEl)
+					.setName("Track recurrence")
+					.setDesc(
+						"Persist topic history across days to detect recurring interests, " +
+						"returning topics, and rising trends. Stored locally in your vault " +
+						"under .daily-digest/topic-history.json."
+					)
+					.addToggle((toggle) =>
+						toggle
+							.setValue(this.plugin.settings.trackRecurrence)
+							.onChange(async (value) => {
+								this.plugin.settings.trackRecurrence = value;
+								await this.plugin.saveSettings();
+							})
+					);
 
-					new Setting(containerEl)
-						.setName("Track recurrence")
-						.setDesc(
-							"Persist topic history across days to detect recurring interests, " +
-							"returning topics, and rising trends. Stored locally in your vault " +
-							"under .daily-digest/topic-history.json."
-						)
-						.addToggle((toggle) =>
-							toggle
-								.setValue(this.plugin.settings.trackRecurrence)
-								.onChange(async (value) => {
-									this.plugin.settings.trackRecurrence = value;
-									await this.plugin.saveSettings();
-								})
-						);
-
-					const patternCallout = containerEl.createDiv({
-						cls: "dd-settings-callout",
-					});
-					patternCallout.createEl("p", {
-						text:
-							"Pattern extraction is entirely local and statistical — no LLM calls. " +
-							"It analyzes classified events to find activity clusters, topic connections, " +
-							"and curiosity patterns. Results appear as new sections in your daily note.",
-					});
-				}
+				const patternCallout = containerEl.createDiv({
+					cls: "dd-settings-callout",
+				});
+				patternCallout.createEl("p", {
+					text:
+						"Pattern extraction always runs — it is entirely local and statistical (no LLM calls). " +
+						"It analyzes events to find activity clusters, topic connections, " +
+						"and curiosity patterns. Results appear as new sections in your daily note.",
+				});
 			}
 		} else {
 			const depCallout = containerEl.createDiv({

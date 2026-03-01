@@ -50,7 +50,6 @@ function makeSettings(overrides: Partial<DailyDigestSettings> = {}): DailyDigest
 		sensitivityAction: "exclude",
 		enableGit: false,
 		gitParentDir: "",
-		enablePatterns: false,
 		patternCooccurrenceWindow: 30,
 		patternMinClusterSize: 3,
 		trackRecurrence: false,

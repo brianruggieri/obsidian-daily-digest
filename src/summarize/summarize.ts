@@ -1,12 +1,10 @@
 import { CATEGORY_LABELS } from "../filter/categorize";
-import { chunkActivityData, estimateTokens } from "./chunker";
-import { retrieveRelevantChunks } from "./embeddings";
+import { estimateTokens } from "./chunker";
 import { CompressedActivity } from "./compress";
-import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, EmbeddedChunk, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, slugifyQuestion, sanitizeReflectionId, GitCommit, ArticleCluster } from "../types";
+import { AISummary, CategorizedVisits, ClassificationResult, PatternAnalysis, RAGConfig, SearchQuery, ClaudeSession, StructuredEvent, GitCommit, ArticleCluster } from "../types";
 import { callAI, AICallConfig } from "./ai-client";
 import { loadPromptTemplate, loadProseTemplate, fillTemplate, PromptCapability } from "./prompt-templates";
 import { parseProseSections } from "./prose-parser";
-import { PromptStrategy } from "../settings/types";
 import { getFocusLabel } from "../analyze/patterns";
 import * as log from "../plugin/log";
 
@@ -65,86 +63,6 @@ export function buildPrompt(
 		gitCommits: gitList.length ? gitList.join("\n") : "  (none)",
 	};
 	return fillTemplate(loadPromptTemplate("standard", promptsDir), vars);
-}
-
-// ── Compressed prompt builder (full-day mode) ───────────
-// Uses pre-compressed activity data from compress.ts. This path is taken
-// when collectionMode === "complete" — it replaces the fixed-cap slicing
-// in buildPrompt with budget-aware proportional compression.
-
-function buildCompressedPrompt(
-	date: Date,
-	compressed: CompressedActivity,
-	profile: string,
-	promptsDir?: string,
-	focusScore?: number
-): string {
-	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
-	const dateStr = date.toLocaleDateString("en-US", {
-		weekday: "long",
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	});
-
-	const focusLabel = focusScore !== undefined
-		? getFocusLabel(focusScore).toLowerCase()
-		: "";
-	const focusHint = focusScore !== undefined
-		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
-		: "";
-
-	const vars: Record<string, string> = {
-		dateStr,
-		contextHint,
-		focusHint,
-		totalEvents: String(compressed.totalEvents),
-		browserActivity: compressed.browserText,
-		searches: compressed.searchText,
-		claudePrompts: compressed.claudeText,
-		gitCommits: compressed.gitText,
-	};
-	return fillTemplate(loadPromptTemplate("compressed", promptsDir), vars);
-}
-
-// ── RAG-aware prompt builder ────────────────────────────
-
-function buildRAGPrompt(
-	date: Date,
-	retrievedChunks: EmbeddedChunk[],
-	profile: string,
-	promptsDir?: string,
-	focusScore?: number
-): string {
-	const dateStr = date.toLocaleDateString("en-US", {
-		weekday: "long",
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	});
-	const contextHint = profile ? `\nUser profile context: ${profile}` : "";
-
-	const chunkTexts = retrievedChunks
-		.map(
-			(c, i) =>
-				`--- Activity Block ${i + 1} (${c.type}${c.category ? `: ${c.category}` : ""}) ---\n${c.text}`
-		)
-		.join("\n\n");
-
-	const focusLabel = focusScore !== undefined
-		? getFocusLabel(focusScore).toLowerCase()
-		: "";
-	const focusHint = focusScore !== undefined
-		? `\nEstimated focus score: ${Math.round(focusScore * 100)}% (${focusLabel})`
-		: "";
-
-	const vars: Record<string, string> = {
-		dateStr,
-		contextHint,
-		focusHint,
-		chunkTexts,
-	};
-	return fillTemplate(loadPromptTemplate("rag", promptsDir), vars);
 }
 
 // ── Classified prompt builder (Phase 2) ─────────────────
@@ -582,155 +500,19 @@ Reflections: Return 1-3 reflection prompts depending on the day's complexity —
 
 export type PrivacyTier = 1 | 2 | 3 | 4;
 
-export interface PromptResolution {
-	prompt: string;
-	tier: PrivacyTier;
-	maxTokens: number;
-}
-
-/**
- * Routes to a specific forced tier, falling back to Tier 1 with a warning
- * if the requested tier's data is unavailable.
- */
-function buildTierForced(
-	tier: number,
-	date: Date,
-	categorized: CategorizedVisits,
-	searches: SearchQuery[],
-	claudeSessions: ClaudeSession[],
-	config: AICallConfig,
-	profile: string,
-	classification?: ClassificationResult,
-	patterns?: PatternAnalysis,
-	compressed?: CompressedActivity,
-	gitCommits: GitCommit[] = [],
-	promptsDir?: string
-): PromptResolution {
-	const standardPrompt = () =>
-		compressed
-			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
-			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
-
-	switch (tier) {
-		case 4:
-			if (patterns) {
-				return { prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir), tier: 4, maxTokens: 1500 };
-			}
-			log.warn("Daily Digest: Tier 4 override requested but no patterns available, falling back to Tier 1");
-			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
-		case 3:
-			if (classification && classification.events.length > 0) {
-				return {
-					prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
-					tier: 3,
-					maxTokens: 1000,
-				};
-			}
-			log.warn("Daily Digest: Tier 3 override requested but no classification available, falling back to Tier 1");
-			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
-		case 2:
-			if (compressed) {
-				return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
-			}
-			log.warn("Daily Digest: Tier 2 override requested but no compressed activity available, falling back to Tier 1");
-			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
-		case 1:
-		default:
-			return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
-	}
-}
-
-/**
- * Resolve which prompt to build and which privacy tier it corresponds to,
- * based on available data layers and the AI provider.
- *
- * This is the synchronous, non-network portion of the privacy escalation
- * chain. The async RAG path (tier 2 with actual chunk retrieval) is handled
- * only inside `summarizeDay`; this function returns tier 2 with a standard
- * prompt as a placeholder for the tier label when RAG is enabled.
- *
- * Privacy escalation for Anthropic:
- *   Tier 4: De-identified — aggregated patterns only, zero per-event data
- *   Tier 3: Classified — per-event abstractions, no raw URLs
- *   Tier 2: RAG — retrieval-selected chunks (async path in summarizeDay)
- *   Tier 1: Standard — sanitized raw activity data
- * Local provider always uses the unified prompt (all layers, stays on device).
- */
-export function resolvePromptAndTier(
-	date: Date,
-	categorized: CategorizedVisits,
-	searches: SearchQuery[],
-	claudeSessions: ClaudeSession[],
-	config: AICallConfig,
-	profile: string,
-	ragConfig?: RAGConfig,
-	classification?: ClassificationResult,
-	patterns?: PatternAnalysis,
-	compressed?: CompressedActivity,
-	gitCommits: GitCommit[] = [],
-	promptsDir?: string,
-	privacyTierOverride?: number | null
-): PromptResolution {
-	const standardPrompt = () =>
-		compressed
-			? buildCompressedPrompt(date, compressed, profile, promptsDir, patterns?.focusScore)
-			: buildPrompt(date, categorized, searches, claudeSessions, profile, gitCommits, promptsDir, patterns?.focusScore);
-
-	// Explicit tier override bypasses auto-escalation
-	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
-		return buildTierForced(
-			privacyTierOverride, date, categorized, searches, claudeSessions,
-			config, profile, classification, patterns, compressed, gitCommits, promptsDir
-		);
-	}
-
-	if (patterns && config.provider === "anthropic") {
-		return {
-			prompt: buildDeidentifiedPrompt(date, patterns, profile, promptsDir),
-			tier: 4,
-			maxTokens: 1500,
-		};
-	} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
-		return {
-			prompt: buildClassifiedPrompt(date, classification, profile, promptsDir, patterns?.focusScore),
-			tier: 3,
-			maxTokens: 1000,
-		};
-	} else if (config.provider === "local") {
-		return {
-			prompt: buildUnifiedPrompt(date, profile, {
-				categorized,
-				searches,
-				claudeSessions,
-				gitCommits,
-				compressed,
-				classification: classification?.events.length ? classification : undefined,
-				patterns,
-			}),
-			tier: 1,
-			maxTokens: patterns ? 1500 : 1000,
-		};
-	} else if (ragConfig?.enabled) {
-		// RAG requires async chunk retrieval — return the standard prompt as a
-		// placeholder. The actual RAG prompt is built inside summarizeDay.
-		return { prompt: standardPrompt(), tier: 2, maxTokens: 1000 };
-	} else {
-		return { prompt: standardPrompt(), tier: 1, maxTokens: 1000 };
-	}
-}
-
 // ── Privacy tier helpers ─────────────────────────────────
 
 /**
- * Resolve the privacy tier for a prose-strategy call, applying the same
- * escalation logic used by the monolithic-json path in resolvePromptAndTier().
+ * Resolve the privacy tier based on available data and explicit tier setting.
+ * This is the sole tier-routing function — both the main plugin and the
+ * matrix script call this to determine what data reaches the AI prompt.
  */
 export function resolvePrivacyTier(
 	config: AICallConfig,
 	classification?: ClassificationResult,
 	patterns?: PatternAnalysis,
 	ragConfig?: RAGConfig,
-	privacyTierOverride?: number | null
+	privacyTier?: number | null
 ): 1 | 2 | 3 | 4 {
 	// Determine the highest privacy tier actually supported by available data.
 	const maxAvailableTier: 1 | 2 | 3 | 4 = (() => {
@@ -740,8 +522,8 @@ export function resolvePrivacyTier(
 		return 1;
 	})();
 
-	if (privacyTierOverride !== null && privacyTierOverride !== undefined) {
-		const requested = privacyTierOverride as 1 | 2 | 3 | 4;
+	if (privacyTier !== null && privacyTier !== undefined) {
+		const requested = privacyTier as 1 | 2 | 3 | 4;
 		// If the requested tier requires data that is not available, warn and
 		// fall back to the most private tier that *is* supported.
 		if (requested > maxAvailableTier) {
@@ -793,7 +575,7 @@ export function buildTierFilteredOptions(
 		};
 	}
 	if (tier === 2) {
-		// RAG-selected chunks + patterns + classification
+		// Compressed activity + patterns + classification
 		return {
 			compressed: full.compressed,
 			classification: full.classification,
@@ -801,8 +583,19 @@ export function buildTierFilteredOptions(
 			articleClusters: full.articleClusters,
 		};
 	}
-	// Tier 1: everything
-	return full;
+	// Tier 1: raw arrays (full granularity) + classification + patterns
+	// Excludes `compressed` so the prompt builder renders raw arrays
+	// instead of budget-compressed text — this is what distinguishes
+	// Tier 1 (full detail) from Tier 2 (budget-compressed).
+	return {
+		categorized: full.categorized,
+		searches: full.searches,
+		claudeSessions: full.claudeSessions,
+		gitCommits: full.gitCommits,
+		classification: full.classification,
+		patterns: full.patterns,
+		articleClusters: full.articleClusters,
+	};
 }
 
 /**
@@ -980,9 +773,8 @@ export async function summarizeDay(
 	compressed?: CompressedActivity,
 	gitCommits: GitCommit[] = [],
 	promptsDir?: string,
-	promptStrategy: PromptStrategy = "monolithic-json",
 	articleClusters?: ArticleCluster[],
-	privacyTierOverride?: number | null
+	privacyTier?: number | null
 ): Promise<AISummary> {
 	// ── Guard: skip AI call when no activity data is available ──
 	const hasVisits = Object.values(categorized).some((categoryVisits) => categoryVisits.length > 0);
@@ -999,157 +791,23 @@ export async function summarizeDay(
 		};
 	}
 
-	// ── Prose strategy: heading-delimited markdown output ──
-	if (promptStrategy === "single-prose") {
-		// Resolve privacy tier and filter data layers accordingly
-		const tier = resolvePrivacyTier(config, classification, patterns, ragConfig, privacyTierOverride);
-		const proseOptions = buildTierFilteredOptions(tier, {
-			categorized, searches, claudeSessions, gitCommits,
-			compressed, classification, patterns, articleClusters,
-		});
+	// Resolve privacy tier and filter data layers accordingly
+	const tier = resolvePrivacyTier(config, classification, patterns, ragConfig, privacyTier);
+	const proseOptions = buildTierFilteredOptions(tier, {
+		categorized, searches, claudeSessions, gitCommits,
+		compressed, classification, patterns, articleClusters,
+	});
 
-		const modelName = config.provider === "anthropic" ? config.anthropicModel : config.localModel;
-		const capability = resolvePromptCapability(modelName, config.provider);
-		const prompt = buildProsePrompt(date, profile, proseOptions, promptsDir, capability, tier);
+	const modelName = config.provider === "anthropic" ? config.anthropicModel : config.localModel;
+	const capability = resolvePromptCapability(modelName, config.provider);
+	const prompt = buildProsePrompt(date, profile, proseOptions, promptsDir, capability, tier);
 
-		log.debug(
-			`Daily Digest: Using single-prose strategy ` +
-			`(tier=${tier}, capability=${capability}, ` +
-			`~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
-		);
+	log.debug(
+		`Daily Digest: Summarizing ` +
+		`(tier=${tier}, capability=${capability}, ` +
+		`~${estimateTokens(prompt)} prompt tokens, provider=${config.provider})`
+	);
 
-		const raw = await callAI(prompt, config, 1500, undefined, false);
-		return parseProseSections(raw);
-	}
-
-	// ── JSON strategy (monolithic-json): existing behavior ──
-	let prompt: string;
-	let maxTokens = 1000;
-
-	if (ragConfig?.enabled) {
-		// Async RAG path — kept here because it requires network calls.
-		const chunks = chunkActivityData(
-			date, categorized, searches, claudeSessions
-		);
-		const totalTokens = chunks.reduce(
-			(sum, c) => sum + estimateTokens(c.text), 0
-		);
-
-		if (chunks.length > 2 && totalTokens > 500) {
-			try {
-				const retrieved = await retrieveRelevantChunks(
-					chunks,
-					ragConfig.embeddingEndpoint,
-					ragConfig.embeddingModel,
-					ragConfig.topK
-				);
-				prompt = buildRAGPrompt(date, retrieved, profile, promptsDir, patterns?.focusScore);
-				log.debug(
-					`Daily Digest RAG: Using RAG prompt (${retrieved.length} chunks, ` +
-					`~${estimateTokens(prompt)} tokens)`
-				);
-			} catch (e) {
-				log.warn(
-					"Daily Digest: RAG pipeline failed, falling back to standard prompt:",
-					e
-				);
-				const fallback = resolvePromptAndTier(
-					date, categorized, searches, claudeSessions, config, profile,
-					undefined, classification, patterns, compressed, gitCommits, promptsDir
-				);
-				prompt = fallback.prompt;
-				maxTokens = fallback.maxTokens;
-			}
-		} else {
-			log.debug(
-				`Daily Digest RAG: Skipping RAG (${chunks.length} chunks, ` +
-				`${totalTokens} tokens — too small)`
-			);
-			const fallback = resolvePromptAndTier(
-				date, categorized, searches, claudeSessions, config, profile,
-				undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
-			);
-			prompt = fallback.prompt;
-			maxTokens = fallback.maxTokens;
-		}
-	} else {
-		const resolution = resolvePromptAndTier(
-			date, categorized, searches, claudeSessions, config, profile,
-			undefined, classification, patterns, compressed, gitCommits, promptsDir, privacyTierOverride
-		);
-		prompt = resolution.prompt;
-		maxTokens = resolution.maxTokens;
-
-		// Debug logging for non-RAG paths
-		if (patterns && config.provider === "anthropic") {
-			log.debug(
-				`Daily Digest: Using de-identified prompt for Anthropic ` +
-				`(${patterns.temporalClusters.length} clusters, ` +
-				`focus ${Math.round(patterns.focusScore * 100)}%, ` +
-				`${patterns.recurrenceSignals.length} recurrence signals)`
-			);
-		} else if (classification && classification.events.length > 0 && config.provider === "anthropic") {
-			log.debug(
-				`Daily Digest: Using classified prompt for Anthropic ` +
-				`(${classification.events.length} events, ${classification.llmClassified} LLM-classified)`
-			);
-		} else if (config.provider === "local") {
-			log.debug(
-				`Daily Digest: Using unified prompt for local provider ` +
-				`(raw=${!!(compressed ?? Object.keys(categorized).length)}, ` +
-				`classified=${!!(classification?.events.length)}, ` +
-				`patterns=${!!patterns})`
-			);
-		}
-	}
-
-	const raw = await callAI(prompt, config, maxTokens);
-
-	// Strip markdown fences if the model wrapped it
-	const cleaned = raw
-		.replace(/^```json?\s*/m, "")
-		.replace(/\s*```$/m, "")
-		.trim();
-
-	try {
-		const summary = JSON.parse(cleaned) as AISummary;
-		// Derive structured prompts from reflections (new format) or questions (legacy)
-		if (summary.reflections?.length) {
-			// New format: [{theme, text}] → ReflectionPrompt {id, question}
-			const seen = new Set<string>();
-			summary.prompts = summary.reflections.map((r) => {
-				let id = sanitizeReflectionId(r.theme);
-				const base = id;
-				let n = 2;
-				while (seen.has(id)) {
-					id = `${base}_${n++}`;
-				}
-				seen.add(id);
-				return { id, question: r.text };
-			});
-		} else if (summary.questions?.length) {
-			// Legacy fallback: derive IDs from question text
-			const seen = new Set<string>();
-			summary.prompts = summary.questions.map((q) => {
-				let id = slugifyQuestion(q);
-				const base = id;
-				let n = 2;
-				while (seen.has(id)) {
-					id = `${base}_${n++}`;
-				}
-				seen.add(id);
-				return { id, question: q };
-			});
-		}
-		return summary;
-	} catch {
-		return {
-			headline: "Activity summary unavailable",
-			tldr: cleaned.slice(0, 400),
-			themes: [],
-			category_summaries: {},
-			notable: [],
-			questions: [],
-		};
-	}
+	const raw = await callAI(prompt, config, 1500, undefined, false);
+	return parseProseSections(raw);
 }

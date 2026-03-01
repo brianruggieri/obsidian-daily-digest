@@ -18,7 +18,7 @@ import {
 } from "./privacy";
 import { RAGConfig, SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
 import { sanitizeCollectedData } from "../filter/sanitize";
-import { classifyEvents } from "../filter/classify";
+import { classifyEvents, classifyEventsRuleOnly } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
 import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "../analyze/patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "../analyze/knowledge";
@@ -336,7 +336,12 @@ export default class DailyDigestPlugin extends Plugin {
 			const categorized = categorizeVisits(visits);
 
 			// ── Classify (Phase 2) ──────────────
-			let classification: ClassificationResult | undefined;
+			// Always run rule-based classification (free, on-device)
+			let classification: ClassificationResult = classifyEventsRuleOnly(
+				visits, searches, claudeSessions, gitCommits, categorized
+			);
+
+			// Optional: LLM-enriched classification for richer Tier 3 abstractions
 			if (this.settings.enableClassification && useAI) {
 				const classifyModel = this.settings.classificationModel || this.settings.localModel;
 				if (classifyModel && this.settings.localEndpoint) {
@@ -358,7 +363,7 @@ export default class DailyDigestPlugin extends Plugin {
 							`in ${classification.processingTimeMs}ms`
 						);
 					} catch (e) {
-						log.warn("Daily Digest: Classification failed, continuing without:", e);
+						log.warn("Daily Digest: LLM classification failed, using rule-based:", e);
 					}
 				} else {
 					log.debug("Daily Digest: Classification enabled but no local model/endpoint configured");
@@ -366,9 +371,10 @@ export default class DailyDigestPlugin extends Plugin {
 			}
 
 			// ── Pattern Extraction (Phase 3) ────
+			// Always run patterns + knowledge (free, on-device computation)
 			let knowledgeSections: KnowledgeSections | undefined;
 			let extractedPatterns: PatternAnalysis | undefined;
-			if (this.settings.enablePatterns && classification && classification.events.length > 0) {
+			if (classification.events.length > 0) {
 				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
 				const patternConfig: PatternConfig = {
 					enabled: true,
@@ -602,8 +608,8 @@ export default class DailyDigestPlugin extends Plugin {
 						aiSummary = await summarizeDay(
 							targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 							ragConfig, classification, extractedPatterns,
-							compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-							articleClustersForSemantic, this.settings.privacyTierOverride
+							compressed, gitCommits, this.settings.promptsDir,
+							articleClustersForSemantic, this.settings.privacyTier
 						);
 						aiNotice.hide();
 					} else {
@@ -619,8 +625,8 @@ export default class DailyDigestPlugin extends Plugin {
 					aiSummary = await summarizeDay(
 						targetDate, categorized, searches, claudeSessions, aiConfig, this.settings.profile,
 						ragConfig, classification, extractedPatterns,
-						compressed, gitCommits, this.settings.promptsDir, this.settings.promptStrategy,
-						articleClustersForSemantic, this.settings.privacyTierOverride
+						compressed, gitCommits, this.settings.promptsDir,
+						articleClustersForSemantic, this.settings.privacyTier
 					);
 				}
 			}

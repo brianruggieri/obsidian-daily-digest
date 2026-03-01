@@ -308,10 +308,10 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableSanitization",
 	},
 	{
-		key: "privacyTierOverride",
-		label: "Privacy tier override",
+		key: "privacyTier",
+		label: "Privacy tier",
 		description:
-			"Force a specific privacy tier instead of auto-selecting the most private available tier. " +
+			"Explicit privacy tier for Anthropic cloud calls. " +
 			"Tiers: 4 (de-identified stats only), 3 (classified abstractions), " +
 			"2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.",
 		section: "Privacy & filtering",
@@ -412,18 +412,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		defaultValue: "",
 		dependsOn: "enableAI",
 	},
-	{
-		key: "promptStrategy",
-		label: "Prompt strategy",
-		description:
-			"monolithic-json: sends all activity as a structured JSON object in a single " +
-			"prompt — best for most models. " +
-			"single-prose: sends activity as natural language prose — may suit some models better.",
-		section: "AI summarization",
-		type: "select",
-		defaultValue: "monolithic-json",
-		dependsOn: "enableAI",
-	},
 
 	// ── Advanced AI processing ───────────────────────────────────────────────
 	{
@@ -503,20 +491,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableClassification",
 	},
 	{
-		key: "enablePatterns",
-		label: "Enable pattern extraction",
-		description:
-			"Extract temporal clusters, topic co-occurrences, entity relations, " +
-			"and recurrence signals from classified events. Adds focus scores, " +
-			"topic maps, and knowledge delta analysis to your daily notes.",
-		section: "Advanced AI processing",
-		type: "boolean",
-		defaultValue: "false",
-		dependsOn: "enableClassification",
-		privacyNote:
-			"Pattern extraction is entirely local and statistical — no LLM calls.",
-	},
-	{
 		key: "patternCooccurrenceWindow",
 		label: "Co-occurrence window",
 		description:
@@ -525,7 +499,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "30",
-		dependsOn: "enablePatterns",
+		dependsOn: undefined,
 	},
 	{
 		key: "patternMinClusterSize",
@@ -536,7 +510,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		section: "Advanced AI processing",
 		type: "slider",
 		defaultValue: "3",
-		dependsOn: "enablePatterns",
+		dependsOn: undefined,
 	},
 	{
 		key: "trackRecurrence",
@@ -549,7 +523,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
-		dependsOn: "enablePatterns",
+		dependsOn: undefined,
 	},
 
 	// ── Meta ─────────────────────────────────────────────────────────────────

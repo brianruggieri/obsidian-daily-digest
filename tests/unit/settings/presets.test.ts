@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { PRESETS, BASE_SETTINGS, resolvePreset } from "../../../scripts/presets";
 
 describe("Presets", () => {
-  it("exports exactly 13 presets", () => {
-    expect(PRESETS).toHaveLength(13);
+  it("exports exactly 11 presets", () => {
+    expect(PRESETS).toHaveLength(11);
   });
 
   it("every preset has a unique id", () => {
@@ -30,6 +30,23 @@ describe("Presets", () => {
     expect(resolved.enableAI).toBe(false);
     expect(resolved.aiProvider).toBe("none");
   });
+
+  it("all cloud presets declare an explicit privacyTier", () => {
+    const cloudPresets = PRESETS.filter(p => p.privacyGroup === "cloud");
+    for (const preset of cloudPresets) {
+      const resolved = resolvePreset(preset);
+      expect(resolved.privacyTier).not.toBeNull();
+      expect([1, 2, 3, 4]).toContain(resolved.privacyTier);
+    }
+  });
+
+  it("non-cloud presets have null privacyTier", () => {
+    const nonCloud = PRESETS.filter(p => p.privacyGroup !== "cloud");
+    for (const preset of nonCloud) {
+      const resolved = resolvePreset(preset);
+      expect(resolved.privacyTier).toBeNull();
+    }
+  });
 });
 
 describe("local LLM presets", () => {
@@ -40,7 +57,6 @@ describe("local LLM presets", () => {
     expect(settings.aiProvider).toBe("local");
     expect(settings.enableClassification).toBe(true);
     expect(settings.enableRAG).toBe(false);
-    expect(settings.enablePatterns).toBe(true);
   });
 
   it("local-llm-rag resolves correctly", () => {
@@ -50,7 +66,6 @@ describe("local LLM presets", () => {
     expect(settings.aiProvider).toBe("local");
     expect(settings.enableRAG).toBe(true);
     expect(settings.enableClassification).toBe(false);
-    expect(settings.enablePatterns).toBe(true);
     expect(settings.ragTopK).toBe(8);
     expect(settings.embeddingModel).toBe("nomic-embed-text");
   });
@@ -62,25 +77,5 @@ describe("local LLM presets", () => {
     expect(settings.aiProvider).toBe("local");
     expect(settings.enableRAG).toBe(false);
     expect(settings.enableClassification).toBe(false);
-    expect(settings.enablePatterns).toBe(true);
-  });
-
-  it("local-llm-prose uses single-prose strategy", () => {
-    const preset = PRESETS.find(p => p.id === "local-llm-prose")!;
-    expect(preset).toBeDefined();
-    const settings = resolvePreset(preset);
-    expect(settings.aiProvider).toBe("local");
-    expect(settings.promptStrategy).toBe("single-prose");
-  });
-});
-
-describe("cloud prose presets", () => {
-  it("cloud-haiku-prose uses single-prose strategy", () => {
-    const preset = PRESETS.find(p => p.id === "cloud-haiku-prose")!;
-    expect(preset).toBeDefined();
-    const settings = resolvePreset(preset);
-    expect(settings.aiProvider).toBe("anthropic");
-    expect(settings.aiModel).toBe("claude-haiku-4-5-20251001");
-    expect(settings.promptStrategy).toBe("single-prose");
   });
 });

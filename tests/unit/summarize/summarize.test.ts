@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePromptAndTier, summarizeDay } from "../../../src/summarize/summarize";
-import { ClassificationResult, StructuredEvent, PatternAnalysis, CategorizedVisits, ActivityType, RAGConfig, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
+import { buildClassifiedPrompt, buildDeidentifiedPrompt, buildProsePrompt, resolvePrivacyTier, summarizeDay } from "../../../src/summarize/summarize";
+import { ClassificationResult, StructuredEvent, PatternAnalysis, ActivityType, RAGConfig, ArticleCluster, CommitWorkUnit, ClaudeTaskSession, GitCommit } from "../../../src/types";
 import type { AICallConfig } from "../../../src/summarize/ai-client";
 
 vi.mock("../../../src/summarize/ai-client", async (importOriginal) => {
@@ -263,11 +263,7 @@ describe("buildDeidentifiedPrompt", () => {
 	});
 });
 
-// ── resolvePromptAndTier helpers ─────────────────────────
-
-function emptyCategorized(): CategorizedVisits {
-	return {};
-}
+// ── resolvePrivacyTier helpers ───────────────────────────
 
 function makeMockPatterns(): PatternAnalysis {
 	return {
@@ -318,22 +314,16 @@ function makeMockClassification(n: number): ClassificationResult {
 	};
 }
 
-// ── resolvePromptAndTier ─────────────────────────────────
+// ── resolvePrivacyTier ──────────────────────────────────
 
-describe("resolvePromptAndTier", () => {
+describe("resolvePrivacyTier", () => {
 	it("returns tier 4 when patterns + anthropic provider", () => {
 		const config: AICallConfig = {
 			provider: "anthropic",
 			anthropicApiKey: "key",
 			anthropicModel: "claude-haiku-4-5-20251001",
 		};
-		const mockPatterns = makeMockPatterns();
-		const { tier } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test",
-			undefined, undefined, mockPatterns, undefined, []
-		);
+		const tier = resolvePrivacyTier(config, undefined, makeMockPatterns());
 		expect(tier).toBe(4);
 	});
 
@@ -343,13 +333,7 @@ describe("resolvePromptAndTier", () => {
 			anthropicApiKey: "key",
 			anthropicModel: "claude-haiku-4-5-20251001",
 		};
-		const mockClassification = makeMockClassification(5);
-		const { tier } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test",
-			undefined, mockClassification, undefined, undefined, []
-		);
+		const tier = resolvePrivacyTier(config, makeMockClassification(5));
 		expect(tier).toBe(3);
 	});
 
@@ -359,11 +343,7 @@ describe("resolvePromptAndTier", () => {
 			localEndpoint: "http://localhost:11434",
 			localModel: "llama3",
 		};
-		const { tier } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test"
-		);
+		const tier = resolvePrivacyTier(config);
 		expect(tier).toBe(1);
 	});
 
@@ -381,28 +361,8 @@ describe("resolvePromptAndTier", () => {
 			minChunkTokens: 50,
 			maxChunkTokens: 500,
 		};
-		const { tier } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test",
-			ragConfig
-		);
+		const tier = resolvePrivacyTier(config, undefined, undefined, ragConfig);
 		expect(tier).toBe(2);
-	});
-
-	it("returns the prompt string (non-empty)", () => {
-		const config: AICallConfig = {
-			provider: "anthropic",
-			anthropicApiKey: "key",
-			anthropicModel: "claude-haiku-4-5-20251001",
-		};
-		const { prompt } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test"
-		);
-		expect(typeof prompt).toBe("string");
-		expect(prompt.length).toBeGreaterThan(10);
 	});
 
 	it("local provider always returns tier 1 even with ragConfig enabled", () => {
@@ -419,37 +379,40 @@ describe("resolvePromptAndTier", () => {
 			minChunkTokens: 50,
 			maxChunkTokens: 500,
 		};
-		const { tier } = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test",
-			ragConfig
-		);
+		const tier = resolvePrivacyTier(config, undefined, undefined, ragConfig);
 		expect(tier).toBe(1);
 	});
 
-	it("local provider returns higher maxTokens when patterns present", () => {
+	it("explicit privacyTier overrides auto-detection", () => {
 		const config: AICallConfig = {
-			provider: "local",
-			localEndpoint: "http://localhost:11434",
-			localModel: "llama3.2",
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
 		};
-		const mockPatterns = makeMockPatterns();
+		// Has patterns (would auto-select tier 4) but forced to tier 1
+		const tier = resolvePrivacyTier(config, undefined, makeMockPatterns(), undefined, 1);
+		expect(tier).toBe(1);
+	});
 
-		const withPatterns = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test",
-			undefined, undefined, mockPatterns, undefined, []
-		);
+	it("clamps requested tier to highest available (not jump to tier 1)", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		// Request tier 4 but only classification available (max tier 3)
+		const tier = resolvePrivacyTier(config, makeMockClassification(5), undefined, undefined, 4);
+		expect(tier).toBe(3);
+	});
 
-		const withoutPatterns = resolvePromptAndTier(
-			new Date("2026-02-24"),
-			emptyCategorized(),
-			[], [], config, "test"
-		);
-
-		expect(withPatterns.maxTokens).toBeGreaterThan(withoutPatterns.maxTokens);
+	it("null privacyTier uses auto-selection", () => {
+		const config: AICallConfig = {
+			provider: "anthropic",
+			anthropicApiKey: "key",
+			anthropicModel: "claude-haiku-4-5-20251001",
+		};
+		const tier = resolvePrivacyTier(config, undefined, makeMockPatterns(), undefined, null);
+		expect(tier).toBe(4);
 	});
 });
 
