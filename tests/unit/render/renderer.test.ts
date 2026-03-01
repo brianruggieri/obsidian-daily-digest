@@ -188,7 +188,7 @@ describe("cognitive patterns section", () => {
 			quirky_signals: ["Visited Rust docs but never ran cargo"],
 		};
 		const md = renderMarkdown(DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized, summary);
-		expect(md).toContain("Unusual Signals");
+		expect(md).toContain("Voice & Vernacular");
 		expect(md).toContain("Visited Rust docs but never ran cargo");
 	});
 

@@ -231,4 +231,50 @@ Test
 		expect(summary.prompts![0].id).toBe("auth");
 		expect(summary.prompts![1].id).toBe("auth_2");
 	});
+
+	it("parses Voice & Vernacular into quirky_signals", () => {
+		const raw = `
+## Headline
+Chatty research day
+
+## Voice & Vernacular
+- You searched "how do I" 6 times today — you're in learning mode
+- Your Claude prompts got noticeably shorter after 4pm
+- Misspelling streak: "recieve", "seperate" — afternoon typing is creative
+`;
+
+		const summary = parseProseSections(raw);
+		expect(summary.quirky_signals).toHaveLength(3);
+		expect(summary.quirky_signals![0]).toContain("how do I");
+		expect(summary.quirky_signals![2]).toContain("recieve");
+	});
+
+	it("parses Cognitive Patterns into meta_insights", () => {
+		const raw = `
+## Headline
+Deep focus day
+
+## Cognitive Patterns
+- Research spiral: approached OAuth from 3 different angles before committing
+- Sustained 3-hour implementation block with zero context switches
+`;
+
+		const summary = parseProseSections(raw);
+		expect(summary.meta_insights).toHaveLength(2);
+		expect(summary.meta_insights![0]).toContain("Research spiral");
+		expect(summary.meta_insights![1]).toContain("implementation block");
+	});
+
+	it("parses Focus Narrative as a string", () => {
+		const raw = `
+## Headline
+Scattered day
+
+## Focus Narrative
+This was a fragmented day with constant context-switching between three unrelated projects.
+`;
+
+		const summary = parseProseSections(raw);
+		expect(summary.focus_narrative).toContain("fragmented day");
+	});
 });
