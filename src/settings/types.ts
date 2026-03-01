@@ -50,6 +50,8 @@ export interface DailyDigestSettings {
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 	debugMode: boolean;
+	/** Render a cross-source chronological timeline in the daily note (Layer 3A). Default: false (post-v1). */
+	enableTimeline: boolean;
 	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select based on available data layers. */
 	privacyTier: 4 | 3 | 2 | 1 | null;
 	/** Auto-apply aggressive sanitization when provider is Anthropic (recommended: true). */
@@ -99,6 +101,7 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	hasCompletedOnboarding: false,
 	privacyConsentVersion: 0,
 	debugMode: false,
+	enableTimeline: false,
 	privacyTier: null,
 	autoAggressiveSanitization: true,
 };

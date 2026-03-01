@@ -15,7 +15,7 @@ import {
 	CommitWorkUnit,
 	PatternAnalysis,
 	TemporalCluster,
-	RecurrenceSignal,
+	type RecurrenceSignal,
 } from "../types";
 import { getFocusLabel } from "./patterns";
 
@@ -36,6 +36,8 @@ export interface KnowledgeSections {
 	commitWorkUnits?: CommitWorkUnit[];
 	/** Claude task sessions produced by the semantic extraction layer. */
 	claudeTaskSessions?: ClaudeTaskSession[];
+	/** Raw temporal clusters for the timeline renderer. */
+	temporalClusters?: TemporalCluster[];
 }
 
 export function generateKnowledgeSections(
@@ -52,6 +54,7 @@ export function generateKnowledgeSections(
 		tags: generateTags(patterns),
 		commitWorkUnits: patterns.commitWorkUnits,
 		claudeTaskSessions: patterns.claudeTaskSessions,
+		temporalClusters: patterns.temporalClusters,
 	};
 }
 

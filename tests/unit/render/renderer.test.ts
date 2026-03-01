@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { renderMarkdown } from "../../../src/render/renderer";
-import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, GitCommit } from "../../../src/types";
+import { renderMarkdown, mergeToUnifiedEvents, buildTimeBlocks } from "../../../src/render/renderer";
+import { AISummary, BrowserVisit, SearchQuery, ClaudeSession, CategorizedVisits, GitCommit, TemporalCluster } from "../../../src/types";
 import { KnowledgeSections } from "../../../src/analyze/knowledge";
 import { createPromptLog, appendPromptEntry } from "../../../scripts/lib/prompt-logger";
 
@@ -552,5 +552,177 @@ describe("three-layer layout", () => {
 		const browserIdx = md.indexOf("Browser Activity");
 		expect(softCloseIdx).toBeGreaterThan(gitIdx);
 		expect(softCloseIdx).toBeGreaterThan(browserIdx);
+	});
+});
+
+// ── Unified Timeline ──────────────────────────────────────
+
+const timelineVisits: BrowserVisit[] = [
+	{ url: "https://github.com/repo", title: "My Repo", time: new Date("2025-06-15T09:15:00"), domain: "github.com" },
+	{ url: "https://docs.obsidian.md", title: "Obsidian Docs", time: new Date("2025-06-15T14:30:00"), domain: "docs.obsidian.md" },
+];
+
+const timelineSearches: SearchQuery[] = [
+	{ query: "typescript generics", time: new Date("2025-06-15T09:10:00"), engine: "google.com" },
+];
+
+const timelineClaude: ClaudeSession[] = [
+	{ prompt: "Fix the auth bug in login", time: new Date("2025-06-15T09:20:00"), project: "webapp", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 3 },
+	{ prompt: "Explain PKCE flow", time: new Date("2025-06-15T14:45:00"), project: "webapp", isConversationOpener: true, conversationFile: "session2.jsonl", conversationTurnCount: 2 },
+];
+
+const timelineGitCommits: GitCommit[] = [
+	{ hash: "abc1234def5678", message: "feat: add login page", repo: "webapp", time: new Date("2025-06-15T09:30:00"), filesChanged: 3, insertions: 80, deletions: 5 },
+	{ hash: "def5678abc1234", message: "fix: correct token validation", repo: "webapp", time: new Date("2025-06-15T15:00:00"), filesChanged: 1, insertions: 5, deletions: 2 },
+];
+
+describe("mergeToUnifiedEvents", () => {
+	it("merges all sources into a single sorted array", () => {
+		const events = mergeToUnifiedEvents(timelineVisits, timelineSearches, timelineClaude, timelineGitCommits);
+		// 2 visits + 1 search + 2 claude + 2 git = 7
+		expect(events.length).toBe(7);
+		// Sorted chronologically
+		expect(events[0].source).toBe("search");   // 09:10
+		expect(events[1].source).toBe("browser");   // 09:15
+		expect(events[2].source).toBe("claude");     // 09:20
+		expect(events[3].source).toBe("git");        // 09:30
+		expect(events[4].source).toBe("browser");    // 14:30
+		expect(events[5].source).toBe("claude");     // 14:45
+		expect(events[6].source).toBe("git");        // 15:00
+	});
+
+	it("skips events without timestamps", () => {
+		const visitNoTime: BrowserVisit[] = [
+			{ url: "https://example.com", title: "No Time", time: null, domain: "example.com" },
+		];
+		const events = mergeToUnifiedEvents(visitNoTime, [], [], []);
+		expect(events.length).toBe(0);
+	});
+});
+
+describe("buildTimeBlocks", () => {
+	it("groups events into Morning, Afternoon, and Evening blocks", () => {
+		const events = mergeToUnifiedEvents(timelineVisits, timelineSearches, timelineClaude, timelineGitCommits);
+		const blocks = buildTimeBlocks(events, []);
+		// Morning block (09:xx events) and Afternoon block (14:xx-15:xx)
+		expect(blocks.length).toBe(2);
+		expect(blocks[0].period).toBe("Morning");
+		expect(blocks[1].period).toBe("Afternoon");
+	});
+
+	it("assigns events to cluster-based sessions when clusters provided", () => {
+		const cluster: TemporalCluster = {
+			hourStart: 9,
+			hourEnd: 10,
+			activityType: "implementation",
+			eventCount: 4,
+			topics: ["typescript", "auth"],
+			entities: ["GitHub"],
+			intensity: 4,
+			label: "implementation 9am-10am: typescript, auth",
+		};
+		const events = mergeToUnifiedEvents(timelineVisits, timelineSearches, timelineClaude, timelineGitCommits);
+		const blocks = buildTimeBlocks(events, [cluster]);
+		// Morning block should have a session labeled from the cluster
+		const morningBlock = blocks.find((b) => b.period === "Morning");
+		expect(morningBlock).toBeDefined();
+		const clusterSession = morningBlock!.sessions.find(
+			(s) => s.label.toLowerCase().includes("typescript")
+		);
+		expect(clusterSession).toBeDefined();
+	});
+});
+
+describe("timeline rendering", () => {
+	it("renders timeline callout with source badges", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		expect(md).toContain("Timeline");
+		// Source badges
+		expect(md).toContain("\u{1F310}"); // browser
+		expect(md).toContain("\u{1F4E6}"); // git
+		expect(md).toContain("\u{1F916}"); // claude
+		expect(md).toContain("\u{1F50D}"); // search
+	});
+
+	it("renders time-of-day labels", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		expect(md).toContain("**Morning**");
+		expect(md).toContain("**Afternoon**");
+	});
+
+	it("renders events in chronological order within the timeline", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		const timelineStart = md.indexOf("Timeline");
+		const searchIdx = md.indexOf("typescript generics", timelineStart);
+		const browserIdx = md.indexOf("My Repo", timelineStart);
+		const claudeIdx = md.indexOf("Fix the auth bug", timelineStart);
+		const gitIdx = md.indexOf("abc1234", timelineStart);
+		// 09:10 search < 09:15 browser < 09:20 claude < 09:30 git
+		expect(searchIdx).toBeLessThan(browserIdx);
+		expect(browserIdx).toBeLessThan(claudeIdx);
+		expect(claudeIdx).toBeLessThan(gitIdx);
+	});
+
+	it("timeline appears before Layer 3B archive callouts", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		const timelineIdx = md.indexOf("Timeline");
+		const searchesIdx = md.indexOf("Searches");
+		const browserActivityIdx = md.indexOf("Browser Activity");
+		const gitActivityIdx = md.indexOf("Git Activity");
+		expect(timelineIdx).toBeLessThan(searchesIdx);
+		expect(timelineIdx).toBeLessThan(browserActivityIdx);
+		expect(timelineIdx).toBeLessThan(gitActivityIdx);
+	});
+
+	it("omits timeline when enableTimeline is false", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, false,
+		);
+		expect(md).not.toContain("Timeline");
+		// Archive sections should still be present
+		expect(md).toContain("Browser Activity");
+		expect(md).toContain("Git Activity");
+	});
+
+	it("omits timeline when no events have timestamps", () => {
+		const noTimeVisits: BrowserVisit[] = [
+			{ url: "https://example.com", title: "No time", time: null, domain: "example.com" },
+		];
+		const md = renderMarkdown(
+			DATE, noTimeVisits, [], [], [],
+			{ other: noTimeVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		expect(md).not.toContain("Timeline");
+	});
+
+	it("renders session count summary line", () => {
+		const md = renderMarkdown(
+			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
+			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
+		);
+		// The morning session should show counts like "1 commit · 1 visit · 1 AI prompt · 1 search"
+		expect(md).toMatch(/\d+ commit/);
+		expect(md).toMatch(/\d+ visit/);
+		expect(md).toMatch(/\d+ AI prompt/);
 	});
 });

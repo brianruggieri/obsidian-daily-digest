@@ -525,6 +525,18 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		enabledByDefault: true,
 		dependsOn: undefined,
 	},
+	{
+		key: "enableTimeline",
+		label: "Unified timeline",
+		description:
+			"Render a cross-source chronological timeline in the daily note. " +
+			"Merges browser visits, searches, Claude sessions, and git commits " +
+			"into a single timeline grouped by time-of-day and focus sessions.",
+		section: "General",
+		type: "boolean",
+		defaultValue: "false",
+		enabledByDefault: false,
+	},
 
 	// ── Meta ─────────────────────────────────────────────────────────────────
 	{

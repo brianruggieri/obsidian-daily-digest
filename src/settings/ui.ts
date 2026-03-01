@@ -50,6 +50,18 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Unified timeline")
+			.setDesc("Render a cross-source chronological timeline in the daily note")
+			.addToggle((toggle: ToggleComponent) =>
+				toggle
+					.setValue(this.plugin.settings.enableTimeline)
+					.onChange(async (value) => {
+						this.plugin.settings.enableTimeline = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		// ━━ 2. Data Sources ━━━━━━━━━━━━━━━━━━━━━━━━━
 		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
 		this.prependIcon(dataHeading.nameEl, "database");
