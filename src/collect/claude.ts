@@ -166,11 +166,25 @@ export function readClaudeSessions(settings: DailyDigestSettings, since: Date): 
 
 			const content = readFileSync(filePath, "utf-8");
 			const fileName = basename(filePath);
-			const projectName = basename(join(filePath, ".."));
+			const fallbackProject = basename(join(filePath, ".."));
 
 			// Collect all qualifying messages from this file before emitting,
 			// so we can compute turn count and mark the opener.
 			const fileMessages: Array<{ text: string; dt: Date }> = [];
+
+			// Extract short project name from the cwd field on the first
+			// record that has one (e.g. "/Users/me/git/my-repo" → "my-repo").
+			let projectName = fallbackProject;
+			for (const line of content.split("\n")) {
+				if (!line.trim()) continue;
+				try {
+					const obj = JSON.parse(line);
+					if (obj.cwd && typeof obj.cwd === "string") {
+						projectName = basename(obj.cwd);
+						break;
+					}
+				} catch { /* skip */ }
+			}
 
 			for (const line of content.split("\n")) {
 				if (!line.trim()) continue;
