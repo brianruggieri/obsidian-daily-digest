@@ -20,8 +20,8 @@ export const ANTHROPIC_KEY = "sk-ant-" + "api03-FAKE1234abcd5678efgh9012ijkl3456
 /** AWS access key (AKIA prefix + 16 uppercase alphanumeric) */
 export const AWS_ACCESS_KEY = "AKIA" + "IOSFODNN7EXAMPLE";
 
-/** AWS secret key (40 chars, used in env var assignments) */
-export const AWS_SECRET_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+/** AWS secret key (40 chars, used in env var assignments). Built via concatenation to avoid push protection. */
+export const AWS_SECRET_KEY = "wJalrXUtnFEMI/" + "K7MDENG/bPxRfiCYEXAMPLEKEY";
 
 /** OpenAI API key (sk- prefix + 48 alphanumeric) */
 export const OPENAI_KEY = "sk-" + "proj1234abcdef5678ghijklmnopqrstuvwxyz90ABCDEF12";

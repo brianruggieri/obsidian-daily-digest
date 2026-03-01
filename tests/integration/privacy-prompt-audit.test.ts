@@ -296,10 +296,10 @@ describe("privacy prompt audit — buildProsePrompt()", () => {
 					// (the template preamble may mention URLs conceptually, but not data URLs)
 					const prompt = result.prompts[4];
 					const activityStart = prompt.indexOf("Focus:");
-					if (activityStart > -1) {
-						const activitySection = prompt.slice(activityStart);
-						expect(activitySection).not.toMatch(/https?:\/\/[^\s"<>]+/);
-					}
+					// The Focus: marker is required; if it's missing, Tier 4 structure is broken.
+					expect(activityStart).toBeGreaterThan(-1);
+					const activitySection = prompt.slice(activityStart);
+					expect(activitySection).not.toMatch(/https?:\/\/[^\s"<>]+/);
 				});
 
 				it("no verbatim search queries from persona", () => {
@@ -339,8 +339,8 @@ describe("privacy prompt audit — buildProsePrompt()", () => {
 					const classifiedStart = prompt.indexOf("Classified activity:");
 					if (classifiedStart > -1) {
 						const classifiedSection = prompt.slice(classifiedStart);
-						// Should not contain full URLs in the classified section
-						expect(classifiedSection).not.toMatch(/https?:\/\/[^\s]+@/);  // no userinfo URLs
+						// Should not contain any http(s) URLs in the classified section
+						expect(classifiedSection).not.toMatch(/https?:\/\/\S+/);
 					}
 				});
 
@@ -439,7 +439,7 @@ describe("privacy prompt audit — buildProsePrompt()", () => {
 			const classifiedIdx = prompt.indexOf("Classified activity:");
 			if (classifiedIdx > -1) {
 				const section = prompt.slice(classifiedIdx);
-				expect(section).not.toMatch(/https?:\/\/[^\s]+\.(com|org|net)/);
+				expect(section).not.toMatch(/https?:\/\/\S+/);
 			}
 		});
 
