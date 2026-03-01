@@ -50,7 +50,7 @@ export interface DailyDigestSettings {
 	hasCompletedOnboarding: boolean;
 	privacyConsentVersion: number;
 	debugMode: boolean;
-	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select from features (legacy). */
+	/** Explicit privacy tier for Anthropic cloud calls. null = auto-select based on available data layers. */
 	privacyTier: 4 | 3 | 2 | 1 | null;
 	/** Auto-apply aggressive sanitization when provider is Anthropic (recommended: true). */
 	autoAggressiveSanitization: boolean;

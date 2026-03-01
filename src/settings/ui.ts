@@ -472,11 +472,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Privacy tier override")
+			.setName("Privacy tier")
 			.setDesc(
-				"Force a specific privacy tier instead of auto-selecting the most private available tier. " +
-				"Auto (recommended): escalates to Tier 4 when patterns are available. " +
-				"Override: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
+				"Select the privacy tier for Anthropic cloud calls. " +
+				"Auto (recommended): uses the most private tier supported by available data. " +
+				"Manual: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
 			)
 			.addDropdown((dropdown) =>
 				dropdown

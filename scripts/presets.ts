@@ -182,7 +182,7 @@ export const PRESETS: Preset[] = [
 	},
 	{
 		id: "cloud-haiku-tier2",
-		description: "Anthropic Haiku, RAG chunks only (Tier 2)",
+		description: "Anthropic Haiku, compressed activity only (Tier 2)",
 		privacyRank: 8,
 		privacyGroup: "cloud",
 		settings: {

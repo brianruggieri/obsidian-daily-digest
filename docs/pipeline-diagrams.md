@@ -324,9 +324,9 @@ enableClassification    ──► Stage 4: classify.ts runs
                               → Tier 3 (classified prompt) is unavailable
                               → Anthropic falls back to standard (not RAG)
 
-(patterns always run)   ──► Stage 5+6: patterns.ts + knowledge.ts always run
-                              → PatternAnalysis always populated
-                              → Knowledge sections always present in notes
+(patterns always run)   ──► Stage 5+6: patterns.ts + knowledge.ts are invoked
+                              → PatternAnalysis populated when there is activity to analyze
+                              → Knowledge sections added to notes when patterns produce output
                               → Privacy tier controls what reaches AI prompt
 
 enableRAG = false       ──► RAG path skipped in summarize.ts

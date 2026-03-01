@@ -575,7 +575,7 @@ export function buildTierFilteredOptions(
 		};
 	}
 	if (tier === 2) {
-		// RAG-selected chunks + patterns + classification
+		// Compressed activity + patterns + classification
 		return {
 			compressed: full.compressed,
 			classification: full.classification,
