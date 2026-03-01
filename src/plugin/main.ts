@@ -645,7 +645,9 @@ export default class DailyDigestPlugin extends Plugin {
 				categorized,
 				aiSummary,
 				aiProviderUsed,
-				knowledgeSections
+				knowledgeSections,
+				undefined,  // promptLog
+				this.settings.enableTimeline,
 			);
 
 			// ── Write to vault ───────────────────

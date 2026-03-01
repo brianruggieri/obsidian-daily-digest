@@ -6,6 +6,7 @@ import {
 	ClaudeSession,
 	GitCommit,
 	SearchQuery,
+	TemporalCluster,
 	slugifyQuestion,
 } from "../types";
 import { AIProvider } from "../settings/types";
@@ -29,6 +30,289 @@ function dayOfWeek(d: Date): string {
 
 function longDate(d: Date): string {
 	return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+
+// ── Unified Timeline Types & Functions ──────────────────
+
+interface UnifiedEvent {
+	time: Date;
+	source: "browser" | "git" | "claude" | "search";
+	label: string;
+	detail?: string;
+}
+
+type TimeOfDay = "Morning" | "Afternoon" | "Evening";
+
+interface TimelineSession {
+	label: string;
+	startTime: Date;
+	endTime: Date;
+	events: UnifiedEvent[];
+}
+
+interface TimeBlock {
+	period: TimeOfDay;
+	startTime: Date;
+	endTime: Date;
+	sessions: TimelineSession[];
+}
+
+function getTimeOfDay(d: Date): TimeOfDay {
+	const h = d.getHours();
+	if (h < 12) return "Morning";
+	if (h < 17) return "Afternoon";
+	return "Evening";
+}
+
+/**
+ * Merge all four source arrays into a single sorted UnifiedEvent[].
+ */
+export function mergeToUnifiedEvents(
+	visits: BrowserVisit[],
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
+): UnifiedEvent[] {
+	const events: UnifiedEvent[] = [];
+
+	for (const v of visits) {
+		if (!v.time) continue;
+		const domain = v.domain || "unknown";
+		let title = (v.title || "").trim() || v.url;
+		if (title.length > 60) title = title.slice(0, 60) + "\u2026";
+		events.push({
+			time: v.time,
+			source: "browser",
+			label: `${escapeForMarkdown(title)}`,
+			detail: domain,
+		});
+	}
+
+	for (const s of searches) {
+		if (!s.time) continue;
+		events.push({
+			time: s.time,
+			source: "search",
+			label: `"${escapeForMarkdown(s.query)}"`,
+		});
+	}
+
+	for (const c of claudeSessions) {
+		if (!c.time) continue;
+		let prompt = c.prompt.replace(/\n/g, " ").trim();
+		if (prompt.length > 60) prompt = prompt.slice(0, 60) + "\u2026";
+		events.push({
+			time: c.time,
+			source: "claude",
+			label: escapeForMarkdown(prompt),
+			detail: c.project || undefined,
+		});
+	}
+
+	for (const g of gitCommits) {
+		if (!g.time) continue;
+		events.push({
+			time: g.time,
+			source: "git",
+			label: `\`${g.hash.slice(0, 7)}\` ${escapeForMarkdown(g.message)}`,
+			detail: g.repo || undefined,
+		});
+	}
+
+	events.sort((a, b) => a.time.getTime() - b.time.getTime());
+	return events;
+}
+
+const SOURCE_BADGE: Record<UnifiedEvent["source"], string> = {
+	browser: "\u{1F310}",
+	git: "\u{1F4E6}",
+	claude: "\u{1F916}",
+	search: "\u{1F50D}",
+};
+
+/**
+ * Group unified events into time-of-day blocks, then into sessions
+ * using temporal clusters when available or 90-minute gap detection.
+ */
+export function buildTimeBlocks(
+	events: UnifiedEvent[],
+	clusters: TemporalCluster[],
+): TimeBlock[] {
+	if (events.length === 0) return [];
+
+	// Group events by time of day
+	const byPeriod = new Map<TimeOfDay, UnifiedEvent[]>();
+	for (const e of events) {
+		const period = getTimeOfDay(e.time);
+		if (!byPeriod.has(period)) byPeriod.set(period, []);
+		byPeriod.get(period)!.push(e);
+	}
+
+	const blocks: TimeBlock[] = [];
+	const periodOrder: TimeOfDay[] = ["Morning", "Afternoon", "Evening"];
+
+	for (const period of periodOrder) {
+		const periodEvents = byPeriod.get(period);
+		if (!periodEvents || periodEvents.length === 0) continue;
+
+		const sessions = assignToSessions(periodEvents, clusters);
+		blocks.push({
+			period,
+			startTime: periodEvents[0].time,
+			endTime: periodEvents[periodEvents.length - 1].time,
+			sessions,
+		});
+	}
+
+	return blocks;
+}
+
+const SESSION_GAP_MS = 90 * 60 * 1000; // 90 minutes
+
+/**
+ * Assign events to sessions. If temporal clusters overlap the event times,
+ * use the cluster label. Otherwise, group by 90-minute gaps.
+ */
+function assignToSessions(
+	events: UnifiedEvent[],
+	clusters: TemporalCluster[],
+): TimelineSession[] {
+	if (events.length === 0) return [];
+
+	// Try to match each event to a temporal cluster
+	const clusterMap = new Map<number, { cluster: TemporalCluster; events: UnifiedEvent[] }>();
+	const unmatched: UnifiedEvent[] = [];
+
+	for (const e of events) {
+		const hour = e.time.getHours();
+		const matched = clusters.find(
+			(c) => hour >= c.hourStart && hour <= c.hourEnd
+		);
+		if (matched) {
+			const key = matched.hourStart * 100 + matched.hourEnd;
+			if (!clusterMap.has(key)) {
+				clusterMap.set(key, { cluster: matched, events: [] });
+			}
+			clusterMap.get(key)!.events.push(e);
+		} else {
+			unmatched.push(e);
+		}
+	}
+
+	const sessions: TimelineSession[] = [];
+
+	// Convert cluster matches to sessions
+	for (const { cluster, events: clusterEvents } of clusterMap.values()) {
+		if (clusterEvents.length === 0) continue;
+		// Build a readable label from the cluster
+		const topicStr = cluster.topics.length > 0
+			? cluster.topics.slice(0, 2).join(", ")
+			: cluster.activityType;
+		sessions.push({
+			label: topicStr.charAt(0).toUpperCase() + topicStr.slice(1),
+			startTime: clusterEvents[0].time,
+			endTime: clusterEvents[clusterEvents.length - 1].time,
+			events: clusterEvents,
+		});
+	}
+
+	// Group unmatched events by 90-minute gaps
+	if (unmatched.length > 0) {
+		let sessionStart = 0;
+		for (let i = 1; i < unmatched.length; i++) {
+			const gap = unmatched[i].time.getTime() - unmatched[i - 1].time.getTime();
+			if (gap > SESSION_GAP_MS) {
+				sessions.push(buildGapSession(unmatched.slice(sessionStart, i)));
+				sessionStart = i;
+			}
+		}
+		sessions.push(buildGapSession(unmatched.slice(sessionStart)));
+	}
+
+	// Sort sessions by start time
+	sessions.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+	return sessions;
+}
+
+function buildGapSession(events: UnifiedEvent[]): TimelineSession {
+	// Derive a label from the dominant source type
+	const sourceCounts: Record<string, number> = {};
+	for (const e of events) {
+		sourceCounts[e.source] = (sourceCounts[e.source] || 0) + 1;
+	}
+	const dominant = Object.entries(sourceCounts)
+		.sort((a, b) => b[1] - a[1])[0];
+	const sourceLabels: Record<string, string> = {
+		browser: "Browsing",
+		git: "Commits",
+		claude: "AI work",
+		search: "Research",
+	};
+	const label = sourceLabels[dominant[0]] || "Activity";
+
+	return {
+		label,
+		startTime: events[0].time,
+		endTime: events[events.length - 1].time,
+		events,
+	};
+}
+
+/**
+ * Render the unified timeline as nested Obsidian callouts.
+ */
+function renderTimelineLayer(
+	lines: string[],
+	visits: BrowserVisit[],
+	searches: SearchQuery[],
+	claudeSessions: ClaudeSession[],
+	gitCommits: GitCommit[],
+	clusters: TemporalCluster[],
+): void {
+	const unified = mergeToUnifiedEvents(visits, searches, claudeSessions, gitCommits);
+	if (unified.length === 0) return;
+
+	const blocks = buildTimeBlocks(unified, clusters);
+	if (blocks.length === 0) return;
+
+	lines.push(`> [!abstract]- \u{1F4C5} Timeline`);
+
+	for (const block of blocks) {
+		const startTs = formatTime(block.startTime);
+		const endTs = formatTime(block.endTime);
+		const range = startTs === endTs ? startTs : `${startTs}\u2013${endTs}`;
+		lines.push(`>`);
+		lines.push(`> **${block.period}** \u00B7 ${range}`);
+
+		for (const session of block.sessions) {
+			const sStartTs = formatTime(session.startTime);
+			const sEndTs = formatTime(session.endTime);
+			const sRange = sStartTs === sEndTs ? sStartTs : `${sStartTs}\u2013${sEndTs}`;
+
+			// Count events by source for the summary line
+			const counts: Record<string, number> = {};
+			for (const e of session.events) {
+				counts[e.source] = (counts[e.source] || 0) + 1;
+			}
+			const countParts: string[] = [];
+			if (counts.git) countParts.push(`${counts.git} commit${counts.git !== 1 ? "s" : ""}`);
+			if (counts.browser) countParts.push(`${counts.browser} visit${counts.browser !== 1 ? "s" : ""}`);
+			if (counts.claude) countParts.push(`${counts.claude} AI prompt${counts.claude !== 1 ? "s" : ""}`);
+			if (counts.search) countParts.push(`${counts.search} search${counts.search !== 1 ? "es" : ""}`);
+
+			lines.push(`> > [!info]- ${escapeForMarkdown(session.label)} \u00B7 ${sRange}`);
+			lines.push(`> > _${countParts.join(" \u00B7 ")}_`);
+
+			for (const e of session.events) {
+				const ts = formatTime(e.time);
+				const badge = SOURCE_BADGE[e.source];
+				const detail = e.detail ? ` \u2014 ${escapeForMarkdown(e.detail)}` : "";
+				lines.push(`> > - ${ts} ${badge} ${e.label}${detail}`);
+			}
+		}
+	}
+
+	lines.push("");
 }
 
 /**
@@ -151,7 +435,8 @@ export function renderMarkdown(
 	aiSummary: AISummary | null,
 	aiProviderUsed: AIProvider | "none" = "none",
 	knowledge?: KnowledgeSections,
-	promptLog?: PromptLog
+	promptLog?: PromptLog,
+	enableTimeline = true,
 ): string {
 	const today = formatDate(date);
 	const dow = dayOfWeek(date);
@@ -354,7 +639,16 @@ export function renderMarkdown(
 	}
 
 	// ══════════════════════════════════════════════
-	// LAYER 3 — "Archive" (all raw data, collapsed)
+	// LAYER 3A — "Timeline" (cross-source chronological)
+	// ══════════════════════════════════════════════
+
+	if (enableTimeline) {
+		const clusters = knowledge?.temporalClusters ?? [];
+		renderTimelineLayer(lines, visits, searches, claudeSessions, gitCommits, clusters);
+	}
+
+	// ══════════════════════════════════════════════
+	// LAYER 3B — "Archive" (all raw data, collapsed)
 	// ══════════════════════════════════════════════
 
 	// ── Searches (collapsed callout) ─────────────

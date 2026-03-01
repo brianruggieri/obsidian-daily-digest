@@ -31,6 +31,7 @@ const GENERATED_HEADINGS = new Set([
 	"Learnings",
 	"Remember",
 	"Note Seeds",
+	"Timeline",
 	"Reflection",
 ]);
 
