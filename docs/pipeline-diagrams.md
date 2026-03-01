@@ -146,7 +146,7 @@ AISummary.cross_source_connections[] ► > **🔗 Cross-Source Connections**
 
 AISummary.focus_narrative         ──►  > [!example]- 🔭 Cognitive Patterns
 AISummary.meta_insights[]         ──►  > **Insights**  - item
-AISummary.quirky_signals[]        ──►  > **🔎 Unusual Signals**  - item
+AISummary.quirky_signals[]        ──►  > **🔎 Voice & Vernacular**  - item
 
 KnowledgeSections (AI-on)         ──►  > [!info]- 🧠 Knowledge Insights
                                        > **⏰ Activity Clusters**  - item

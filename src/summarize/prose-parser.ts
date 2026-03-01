@@ -20,6 +20,10 @@ const HEADING_MAP: Record<string, keyof AISummary> = {
 	"themes": "themes",
 	"topics": "topics",
 	"entities": "entities",
+	// Cognitive patterns + voice signals (available at all tiers)
+	"cognitive patterns": "meta_insights",
+	"voice & vernacular": "quirky_signals",
+	"focus narrative": "focus_narrative",
 };
 
 /**
@@ -37,6 +41,8 @@ const LIST_FIELDS = new Set<keyof AISummary>([
 	"themes",
 	"topics",
 	"entities",
+	"meta_insights",
+	"quirky_signals",
 ]);
 
 /**
