@@ -64,13 +64,43 @@ export function isLowValueCcTld(domain: string, rank: number, threshold = 20_000
  * subdomains like "news.google.com" conflict with broader patterns.
  */
 const MAJOR_PLATFORM_ROOTS = new Set([
+	// Big tech portals
 	"google.com", "yahoo.com", "microsoft.com", "apple.com",
 	"amazon.com", "facebook.com", "twitter.com", "live.com",
 	"msn.com", "yandex.ru", "mail.ru", "baidu.com",
-	"wordpress.com", "blogspot.com", "tumblr.com",
+	"qq.com", "sina.com.cn", "sina.com",
+	// Blog / CMS hosting
+	"wordpress.com", "blogspot.com", "blogspot.de", "blogspot.fr",
+	"blogspot.nl", "tumblr.com", "medium.com",
 	"wifeo.com", "free.fr", "wixsite.com", "weebly.com",
-	"squarespace.com", "github.io", "netlify.app",
-	"rakuten.co.jp",
+	"squarespace.com", "over-blog.com", "canalblog.com",
+	"skyrock.com", "unblog.fr", "blog4ever.com",
+	"e-monsite.com", "forumactif.com",
+	// Free hosting / personal pages
+	"tripod.com", "homestead.com", "freeservers.com",
+	"50megs.com", "8m.com", "hypermart.net", "cjb.net",
+	"geocities.com", "angelfire.com", "yolasite.com",
+	"moonfruit.com", "jimdo.com", "webcindario.com",
+	"ifrance.com", "narod.ru", "ucoz.com", "ucoz.net",
+	"no-ip.com", "no-ip.info", "sytes.net",
+	// Developer hosting (subdomains are user content)
+	"github.io", "netlify.app", "sourceforge.net",
+	"azurewebsites.net", "cloudfront.net",
+	// CDN / infrastructure (never user-facing domains)
+	"akamaized.net", "akamaihd.net", "googleapis.com",
+	"googleusercontent.com", "googlevideo.com", "amazonvideo.com",
+	"fbcdn.net", "facebook.net", "tiktokcdn.com", "tiktokcdn-us.com",
+	"tiktokv.com", "nflxvideo.net", "nflxext.com", "netflix.net",
+	"pinimg.com", "shopifycdn.com", "alicdn.com", "ebaystatic.com",
+	"espncdn.com", "vimeocdn.com", "licdn.com",
+	// Media conglomerates (subdomains are individual properties)
+	"warnerbros.com", "sonypictures.com", "go.com",
+	// Regional platforms
+	"rakuten.co.jp", "terra.com.br", "uol.com.br",
+	"onet.pl", "indiatimes.com", "globo.com", "aol.com",
+	"orange.fr", "orange.pl", "rambler.ru",
+	// Social/content (subdomains are user pages)
+	"deviantart.com", "livejournal.com",
 ]);
 
 export function isSubdomainOfMajorPlatform(domain: string): boolean {
