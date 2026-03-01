@@ -164,14 +164,42 @@ function runAnalysis(persona: PersonaOutput): AnalysisResult {
 // ── Investigation ───────────────────────────────────────
 
 describe("investigation: classificationBatchSize (#84)", () => {
+	// ── Shared persona analyses (reused by D3 and D7) ──
+
+	const PERSONAS = [
+		{ fn: softwareEngineerDeepWork, name: "SWE Deep Work" },
+		{ fn: freelancerMultiProject, name: "Freelancer" },
+		{ fn: devopsIncidentDay, name: "DevOps Incident" },
+		{ fn: academicResearcher, name: "Academic Researcher" },
+	];
+	const personaResults: Record<string, AnalysisResult> = {};
+
+	beforeAll(() => {
+		for (const { fn, name } of PERSONAS) {
+			personaResults[name] = runAnalysis(fn(DATE));
+		}
+	});
+
 	// ── Dimension 1: batchSize has zero effect on rule-only path ──
 
 	describe("D1: batchSize is irrelevant for rule-only classification", () => {
-		it("classifyEventsRuleOnly has no config parameter", () => {
-			// The function signature has no ClassificationConfig — batchSize
-			// cannot be passed in. This is a structural guarantee, not a
-			// runtime check.
-			expect(classifyEventsRuleOnly.length).toBe(5); // 5 params, no config
+		it("rule-only classification is fully synchronous (no async batching or HTTP)", () => {
+			const persona = softwareEngineerDeepWork(DATE);
+			const sanitized = sanitizeCollectedData(
+				persona.visits, persona.searches,
+				[...persona.claude, ...(persona.codex ?? [])],
+				persona.git ?? [], defaultSanitizeConfig()
+			);
+			const categorized = categorizeVisits(sanitized.visits);
+
+			const result = classifyEventsRuleOnly(
+				sanitized.visits, sanitized.searches,
+				sanitized.claudeSessions, sanitized.gitCommits, categorized
+			);
+
+			// If this ever becomes async (e.g., to support LLM/batch HTTP calls),
+			// it will return a Promise instead of a plain result.
+			expect(result instanceof Promise).toBe(false);
 		});
 
 		it("rule-only classification processes all events in one pass (no batching)", () => {
@@ -195,26 +223,6 @@ describe("investigation: classificationBatchSize (#84)", () => {
 			expect(result.totalProcessed).toBe(inputCount);
 			expect(result.ruleClassified).toBe(inputCount);
 			expect(result.llmClassified).toBe(0);
-		});
-
-		it("processing time is near-instant (no HTTP calls)", () => {
-			const persona = softwareEngineerDeepWork(DATE);
-			const sanitized = sanitizeCollectedData(
-				persona.visits, persona.searches,
-				[...persona.claude, ...(persona.codex ?? [])],
-				persona.git ?? [], defaultSanitizeConfig()
-			);
-			const categorized = categorizeVisits(sanitized.visits);
-
-			const start = Date.now();
-			classifyEventsRuleOnly(
-				sanitized.visits, sanitized.searches,
-				sanitized.claudeSessions, sanitized.gitCommits, categorized
-			);
-			const elapsed = Date.now() - start;
-
-			// Rule-based classification of 100+ events should complete in <50ms
-			expect(elapsed).toBeLessThan(50);
 		});
 	});
 
@@ -277,28 +285,17 @@ describe("investigation: classificationBatchSize (#84)", () => {
 	// ── Dimension 3: Downstream impact on patterns ──
 
 	describe("D3: classification impact on pattern extraction", () => {
-		const personas = [
-			{ fn: softwareEngineerDeepWork, name: "Software Engineer" },
-			{ fn: freelancerMultiProject, name: "Freelancer" },
-			{ fn: devopsIncidentDay, name: "DevOps Incident" },
-			{ fn: academicResearcher, name: "Academic Researcher" },
-		];
-
-		for (const { fn, name } of personas) {
+		for (const { name } of PERSONAS) {
 			describe(`Persona: ${name}`, () => {
-				let result: AnalysisResult;
-
-				beforeAll(() => {
-					result = runAnalysis(fn(DATE));
-				});
-
 				it("focus score is computed (classification provides activity types)", () => {
+					const result = personaResults[name];
 					expect(result.patterns.focusScore).toBeDefined();
 					expect(result.patterns.focusScore).toBeGreaterThanOrEqual(0);
 					expect(result.patterns.focusScore).toBeLessThanOrEqual(1);
 				});
 
 				it("activity distribution reflects classified types", () => {
+					const result = personaResults[name];
 					const types = result.patterns.topActivityTypes;
 					expect(types.length).toBeGreaterThan(0);
 					// Sum of counts should equal total events
@@ -307,15 +304,13 @@ describe("investigation: classificationBatchSize (#84)", () => {
 				});
 
 				it("temporal clusters are detected", () => {
-					// Pattern extraction groups events into time-based clusters
+					const result = personaResults[name];
 					expect(result.patterns.temporalClusters.length).toBeGreaterThan(0);
 				});
 
 				it("topic co-occurrence captures cross-event relationships", () => {
-					// Even with coarse topics, co-occurrence should find clusters
-					const coOcc = result.patterns.topicCooccurrences;
-					// With 4+ personas worth of events, at least some co-occurrences
-					expect(coOcc.length).toBeGreaterThanOrEqual(0);
+					const result = personaResults[name];
+					expect(result.patterns.topicCooccurrences.length).toBeGreaterThan(0);
 				});
 			});
 		}
@@ -451,72 +446,41 @@ describe("investigation: classificationBatchSize (#84)", () => {
 	// ── Dimension 6: LLM batch size mechanical effects ──
 
 	describe("D6: batch size mechanical analysis (no LLM needed)", () => {
-		it("batch count decreases as batch size increases", () => {
-			const eventCounts = [20, 50, 100, 150];
+		it("batch count monotonically decreases as batch size increases", () => {
+			const eventCount = 100;
 			const batchSizes = [4, 6, 8, 10, 12, 14, 16];
 
-			for (const eventCount of eventCounts) {
-				for (const batchSize of batchSizes) {
-					const batchCount = Math.ceil(eventCount / batchSize);
-					// Each batch = 1 HTTP call to local LLM
-					// Batch 4 with 100 events = 25 calls
-					// Batch 16 with 100 events = 7 calls
-					expect(batchCount).toBe(Math.ceil(eventCount / batchSize));
+			let previousBatchCount = Infinity;
+			let hasDecrease = false;
+
+			for (const batchSize of batchSizes) {
+				const batchCount = Math.ceil(eventCount / batchSize);
+				expect(batchCount).toBeLessThanOrEqual(previousBatchCount);
+				if (batchCount < previousBatchCount) {
+					hasDecrease = true;
 				}
-			}
-		});
-
-		it("prompt token estimate grows linearly with batch size", () => {
-			// Each event in the prompt ≈ 20-40 tokens for the numbered list item
-			// System prompt ≈ 100 tokens, example ≈ 50 tokens
-			const overheadTokens = 150;
-			const tokensPerEvent = 30;
-
-			const estimates: Record<number, number> = {};
-			for (const batchSize of [4, 8, 12, 16]) {
-				estimates[batchSize] = overheadTokens + (tokensPerEvent * batchSize);
+				previousBatchCount = batchCount;
 			}
 
-			// Batch 4: ~270 tokens/request
-			// Batch 8: ~390 tokens/request
-			// Batch 16: ~630 tokens/request
-			expect(estimates[4]).toBeLessThan(estimates[8]);
-			expect(estimates[8]).toBeLessThan(estimates[16]);
-
-			// All well within local model context windows (4K-8K typical)
-			for (const size of [4, 8, 12, 16]) {
-				expect(estimates[size]).toBeLessThan(1000);
-			}
+			expect(hasDecrease).toBe(true);
 		});
 
 		it("failure blast radius is proportional to batch size", () => {
 			// If a batch's LLM response is malformed JSON, the ENTIRE batch
 			// falls back to rule-based classification.
-			// Larger batch = more events lost to a single parse failure.
-
-			const batchSizes = [4, 8, 16];
 			const eventCount = 100;
 
-			for (const batchSize of batchSizes) {
-				const batchCount = Math.ceil(eventCount / batchSize);
-				const eventsLostPerFailure = batchSize;
-				const percentLostPerFailure = (eventsLostPerFailure / eventCount) * 100;
+			// Pin concrete expected percentages
+			expect((4 / eventCount) * 100).toBe(4);
+			expect((8 / eventCount) * 100).toBe(8);
+			expect((16 / eventCount) * 100).toBe(16);
 
-				// Batch 4: 4% of events lost per failure
-				// Batch 8: 8% of events lost per failure
-				// Batch 16: 16% of events lost per failure
-				expect(percentLostPerFailure).toBe((batchSize / eventCount) * 100);
-				expect(batchCount).toBeGreaterThan(0);
-			}
+			// Blast radius increases with batch size
+			expect(4 / eventCount).toBeLessThan(8 / eventCount);
+			expect(8 / eventCount).toBeLessThan(16 / eventCount);
 		});
 
-		it("total cost is batch count × response tokens (roughly constant)", () => {
-			// Total input tokens ≈ (overhead + events/batch × tokensPerEvent) × batches
-			// ≈ overhead × batches + totalEvents × tokensPerEvent
-			// So total input tokens grow with batch count (more overhead copies)
-			// while per-request tokens grow with batch size.
-			// The event-proportional cost is constant regardless of batch size.
-
+		it("smaller batches have more overhead (system prompt repeated per batch)", () => {
 			const eventCount = 100;
 			const overheadTokens = 150;
 			const tokensPerEvent = 30;
@@ -524,52 +488,31 @@ describe("investigation: classificationBatchSize (#84)", () => {
 			const costs: Record<number, number> = {};
 			for (const batchSize of [4, 8, 16]) {
 				const batches = Math.ceil(eventCount / batchSize);
-				const totalInputTokens = (overheadTokens * batches) + (eventCount * tokensPerEvent);
-				costs[batchSize] = totalInputTokens;
+				costs[batchSize] = (overheadTokens * batches) + (eventCount * tokensPerEvent);
 			}
 
-			// Smaller batches have MORE overhead (system prompt repeated per batch)
 			// Batch 4: 150×25 + 3000 = 6750 tokens
 			// Batch 8: 150×13 + 3000 = 4950 tokens
 			// Batch 16: 150×7 + 3000 = 4050 tokens
-			expect(costs[4]).toBeGreaterThan(costs[16]);
+			expect(costs[4]).toBeGreaterThan(costs[8]);
+			expect(costs[8]).toBeGreaterThan(costs[16]);
 		});
 	});
 
 	// ── Dimension 7: Cross-persona comparison ──
 
 	describe("D7: classification richness across personas", () => {
-		const personaFns = [
-			{ fn: softwareEngineerDeepWork, name: "SWE Deep Work" },
-			{ fn: freelancerMultiProject, name: "Freelancer" },
-			{ fn: devopsIncidentDay, name: "DevOps Incident" },
-			{ fn: academicResearcher, name: "Academic Researcher" },
-		];
-
-		const results: Record<string, AnalysisResult> = {};
-
-		beforeAll(() => {
-			for (const { fn, name } of personaFns) {
-				results[name] = runAnalysis(fn(DATE));
-			}
-		});
-
 		it("all personas produce meaningful focus scores", () => {
-			for (const [name, result] of Object.entries(results)) {
+			for (const [_name, result] of Object.entries(personaResults)) {
 				expect(result.patterns.focusScore).toBeGreaterThan(0);
-				// A real workday should have focus > 0
 				expect(result.patterns.focusScore).toBeLessThanOrEqual(1);
-				// Just ensure it's computed; the value depends on activity diversity
 				expect(typeof result.patterns.focusScore).toBe("number");
-				expect(name).toBeTruthy(); // use name to avoid unused var
 			}
 		});
 
 		it("personas with diverse activities have more activity types", () => {
-			// Freelancer works on multiple projects → more activity types
-			// Deep work engineer → fewer, more focused activity types
-			const freelancer = results["Freelancer"];
-			const swe = results["SWE Deep Work"];
+			const freelancer = personaResults["Freelancer"];
+			const swe = personaResults["SWE Deep Work"];
 
 			// Both should have at least 2 activity types
 			expect(freelancer.uniqueActivityTypes.length).toBeGreaterThanOrEqual(2);
@@ -577,36 +520,10 @@ describe("investigation: classificationBatchSize (#84)", () => {
 		});
 
 		it("Tier 3 prompt differs across personas (classification carries persona signal)", () => {
-			const prompts = Object.entries(results).map(([name, r]) => ({
-				name,
-				length: r.promptLengths[3],
-			}));
-
-			// Prompts should vary in size based on activity volume
-			const lengths = prompts.map((p) => p.length);
+			const lengths = Object.values(personaResults).map((r) => r.promptLengths[3]);
 			const min = Math.min(...lengths);
 			const max = Math.max(...lengths);
 			expect(max).toBeGreaterThan(min);
-		});
-
-		it("REPORT: quantitative summary across personas", () => {
-			// This test always passes — it captures the numbers for the issue write-up.
-			const rows: string[] = [];
-			rows.push("| Persona | Events | Topics | Entities | Activity Types | Focus | T1 | T2 | T3 | T4 | T3−T4 |");
-			rows.push("|---------|--------|--------|----------|----------------|-------|------|------|------|------|-------|");
-
-			for (const [name, r] of Object.entries(results)) {
-				const delta = r.promptLengths[3] - r.promptLengths[4];
-				rows.push(
-					`| ${name} | ${r.eventCount} | ${r.uniqueTopics.length} | ${r.uniqueEntities.length} | ${r.uniqueActivityTypes.length} | ${r.patterns.focusScore.toFixed(2)} | ${r.promptLengths[1]} | ${r.promptLengths[2]} | ${r.promptLengths[3]} | ${r.promptLengths[4]} | +${delta} |`
-				);
-			}
-
-			// Print to console for capture
-			console.log("\n" + rows.join("\n") + "\n");
-
-			// Always passes
-			expect(Object.keys(results).length).toBeGreaterThan(0);
 		});
 	});
 });
