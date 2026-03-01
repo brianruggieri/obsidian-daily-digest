@@ -6,7 +6,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 
 ## Table of Contents
 
-- [⚙️ General](#general) (2 settings)
+- [⚙️ General](#general) (3 settings)
 - [🗄️ Data sources](#data-sources) (10 settings)
 - [🛡️ Privacy & filtering](#privacy-filtering) (12 settings)
 - [✨ AI summarization](#ai-summarization) (7 settings)
@@ -32,6 +32,16 @@ Date format for daily note filenames. Supports YYYY, MM, DD tokens (e.g. YYYY-MM
 
 - **Type:** Text
 - **Default:** `YYYY-MM-DD`
+
+### `enableTimeline`
+
+**Unified timeline**
+
+Render a cross-source chronological timeline in the daily note. Merges browser visits, searches, Claude sessions, and git commits into a single timeline grouped by time-of-day and focus sessions.
+
+- **Type:** Toggle
+- **Default:** `true`
+- **On by default:** yes
 
 ## 🗄️ Data sources
 

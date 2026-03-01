@@ -78,12 +78,13 @@ export function mergeToUnifiedEvents(
 	for (const v of visits) {
 		if (!v.time) continue;
 		const domain = v.domain || "unknown";
-		let title = (v.title || "").trim() || v.url;
+		const rawTitle = (v.title || "").trim();
+		let title = rawTitle || (v.url ? cleanUrlForDisplay(v.url) : "");
 		if (title.length > 60) title = title.slice(0, 60) + "\u2026";
 		events.push({
 			time: v.time,
 			source: "browser",
-			label: `${escapeForMarkdown(title)}`,
+			label: escapeForMarkdown(title),
 			detail: domain,
 		});
 	}
