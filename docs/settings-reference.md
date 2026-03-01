@@ -10,7 +10,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 - [🗄️ Data sources](#data-sources) (9 settings)
 - [🛡️ Privacy](#privacy) (4 settings)
 - [✨ AI summarization](#ai-summarization) (9 settings)
-- [🧠 Advanced](#advanced) (12 settings)
+- [🧠 Advanced](#advanced) (9 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
