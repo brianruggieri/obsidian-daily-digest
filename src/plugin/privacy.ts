@@ -417,7 +417,7 @@ export class DataPreviewModal extends Modal {
 		}
 
 		// ── Prompt preview section ────────────
-		if (this.stats.promptText) {
+		if (this.stats.promptText !== undefined) {
 			const promptSection = contentEl.createDiv({ cls: "dd-preview-prompt" });
 
 			// Tier label
@@ -475,7 +475,7 @@ export class DataPreviewModal extends Modal {
 				textArea.value = this.stats.promptText!;
 			});
 
-			if (this.stats.promptTokenEstimate) {
+			if (this.stats.promptTokenEstimate !== undefined) {
 				promptFooter.createEl("span", {
 					text: `~${this.stats.promptTokenEstimate.toLocaleString()} tokens`,
 					cls: "dd-preview-token-estimate",

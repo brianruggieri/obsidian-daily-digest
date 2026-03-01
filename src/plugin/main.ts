@@ -546,14 +546,20 @@ export default class DailyDigestPlugin extends Plugin {
 					progressNotice.hide();
 
 					// Build prompt for preview (before showing modal)
-					const summaryPrompt = this.settings.enablePromptPreview
-						? buildSummaryPrompt(
-							targetDate, categorized, searches, claudeSessions, aiConfig,
-							this.settings.profile, classification, extractedPatterns,
-							compressed, gitCommits, this.settings.promptsDir,
-							articleClustersForSemantic, this.settings.privacyTier
-						)
-						: undefined;
+					let summaryPrompt: ReturnType<typeof buildSummaryPrompt> | undefined;
+					if (this.settings.enablePromptPreview) {
+						try {
+							summaryPrompt = buildSummaryPrompt(
+								targetDate, categorized, searches, claudeSessions, aiConfig,
+								this.settings.profile, classification, extractedPatterns,
+								compressed, gitCommits, this.settings.promptsDir,
+								articleClustersForSemantic, this.settings.privacyTier
+							);
+						} catch (e) {
+							log.warn("Daily Digest: Failed to build prompt preview, continuing without:", e);
+							summaryPrompt = undefined;
+						}
+					}
 
 					const result = await new DataPreviewModal(this.app, {
 						visitCount: visits.length,

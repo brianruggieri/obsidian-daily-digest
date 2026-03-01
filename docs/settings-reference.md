@@ -258,7 +258,7 @@ Anthropic model to use for summarization when the Anthropic provider is selected
 
 **Show prompt preview**
 
-Display the exact AI prompt in the data preview modal before sending to Anthropic. The prompt can be reviewed and edited before confirming.
+Display the exact AI prompt in the data preview modal before sending to Anthropic. The prompt can be reviewed and edited before confirming. Only applies to the Anthropic provider (local models don't show a consent modal).
 
 - **Type:** Toggle
 - **Default:** `true`
