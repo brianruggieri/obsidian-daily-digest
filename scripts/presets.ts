@@ -53,7 +53,7 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	sensitivityCustomDomains: "",
 
 	// Rendering
-	enableTimeline: true,
+	enableTimeline: false,
 
 	// AI
 	promptsDir: "",

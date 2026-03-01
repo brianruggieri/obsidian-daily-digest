@@ -534,8 +534,8 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"into a single timeline grouped by time-of-day and focus sessions.",
 		section: "General",
 		type: "boolean",
-		defaultValue: "true",
-		enabledByDefault: true,
+		defaultValue: "false",
+		enabledByDefault: false,
 	},
 
 	// ── Meta ─────────────────────────────────────────────────────────────────

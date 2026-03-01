@@ -638,6 +638,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
 			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		expect(md).toContain("Timeline");
 		// Source badges
@@ -651,6 +652,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
 			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		expect(md).toContain("**Morning**");
 		expect(md).toContain("**Afternoon**");
@@ -660,6 +662,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
 			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		const timelineStart = md.indexOf("Timeline");
 		const searchIdx = md.indexOf("typescript generics", timelineStart);
@@ -676,6 +679,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
 			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		const timelineIdx = md.indexOf("Timeline");
 		const searchesIdx = md.indexOf("Searches");
@@ -705,6 +709,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, noTimeVisits, [], [], [],
 			{ other: noTimeVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		expect(md).not.toContain("Timeline");
 	});
@@ -713,6 +718,7 @@ describe("timeline rendering", () => {
 		const md = renderMarkdown(
 			DATE, timelineVisits, timelineSearches, timelineClaude, timelineGitCommits,
 			{ dev: timelineVisits }, null, "none",
+			undefined, undefined, true,
 		);
 		// The morning session should show counts like "1 commit · 1 visit · 1 AI prompt · 1 search"
 		expect(md).toMatch(/\d+ commit/);

@@ -437,7 +437,7 @@ export function renderMarkdown(
 	aiProviderUsed: AIProvider | "none" = "none",
 	knowledge?: KnowledgeSections,
 	promptLog?: PromptLog,
-	enableTimeline = true,
+	enableTimeline = false,
 ): string {
 	const today = formatDate(date);
 	const dow = dayOfWeek(date);

@@ -40,8 +40,7 @@ Date format for daily note filenames. Supports YYYY, MM, DD tokens (e.g. YYYY-MM
 Render a cross-source chronological timeline in the daily note. Merges browser visits, searches, Claude sessions, and git commits into a single timeline grouped by time-of-day and focus sessions.
 
 - **Type:** Toggle
-- **Default:** `true`
-- **On by default:** yes
+- **Default:** `false`
 
 ## 🗄️ Data sources
 
