@@ -168,10 +168,16 @@ describe("parseGitLogOutput", () => {
 // ── isStashCommit tests ─────────────────────────────────
 
 describe("isStashCommit", () => {
-	it("matches 'On <branch>:' stash messages", () => {
+	it("matches 'On <branch>:' stash messages (custom message)", () => {
 		expect(isStashCommit("On main: WIP save")).toBe(true);
 		expect(isStashCommit("On feat/login: stash changes")).toBe(true);
 		expect(isStashCommit("On fix/v1-data-quality: quick save")).toBe(true);
+	});
+
+	it("matches 'WIP on <branch>:' stash messages (auto stash, no custom message)", () => {
+		expect(isStashCommit("WIP on test/privacy-adversary-prompts: c8c7cbe feat: add unified cross-source timeline")).toBe(true);
+		expect(isStashCommit("WIP on main: abc1234 some commit")).toBe(true);
+		expect(isStashCommit("WIP on feat/auth: def5678 fix auth")).toBe(true);
 	});
 
 	it("matches 'index on <branch>:' stash messages", () => {
@@ -250,6 +256,22 @@ describe("parseGitLogOutput stash filtering", () => {
 
 		const commits = parseGitLogOutput(raw, "repo");
 		expect(commits).toHaveLength(0);
+	});
+
+	it("filters 'WIP on' auto-stash commits", () => {
+		const raw = [
+			"aaa1111||WIP on test/branch: c8c7cbe feat: some feature|2026-02-20T10:00:00+00:00",
+			"",
+			"5\t0\tsrc/file.ts",
+			"",
+			"bbb2222||feat: Real work|2026-02-20T10:05:00+00:00",
+			"",
+			"10\t3\tsrc/auth.ts",
+		].join("\n");
+
+		const commits = parseGitLogOutput(raw, "repo");
+		expect(commits).toHaveLength(1);
+		expect(commits[0].hash).toBe("bbb2222");
 	});
 });
 

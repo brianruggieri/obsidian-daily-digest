@@ -12,13 +12,14 @@ import { expandHome } from "./browser-profiles";
 /**
  * Matches git stash commit messages.
  * `git stash` creates up to 3 commits per stash entry:
- *   - "On <branch>: <message>"         (stash commit)
- *   - "index on <branch>: <hash> <msg>" (index state)
- *   - "untracked files on <branch>: <hash> <msg>" (untracked files)
+ *   - "WIP on <branch>: <hash> <msg>"             (auto stash, no custom message)
+ *   - "On <branch>: <message>"                     (stash with custom message)
+ *   - "index on <branch>: <hash> <msg>"            (index state)
+ *   - "untracked files on <branch>: <hash> <msg>"  (untracked files)
  *
  * These are internal bookkeeping commits, not real developer work.
  */
-const STASH_MESSAGE_RE = /^(On |index on |untracked files on )\S+:/;
+const STASH_MESSAGE_RE = /^(WIP on |On |index on |untracked files on )\S+:/;
 
 /**
  * Returns true if a commit message matches a git stash pattern.
