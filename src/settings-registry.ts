@@ -22,9 +22,9 @@ export type SettingType =
 export type SettingSection =
 	| "General"
 	| "Data sources"
-	| "Privacy & filtering"
+	| "Privacy"
 	| "AI summarization"
-	| "Advanced AI processing"
+	| "Advanced"
 	| "Meta";
 
 export interface SettingMeta {
@@ -77,9 +77,10 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Target token budget for the data section of AI prompts. Higher values " +
 			"include more detail but consume more context window. Activity is " +
 			"compressed proportionally to fit within this budget.",
-		section: "Data sources",
+		section: "AI summarization",
 		type: "slider",
 		defaultValue: "3000",
+		dependsOn: "enableAI",
 	},
 	{
 		key: "maxVisitsPerDomain",
@@ -189,74 +190,27 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableGit",
 	},
 
-	// ── Privacy & filtering ──────────────────────────────────────────────────
+	// ── Privacy ──────────────────────────────────────────────────────────────
 	{
-		key: "enableSanitization",
-		label: "Enable sanitization",
+		key: "sensitivityPreset",
+		label: "Sensitivity filter",
 		description:
-			"Scrub sensitive tokens, auth parameters, email addresses, and IP addresses " +
-			"from all collected data before AI processing or vault storage. " +
-			"Highly recommended when using the Anthropic API.",
-		section: "Privacy & filtering",
-		type: "boolean",
-		defaultValue: "true",
-		enabledByDefault: true,
-	},
-	{
-		key: "excludedDomains",
-		label: "Excluded domains",
-		description:
-			"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
-			"matches any domain containing that text (mybank.com, us.mybank.com, etc.). " +
-			"For exact domain matching or path-based filtering, use Custom Sensitive Domains instead.",
-		section: "Privacy & filtering",
-		type: "string",
-		defaultValue: "",
-		dependsOn: "enableSanitization",
-	},
-	{
-		key: "redactPaths",
-		label: "Redact file paths",
-		description:
-			"Replace absolute home directory paths (/Users/you/...) with ~/ in all output.",
-		section: "Privacy & filtering",
-		type: "boolean",
-		defaultValue: "true",
-		enabledByDefault: true,
-		dependsOn: "enableSanitization",
-	},
-	{
-		key: "scrubEmails",
-		label: "Redact email addresses",
-		description: "Replace email addresses with [EMAIL] in all output.",
-		section: "Privacy & filtering",
-		type: "boolean",
-		defaultValue: "true",
-		enabledByDefault: true,
-		dependsOn: "enableSanitization",
+			"Quick-select for sensitivity filter categories. Off: no filtering. " +
+			"Recommended: adult, gambling, dating, health, drugs. " +
+			"Strict: all 11 categories. Custom: choose individual categories.",
+		section: "Privacy",
+		type: "select",
+		defaultValue: "off",
 	},
 	{
 		key: "enableSensitivityFilter",
 		label: "Enable sensitivity filter",
 		description:
 			"Automatically filter visits to sensitive domains using a built-in blocklist " +
-			"(419+ domains across 11 categories). Works like an adblock list for your " +
-			"daily notes — prevents embarrassing or private domains from appearing in " +
-			"your activity log.",
-		section: "Privacy & filtering",
+			"(419+ domains across 11 categories). Driven by the sensitivity preset dropdown.",
+		section: "Privacy",
 		type: "boolean",
 		defaultValue: "false",
-	},
-	{
-		key: "sensitivityAction",
-		label: "Filter action",
-		description:
-			"Exclude: remove matching visits entirely from the note. " +
-			"Redact: keep the visit but replace the URL and title with a category label.",
-		section: "Privacy & filtering",
-		type: "select",
-		defaultValue: "exclude",
-		dependsOn: "enableSensitivityFilter",
 	},
 	{
 		key: "sensitivityCategories",
@@ -265,7 +219,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Which categories of sensitive domains to filter. " +
 			"Available categories: adult, gambling, dating, health, drugs, finance, " +
 			"weapons, piracy, vpn_proxy, job_search, social_personal.",
-		section: "Privacy & filtering",
+		section: "Privacy",
 		type: "internal",
 		defaultValue: "[]",
 		dependsOn: "enableSensitivityFilter",
@@ -276,11 +230,33 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Additional domains to filter using exact matching. " +
 			"Subdomains are matched automatically — adding example.com also matches " +
-			"sub.example.com. Supports path prefixes (e.g. reddit.com/r/subreddit). " +
-			"These domains follow the filter action setting (exclude or redact).",
-		section: "Privacy & filtering",
+			"sub.example.com. Supports path prefixes (e.g. reddit.com/r/subreddit).",
+		section: "Privacy",
 		type: "textarea",
 		defaultValue: "",
+		dependsOn: "enableSensitivityFilter",
+	},
+
+	// ── Advanced ─────────────────────────────────────────────────────────────
+	{
+		key: "excludedDomains",
+		label: "Excluded domains",
+		description:
+			"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
+			"matches any domain containing that text (mybank.com, us.mybank.com, etc.).",
+		section: "Advanced",
+		type: "string",
+		defaultValue: "",
+	},
+	{
+		key: "sensitivityAction",
+		label: "Sensitivity filter action",
+		description:
+			"Exclude: remove matching visits entirely from the note. " +
+			"Redact: keep the visit but replace the URL and title with a category label.",
+		section: "Advanced",
+		type: "select",
+		defaultValue: "exclude",
 		dependsOn: "enableSensitivityFilter",
 	},
 	{
@@ -288,9 +264,9 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		label: "Privacy tier",
 		description:
 			"Explicit privacy tier for Anthropic cloud calls. " +
-			"Tiers: 4 (de-identified stats only), 3 (classified abstractions), " +
+			"Tiers: 4 (statistics only), 3 (classified abstractions), " +
 			"2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.",
-		section: "Privacy & filtering",
+		section: "AI summarization",
 		type: "select",
 		defaultValue: "null",
 		dependsOn: "enableAI",
@@ -301,7 +277,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
 			"For development use only.",
-		section: "Privacy & filtering",
+		section: "Advanced",
 		type: "boolean",
 		defaultValue: "false",
 	},
@@ -389,7 +365,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableAI",
 	},
 
-	// ── Advanced AI processing ───────────────────────────────────────────────
+	// (Advanced AI settings — classification, patterns, etc.)
 	{
 		key: "enableClassification",
 		label: "Enable event classification",
@@ -398,7 +374,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"topics, entities, intent) using a local LLM. " +
 			"When Anthropic is the AI provider, only these abstractions are sent " +
 			"externally — never raw URLs, search queries, or commands.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "boolean",
 		defaultValue: "false",
 		dependsOn: "enableAI",
@@ -412,7 +388,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Local model for event classification. Leave blank to use the same model " +
 			"as AI summarization. Recommended: qwen2.5:7b-instruct.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "string",
 		defaultValue: "",
 		dependsOn: "enableClassification",
@@ -423,7 +399,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Number of events per classification batch. Larger batches are faster " +
 			"but may reduce accuracy.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "slider",
 		defaultValue: "8",
 		dependsOn: "enableClassification",
@@ -434,7 +410,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Time window in minutes for detecting topic co-occurrences. " +
 			"Events within the same window are considered related.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "slider",
 		defaultValue: "30",
 		dependsOn: undefined,
@@ -445,7 +421,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		description:
 			"Minimum number of events required to form a temporal cluster. " +
 			"Lower values detect more clusters but may include noise.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "slider",
 		defaultValue: "3",
 		dependsOn: undefined,
@@ -457,7 +433,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 			"Persist topic history across days to detect recurring interests, " +
 			"returning topics, and rising trends. Stored locally in your vault " +
 			"under .daily-digest/topic-history.json.",
-		section: "Advanced AI processing",
+		section: "Advanced",
 		type: "boolean",
 		defaultValue: "true",
 		enabledByDefault: true,
@@ -482,7 +458,7 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		label: "Has completed onboarding",
 		description:
 			"Internal flag. Set to true after the user dismisses the first-run privacy " +
-			"disclosure modal. Reset via 'Reset privacy onboarding' in Privacy & Filtering.",
+			"disclosure modal. Reset via 'Reset privacy onboarding' in Advanced settings.",
 		section: "Meta",
 		type: "internal",
 		defaultValue: "false",

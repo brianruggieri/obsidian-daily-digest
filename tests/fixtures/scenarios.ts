@@ -96,10 +96,7 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 
 export function defaultSanitizeConfig(): SanitizeConfig {
 	return {
-		enabled: true,
 		excludedDomains: [],
-		redactPaths: true,
-		scrubEmails: true,
 	};
 }
 

@@ -263,10 +263,7 @@ export const EXCLUDE_DOMAINS = new Set([
 // ── Sanitization Types ───────────────────────────────────
 
 export interface SanitizeConfig {
-	enabled: boolean;
 	excludedDomains: string[];
-	redactPaths: boolean;
-	scrubEmails: boolean;
 }
 
 // ── Classification Types (Phase 2) ──────────────────────

@@ -162,13 +162,11 @@ async function runPreset(
 	}
 
 	// ── 3. Sanitize ──────────────────────────────────────
+	// Sanitization is always on — secrets, paths, emails, IPs.
 	const sanitizeConfig: SanitizeConfig = {
-		enabled: settings.enableSanitization,
 		excludedDomains: settings.excludedDomains
 			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
 			: [],
-		redactPaths: settings.redactPaths,
-		scrubEmails: settings.scrubEmails,
 	};
 
 	const sanitized = sanitizeCollectedData(

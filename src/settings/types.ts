@@ -4,6 +4,7 @@ import { BrowserInstallConfig, SensitivityCategory } from "../types";
 export const SECRET_ID = "anthropic-api-key";
 
 export type AIProvider = "none" | "local" | "anthropic";
+export type SensitivityPreset = "off" | "recommended" | "strict" | "custom";
 export interface DailyDigestSettings {
 	dailyFolder: string;
 	filenameTemplate: string;
@@ -27,11 +28,9 @@ export interface DailyDigestSettings {
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
-	enableSanitization: boolean;
 	excludedDomains: string;
-	redactPaths: boolean;
-	scrubEmails: boolean;
 	enableSensitivityFilter: boolean;
+	sensitivityPreset: SensitivityPreset;
 	sensitivityCategories: SensitivityCategory[];
 	sensitivityCustomDomains: string;
 	sensitivityAction: "exclude" | "redact";
@@ -73,11 +72,9 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
-	enableSanitization: true,
 	excludedDomains: "",
-	redactPaths: true,
-	scrubEmails: true,
 	enableSensitivityFilter: false,
+	sensitivityPreset: "off" as SensitivityPreset,
 	sensitivityCategories: [] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 	sensitivityAction: "exclude" as "exclude" | "redact",

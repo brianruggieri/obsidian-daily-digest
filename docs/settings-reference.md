@@ -7,10 +7,10 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 ## Table of Contents
 
 - [⚙️ General](#general) (3 settings)
-- [🗄️ Data sources](#data-sources) (10 settings)
-- [🛡️ Privacy & filtering](#privacy-filtering) (10 settings)
-- [✨ AI summarization](#ai-summarization) (7 settings)
-- [🧠 Advanced AI processing](#advanced-ai-processing) (6 settings)
+- [🗄️ Data sources](#data-sources) (9 settings)
+- [🛡️ Privacy](#privacy) (4 settings)
+- [✨ AI summarization](#ai-summarization) (9 settings)
+- [🧠 Advanced](#advanced) (9 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -43,15 +43,6 @@ Render a cross-source chronological timeline in the daily note. Merges browser v
 - **Default:** `false`
 
 ## 🗄️ Data sources
-
-### `promptBudget`
-
-**Prompt detail budget**
-
-Target token budget for the data section of AI prompts. Higher values include more detail but consume more context window. Activity is compressed proportionally to fit within this budget.
-
-- **Type:** Slider
-- **Default:** `3000`
 
 ### `maxVisitsPerDomain`
 
@@ -141,68 +132,25 @@ Parent directory containing your git repositories. The plugin scans one level de
 - **Default:** *(empty)*
 - **Visible when:** `enableGit` is enabled
 
-## 🛡️ Privacy & filtering
+## 🛡️ Privacy
 
-### `enableSanitization`
+### `sensitivityPreset`
 
-**Enable sanitization**
+**Sensitivity filter**
 
-Scrub sensitive tokens, auth parameters, email addresses, and IP addresses from all collected data before AI processing or vault storage. Highly recommended when using the Anthropic API.
+Quick-select for sensitivity filter categories. Off: no filtering. Recommended: adult, gambling, dating, health, drugs. Strict: all 11 categories. Custom: choose individual categories.
 
-- **Type:** Toggle
-- **Default:** `true`
-- **On by default:** yes
-
-### `excludedDomains`
-
-**Excluded domains**
-
-Always-exclude list using simple pattern matching. A pattern like 'mybank' matches any domain containing that text (mybank.com, us.mybank.com, etc.). For exact domain matching or path-based filtering, use Custom Sensitive Domains instead.
-
-- **Type:** Text
-- **Default:** *(empty)*
-- **Visible when:** `enableSanitization` is enabled
-
-### `redactPaths`
-
-**Redact file paths**
-
-Replace absolute home directory paths (/Users/you/...) with ~/ in all output.
-
-- **Type:** Toggle
-- **Default:** `true`
-- **On by default:** yes
-- **Visible when:** `enableSanitization` is enabled
-
-### `scrubEmails`
-
-**Redact email addresses**
-
-Replace email addresses with [EMAIL] in all output.
-
-- **Type:** Toggle
-- **Default:** `true`
-- **On by default:** yes
-- **Visible when:** `enableSanitization` is enabled
+- **Type:** Dropdown
+- **Default:** `off`
 
 ### `enableSensitivityFilter`
 
 **Enable sensitivity filter**
 
-Automatically filter visits to sensitive domains using a built-in blocklist (419+ domains across 11 categories). Works like an adblock list for your daily notes — prevents embarrassing or private domains from appearing in your activity log.
+Automatically filter visits to sensitive domains using a built-in blocklist (419+ domains across 11 categories). Driven by the sensitivity preset dropdown.
 
 - **Type:** Toggle
 - **Default:** `false`
-
-### `sensitivityAction`
-
-**Filter action**
-
-Exclude: remove matching visits entirely from the note. Redact: keep the visit but replace the URL and title with a category label.
-
-- **Type:** Dropdown
-- **Default:** `exclude`
-- **Visible when:** `enableSensitivityFilter` is enabled
 
 ### `sensitivityCategories`
 
@@ -218,32 +166,33 @@ Which categories of sensitive domains to filter. Available categories: adult, ga
 
 **Custom sensitive domains**
 
-Additional domains to filter using exact matching. Subdomains are matched automatically — adding example.com also matches sub.example.com. Supports path prefixes (e.g. reddit.com/r/subreddit). These domains follow the filter action setting (exclude or redact).
+Additional domains to filter using exact matching. Subdomains are matched automatically — adding example.com also matches sub.example.com. Supports path prefixes (e.g. reddit.com/r/subreddit).
 
 - **Type:** Text area
 - **Default:** *(empty)*
 - **Visible when:** `enableSensitivityFilter` is enabled
 
+## ✨ AI summarization
+
+### `promptBudget`
+
+**Prompt detail budget**
+
+Target token budget for the data section of AI prompts. Higher values include more detail but consume more context window. Activity is compressed proportionally to fit within this budget.
+
+- **Type:** Slider
+- **Default:** `3000`
+- **Visible when:** `enableAI` is enabled
+
 ### `privacyTier`
 
 **Privacy tier**
 
-Explicit privacy tier for Anthropic cloud calls. Tiers: 4 (de-identified stats only), 3 (classified abstractions), 2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.
+Explicit privacy tier for Anthropic cloud calls. Tiers: 4 (statistics only), 3 (classified abstractions), 2 (budget-compressed), 1 (sanitized raw data). Auto selects the highest available tier.
 
 - **Type:** Dropdown
 - **Default:** `null`
 - **Visible when:** `enableAI` is enabled
-
-### `debugMode`
-
-**Debug mode**
-
-Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.
-
-- **Type:** Toggle
-- **Default:** `false`
-
-## ✨ AI summarization
 
 ### `enableAI`
 
@@ -315,7 +264,35 @@ Path to a directory containing custom prompt templates (standard.txt, rag.txt, e
 - **Default:** *(empty)*
 - **Visible when:** `enableAI` is enabled
 
-## 🧠 Advanced AI processing
+## 🧠 Advanced
+
+### `excludedDomains`
+
+**Excluded domains**
+
+Always-exclude list using simple pattern matching. A pattern like 'mybank' matches any domain containing that text (mybank.com, us.mybank.com, etc.).
+
+- **Type:** Text
+- **Default:** *(empty)*
+
+### `sensitivityAction`
+
+**Sensitivity filter action**
+
+Exclude: remove matching visits entirely from the note. Redact: keep the visit but replace the URL and title with a category label.
+
+- **Type:** Dropdown
+- **Default:** `exclude`
+- **Visible when:** `enableSensitivityFilter` is enabled
+
+### `debugMode`
+
+**Debug mode**
+
+Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.
+
+- **Type:** Toggle
+- **Default:** `false`
 
 ### `enableClassification`
 
@@ -382,7 +359,7 @@ Persist topic history across days to detect recurring interests, returning topic
 
 **Has completed onboarding**
 
-Internal flag. Set to true after the user dismisses the first-run privacy disclosure modal. Reset via 'Reset privacy onboarding' in Privacy & Filtering.
+Internal flag. Set to true after the user dismisses the first-run privacy disclosure modal. Reset via 'Reset privacy onboarding' in Advanced settings.
 
 - **Type:** Internal
 - **Default:** `false`

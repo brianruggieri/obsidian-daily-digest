@@ -882,12 +882,9 @@ async function runPipeline(
 	// ── 2. Sanitize ──────────────────────────────────────
 
 	const sanitizeConfig: SanitizeConfig = {
-		enabled: settings.enableSanitization,
 		excludedDomains: settings.excludedDomains
 			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
 			: [],
-		redactPaths: settings.redactPaths,
-		scrubEmails: settings.scrubEmails,
 	};
 	let sanitized!: ReturnType<typeof sanitizeCollectedData>;
 	await stage("sanitize", () => {
@@ -898,11 +895,10 @@ async function runPipeline(
 			raw.gitCommits,
 			sanitizeConfig
 		);
-		const detail = sanitizeConfig.enabled ? `level=${sanitizeConfig.level}` : "disabled";
 		return {
-			detail,
+			detail: "always-on",
 			output: {
-				config: { level: sanitizeConfig.level, redactPaths: sanitizeConfig.redactPaths, scrubEmails: sanitizeConfig.scrubEmails },
+				config: { excludedDomains: sanitizeConfig.excludedDomains },
 				counts: {
 					visits: sanitized.visits.length,
 					searches: sanitized.searches.length,

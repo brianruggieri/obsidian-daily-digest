@@ -5,7 +5,7 @@ import { BrowserInstallConfig, SensitivityCategory } from "../types";
 import { getCategoryInfo, getTotalBuiltinDomains } from "../filter/sensitivity";
 import { detectAllBrowsers, mergeDetectedWithExisting, BROWSER_DISPLAY_NAMES } from "../collect/browser-profiles";
 import * as log from "../plugin/log";
-import { AIProvider, SECRET_ID } from "./types";
+import { AIProvider, SECRET_ID, SensitivityPreset } from "./types";
 
 export class DailyDigestSettingTab extends PluginSettingTab {
 	plugin: DailyDigestPlugin;
@@ -65,24 +65,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		// ━━ 2. Data Sources ━━━━━━━━━━━━━━━━━━━━━━━━━
 		const dataHeading = new Setting(containerEl).setName("Data sources").setHeading();
 		this.prependIcon(dataHeading.nameEl, "database");
-
-		new Setting(containerEl)
-			.setName("Prompt detail budget")
-			.setDesc(
-				"Target token budget for the data section of AI prompts. " +
-				"Higher values include more detail but use more context. " +
-				"Activity is compressed proportionally to fit."
-			)
-			.addSlider((slider) =>
-				slider
-					.setLimits(1000, 8000, 500)
-					.setValue(this.plugin.settings.promptBudget)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.promptBudget = value;
-						await this.plugin.saveSettings();
-					})
-			);
 
 		// ── Browser ──────────────────────────────────
 		const browserGroup = containerEl.createDiv({ cls: "dd-source-group" });
@@ -193,27 +175,30 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 		}
 
-		// ━━ 3. Privacy & Filtering ━━━━━━━━━━━━━━━━━━
-		const privacyHeading = new Setting(containerEl).setName("Privacy & filtering").setHeading();
+		new Setting(containerEl)
+			.setName("Max visits per domain")
+			.setDesc("Maximum unique page visits shown per domain in the daily note.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 20, 1)
+					.setValue(this.plugin.settings.maxVisitsPerDomain)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.maxVisitsPerDomain = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ━━ 3. Privacy ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+		const privacyHeading = new Setting(containerEl).setName("Privacy").setHeading();
 		this.prependIcon(privacyHeading.nameEl, "shield");
 
 		// Status callouts (informational banners)
 		const enabledSources: string[] = [];
-		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history databases");
+		if (this.plugin.settings.enableBrowser) enabledSources.push("browser history");
 		if (this.plugin.settings.enableClaude) enabledSources.push("Claude Code sessions");
 		if (this.plugin.settings.enableCodex) enabledSources.push("Codex CLI sessions");
 		if (this.plugin.settings.enableGit) enabledSources.push("git commit history");
-
-		const accessCallout = containerEl.createDiv({ cls: "dd-settings-callout" });
-		if (enabledSources.length > 0) {
-			accessCallout.createEl("p", {
-				text: `Currently accessing: ${enabledSources.join(", ")}.`,
-			});
-		} else {
-			accessCallout.createEl("p", {
-				text: "No external data sources are currently enabled. Enable sources above to collect activity data.",
-			});
-		}
 
 		const transmitCallout = containerEl.createDiv({
 			cls: "dd-settings-callout " +
@@ -223,177 +208,114 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		if (!this.plugin.settings.enableAI) {
 			transmitCallout.createEl("p", {
 				text:
-					"AI Summarization is OFF. All data stays on your computer. " +
-					"No data is transmitted externally.",
+					"All data stays on your computer. Sanitization is always active " +
+					"(API keys, tokens, passwords, emails, IPs, and home paths are scrubbed; " +
+					"URLs are reduced to protocol + domain + path).",
 			});
 		} else if (this.plugin.settings.aiProvider === "local") {
 			transmitCallout.createEl("p", {
 				text:
-					"AI Summarization is ON (local model). All data stays on your " +
-					"computer. No data is transmitted externally.",
+					"All data stays on your computer (local AI model). " +
+					"Sanitization is always active.",
 			});
 		} else {
 			transmitCallout.createEl("p", {
 				text:
-					"AI Summarization is ON (Anthropic API). When you generate a note, " +
-					"collected data will be sent to api.anthropic.com for processing.",
+					"Sanitized data will be sent to api.anthropic.com when generating a note. " +
+					"Sanitization is always active (API keys, tokens, passwords, emails, IPs, " +
+					"and home paths are scrubbed; URLs reduced to domain + path).",
 			});
 		}
 
-		// ── Sanitization ──────────────────────────────
-		new Setting(containerEl)
-			.setName("Enable sanitization")
-			.setDesc(
-				"Scrub sensitive tokens, auth parameters, email addresses, and " +
-				"IP addresses from all collected data before AI processing or " +
-				"vault storage. Highly recommended when using Anthropic API."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableSanitization)
-					.onChange(async (value) => {
-						this.plugin.settings.enableSanitization = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
+		// ── Sensitivity preset dropdown (Step 2) ─────
+		const RECOMMENDED_CATS: SensitivityCategory[] = ["adult", "gambling", "dating", "health", "drugs"];
+		const ALL_CATS: SensitivityCategory[] = [
+			"adult", "gambling", "dating", "health", "drugs",
+			"finance", "weapons", "piracy", "vpn_proxy", "job_search", "social_personal",
+		];
 
-		if (this.plugin.settings.enableSanitization) {
-			new Setting(containerEl)
-				.setName("Excluded domains")
-				.setDesc(
-					"Always-exclude list using simple pattern matching. A pattern like " +
-					"'mybank' matches any domain containing that text (mybank.com, " +
-					"us.mybank.com, etc). For exact domain matching or path-based " +
-					"filtering, use Custom Sensitive Domains in the Sensitivity filter " +
-					"section instead."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder("mybank.com, internal.corp.com")
-						.setValue(this.plugin.settings.excludedDomains)
-						.onChange(async (value) => {
-							this.plugin.settings.excludedDomains = value;
-							await this.plugin.saveSettings();
-						})
-				);
+		// Derive dropdown value from existing settings
+		const deriveSensitivityPreset = (): SensitivityPreset => {
+			if (!this.plugin.settings.enableSensitivityFilter) return "off";
+			const cats = [...this.plugin.settings.sensitivityCategories].sort();
+			const recSorted = [...RECOMMENDED_CATS].sort();
+			const allSorted = [...ALL_CATS].sort();
+			if (cats.length === recSorted.length && cats.every((c, i) => c === recSorted[i])) return "recommended";
+			if (cats.length === allSorted.length && cats.every((c, i) => c === allSorted[i])) return "strict";
+			return "custom";
+		};
 
-			new Setting(containerEl)
-				.setName("Redact file paths")
-				.setDesc(
-					"Replace home directory paths (/Users/you/...) with ~/ in all output."
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.redactPaths)
-						.onChange(async (value) => {
-							this.plugin.settings.redactPaths = value;
-							await this.plugin.saveSettings();
-						})
-				);
+		const currentPreset = deriveSensitivityPreset();
+		// Sync derived value to settings on load
+		this.plugin.settings.sensitivityPreset = currentPreset;
 
-			new Setting(containerEl)
-				.setName("Redact email addresses")
-				.setDesc(
-					"Replace email addresses with [EMAIL] in all output."
-				)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.scrubEmails)
-						.onChange(async (value) => {
-							this.plugin.settings.scrubEmails = value;
-							await this.plugin.saveSettings();
-						})
-				);
-
-			const sanitizeCallout = containerEl.createDiv({
-				cls: "dd-settings-callout dd-settings-callout-info",
-			});
-			sanitizeCallout.createEl("p", {
-				text:
-					"Secrets (API keys, tokens, passwords, JWTs) are always scrubbed " +
-					"from all output regardless of these settings. These controls " +
-					"provide additional defense-in-depth.",
-			});
-		}
-
-		// ── Sensitivity filter ────────────────────────
 		const totalDomains = getTotalBuiltinDomains();
 
 		new Setting(containerEl)
-			.setName("Enable sensitivity filter")
+			.setName("Sensitivity filter")
 			.setDesc(
-				`Automatically filter visits to sensitive domains (${totalDomains} built-in ` +
-				`across 11 categories). Works like an adblock list for your daily notes — ` +
-				`prevents embarrassing or private domains from appearing in your activity log.`
+				`Filter visits to sensitive domains (${totalDomains} built-in across 11 categories). ` +
+				`Prevents embarrassing or private domains from appearing in your daily notes.`
 			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableSensitivityFilter)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("off", "Off")
+					.addOption("recommended", "Recommended (5 categories)")
+					.addOption("strict", "Strict (all 11 categories)")
+					.addOption("custom", "Custom")
+					.setValue(currentPreset)
 					.onChange(async (value) => {
-						this.plugin.settings.enableSensitivityFilter = value;
+						const preset = value as SensitivityPreset;
+						this.plugin.settings.sensitivityPreset = preset;
+						if (preset === "off") {
+							this.plugin.settings.enableSensitivityFilter = false;
+						} else if (preset === "recommended") {
+							this.plugin.settings.enableSensitivityFilter = true;
+							this.plugin.settings.sensitivityCategories = [...RECOMMENDED_CATS];
+						} else if (preset === "strict") {
+							this.plugin.settings.enableSensitivityFilter = true;
+							this.plugin.settings.sensitivityCategories = [...ALL_CATS];
+						} else {
+							// custom — keep current categories, ensure filter is on
+							this.plugin.settings.enableSensitivityFilter = true;
+						}
 						await this.plugin.saveSettings();
 						this.display();
 					})
 			);
 
+		// Show custom domains when filter is active
 		if (this.plugin.settings.enableSensitivityFilter) {
 			new Setting(containerEl)
-				.setName("Filter action")
+				.setName("Custom sensitive domains")
 				.setDesc(
-					"Exclude: remove matching visits entirely. " +
-					"Redact: keep the visit but replace URL and title with a category label."
+					"Additional domains to filter. Subdomains match automatically " +
+					"(example.com also matches sub.example.com). Supports path prefixes."
 				)
-				.addDropdown((dropdown) =>
-					dropdown
-						.addOption("exclude", "Exclude (remove entirely)")
-						.addOption("redact", "Redact (replace with category label)")
-						.setValue(this.plugin.settings.sensitivityAction)
+				.addTextArea((text) => {
+					text.inputEl.rows = 2;
+					text.inputEl.cols = 40;
+					text.setPlaceholder("example.com, reddit.com/r/mysubreddit")
+						.setValue(this.plugin.settings.sensitivityCustomDomains)
 						.onChange(async (value) => {
-							this.plugin.settings.sensitivityAction = value as "exclude" | "redact";
+							this.plugin.settings.sensitivityCustomDomains = value;
 							await this.plugin.saveSettings();
-						})
-				);
+						});
+				});
+		}
 
-			// Category toggles
+		// Show individual category toggles only in "custom" mode
+		if (currentPreset === "custom") {
 			const catInfo = getCategoryInfo();
 			const enabledCats = new Set(this.plugin.settings.sensitivityCategories);
 
 			const catContainer = containerEl.createDiv({ cls: "dd-sensitivity-categories" });
-			const catHeading = new Setting(catContainer)
+			new Setting(catContainer)
 				.setName("Categories")
 				.setDesc(
-					`Select which types of domains to filter. ` +
 					`${enabledCats.size} of ${Object.keys(catInfo).length - 1} categories enabled.`
 				);
 
-			// Quick-select buttons
-			catHeading.addButton((btn) =>
-				btn.setButtonText("All").onClick(async () => {
-					this.plugin.settings.sensitivityCategories = Object.keys(catInfo)
-						.filter((k) => k !== "custom") as SensitivityCategory[];
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-			catHeading.addButton((btn) =>
-				btn.setButtonText("None").onClick(async () => {
-					this.plugin.settings.sensitivityCategories = [];
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-			catHeading.addButton((btn) =>
-				btn.setButtonText("Recommended").onClick(async () => {
-					this.plugin.settings.sensitivityCategories = [
-						"adult", "gambling", "dating", "health", "drugs",
-					];
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-			// Individual category toggles
 			for (const [key, info] of Object.entries(catInfo)) {
 				if (key === "custom") continue;
 				const cat = key as SensitivityCategory;
@@ -415,89 +337,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 			}
-
-			// Custom domains
-			new Setting(containerEl)
-				.setName("Custom sensitive domains")
-				.setDesc(
-					"Additional domains to filter using exact matching. " +
-					"Subdomains are matched automatically (adding example.com also " +
-					"matches sub.example.com). Supports path prefixes " +
-					"(e.g. reddit.com/r/subreddit). These domains follow the " +
-					"filter action setting above (exclude or redact)."
-				)
-				.addTextArea((text) => {
-					text.inputEl.rows = 3;
-					text.inputEl.cols = 40;
-					text.setPlaceholder("example.com, reddit.com/r/mysubreddit")
-						.setValue(this.plugin.settings.sensitivityCustomDomains)
-						.onChange(async (value) => {
-							this.plugin.settings.sensitivityCustomDomains = value;
-							await this.plugin.saveSettings();
-						});
-				});
-
-			const sensitivityCallout = containerEl.createDiv({
-				cls: "dd-settings-callout dd-settings-callout-info",
-			});
-			sensitivityCallout.createEl("p", {
-				text:
-					"The sensitivity filter runs before all other processing. Filtered " +
-					"domains never reach AI models, the vault note, or any external " +
-					"service. The built-in list covers well-known sites; add custom " +
-					"domains for anything specific to your situation.",
-			});
 		}
-
-		// ── Cloud privacy controls ────────────────────
-		new Setting(containerEl)
-			.setName("Privacy tier")
-			.setDesc(
-				"Select the privacy tier for Anthropic cloud calls. " +
-				"Auto (recommended): uses the most private tier supported by available data. " +
-				"Manual: pin to a specific tier (4 = de-identified stats only, 1 = full sanitized data)."
-			)
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption("null", "Auto (recommended)")
-					.addOption("4", "Tier 4 — De-identified (aggregated stats only)")
-					.addOption("3", "Tier 3 — Classified (per-event abstractions)")
-					.addOption("2", "Tier 2 — Compressed (budget-proportional)")
-					.addOption("1", "Tier 1 — Standard (sanitized raw data)")
-					.setValue(
-						this.plugin.settings.privacyTier === null
-							? "null"
-							: String(this.plugin.settings.privacyTier)
-					)
-					.onChange(async (value) => {
-						this.plugin.settings.privacyTier =
-							value === "null" ? null : (parseInt(value) as 1 | 2 | 3 | 4);
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// ── Reset onboarding ──────────────────────────
-		new Setting(containerEl)
-			.setName("Reset privacy onboarding")
-			.setDesc("Show the first-run privacy disclosure modal again next time the plugin loads.")
-			.addButton((btn) =>
-				btn.setButtonText("Reset").onClick(async () => {
-					this.plugin.settings.hasCompletedOnboarding = false;
-					this.plugin.settings.privacyConsentVersion = 0;
-					await this.plugin.saveSettings();
-					new Notice("Onboarding will be shown again when Obsidian restarts.");
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Debug mode")
-			.setDesc("Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.debugMode)
-				.onChange(async (value) => {
-					this.plugin.settings.debugMode = value;
-					await this.plugin.saveSettings();
-				}));
 
 		// ━━ 4. AI Summarization ━━━━━━━━━━━━━━━━━━━━━━
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
@@ -715,53 +555,167 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 								await this.plugin.saveSettings();
 							})
 					);
+
+				// ── Privacy tier (Anthropic only) ────
+				new Setting(containerEl)
+					.setName("Privacy tier")
+					.setDesc(
+						"Controls what data is sent to Anthropic. Higher tiers send less data. " +
+						"Auto selects the highest tier supported by your enabled features."
+					)
+					.addDropdown((dropdown) =>
+						dropdown
+							.addOption("null", "Auto (highest available)")
+							.addOption("4", "Tier 4 — Statistics only (most private)")
+							.addOption("3", "Tier 3 — Classified abstractions (no raw data)")
+							.addOption("2", "Tier 2 — Budget-compressed activity")
+							.addOption("1", "Tier 1 — Full sanitized data (least private)")
+							.setValue(String(this.plugin.settings.privacyTier ?? "null"))
+							.onChange(async (value) => {
+								const tier = value === "null" ? null : (Number(value) as 4 | 3 | 2 | 1);
+								this.plugin.settings.privacyTier = tier;
+								// Auto-enable classification for Tier 3 (requires abstractions).
+								// Tier 4 uses aggregated statistics only — classification not required.
+								if (tier === 3 && !this.plugin.settings.enableClassification) {
+									this.plugin.settings.enableClassification = true;
+								}
+								await this.plugin.saveSettings();
+								this.display();
+							})
+					);
+
+				// Tier description callout
+				const tierValue = this.plugin.settings.privacyTier;
+				const tierDescriptions: Record<string, string> = {
+					"null": "Auto mode selects the most private tier your data supports. " +
+						"Pattern extraction always runs, so Auto resolves to Tier 4 (statistics only). " +
+						"Select Tier 3 explicitly to send classification abstractions instead.",
+					"4": "Only aggregated statistics (visit counts, category distributions, time patterns) " +
+						"are sent. No domains, titles, URLs, or queries reach Anthropic.",
+					"3": "Per-event classified abstractions (activity type, topics, entities) are sent. " +
+						"Requires event classification. No raw URLs, search queries, or commands.",
+					"2": "Budget-compressed activity data is sent: domain names, page titles, and queries " +
+						"proportionally compressed to fit the prompt budget.",
+					"1": "Full sanitized data arrays are sent: all visits, search queries, Claude sessions, " +
+						"and git commits (after secret scrubbing and path redaction).",
+				};
+				const tierKey = String(tierValue ?? "null");
+				const tierCallout = containerEl.createDiv({
+					cls: "dd-settings-callout " +
+						(tierValue !== null && tierValue <= 2 ? "dd-settings-callout-warn" : "dd-settings-callout-info"),
+				});
+				tierCallout.createEl("p", {
+					text: tierDescriptions[tierKey] ?? "",
+				});
 			}
 
+			// Prompt detail budget (moved here from Data Sources — only relevant for AI)
 			new Setting(containerEl)
-				.setName("Prompt templates directory")
-				.setDesc("Path to a directory containing standard.txt, rag.txt, etc. Leave empty to use built-in prompts.")
-				.addText((text) =>
-					text
-						.setPlaceholder("e.g. ~/prompts/daily-digest")
-						.setValue(this.plugin.settings.promptsDir)
+				.setName("Prompt detail budget")
+				.setDesc(
+					"Target token budget for the data section of AI prompts. " +
+					"Higher values include more detail but consume more context window."
+				)
+				.addSlider((slider) =>
+					slider
+						.setLimits(1000, 8000, 500)
+						.setValue(this.plugin.settings.promptBudget)
+						.setDynamicTooltip()
 						.onChange(async (value) => {
-							this.plugin.settings.promptsDir = value;
+							this.plugin.settings.promptBudget = value;
 							await this.plugin.saveSettings();
 						})
 				);
+		}
 
-			// ── Advanced AI processing ───────────────
-			const advAiHeading = new Setting(containerEl)
-				.setName("Advanced AI processing")
-				.setHeading();
-			this.prependIcon(advAiHeading.nameEl, "cpu");
+		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+		const advHeading = new Setting(containerEl).setName("Advanced").setHeading();
+		this.prependIcon(advHeading.nameEl, "sliders-horizontal");
 
-			// Event classification
-			new Setting(containerEl)
+		const advContent = containerEl.createDiv({ cls: "dd-advanced-section" });
+		advContent.style.display = "none";
+
+		const advToggle = new Setting(containerEl)
+			.setDesc("Fine-tune filtering, classification, pattern extraction, and other power-user settings.")
+			.addButton((btn) =>
+				btn.setButtonText("Show advanced settings").onClick(() => {
+					const visible = advContent.style.display !== "none";
+					advContent.style.display = visible ? "none" : "block";
+					btn.setButtonText(visible ? "Show advanced settings" : "Hide advanced settings");
+				})
+			);
+		// Move the toggle button before the content div
+		containerEl.insertBefore(advToggle.settingEl, advContent);
+
+		// ── Excluded domains ─────────────────────────
+		new Setting(advContent)
+			.setName("Excluded domains")
+			.setDesc(
+				"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
+				"matches any domain containing that text (mybank.com, us.mybank.com, etc.)."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g. mybank, internal.corp")
+					.setValue(this.plugin.settings.excludedDomains)
+					.onChange(async (value) => {
+						this.plugin.settings.excludedDomains = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── Sensitivity action ───────────────────────
+		if (this.plugin.settings.enableSensitivityFilter) {
+			new Setting(advContent)
+				.setName("Sensitivity filter action")
+				.setDesc(
+					"Exclude: remove matching visits entirely. " +
+					"Redact: keep the visit but replace URL and title with a category label."
+				)
+				.addDropdown((dropdown) =>
+					dropdown
+						.addOption("exclude", "Exclude (remove entirely)")
+						.addOption("redact", "Redact (replace with label)")
+						.setValue(this.plugin.settings.sensitivityAction)
+						.onChange(async (value) => {
+							this.plugin.settings.sensitivityAction = value as "exclude" | "redact";
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		// ── Event classification ─────────────────────
+		if (this.plugin.settings.enableAI) {
+			new Setting(advContent)
 				.setName("Enable event classification")
 				.setDesc(
 					"Classify raw activity events into structured abstractions " +
 					"(activity type, topics, entities, intent) using a local LLM. " +
-					"When Anthropic is the AI provider, only these abstractions " +
-					"are sent externally — never raw URLs, queries, or commands."
+					"Required for Privacy Tier 3. When Anthropic is the provider, " +
+					"only abstractions are sent externally."
 				)
 				.addToggle((toggle) =>
 					toggle
 						.setValue(this.plugin.settings.enableClassification)
 						.onChange(async (value) => {
 							this.plugin.settings.enableClassification = value;
+							// Disabling classification while Tier 3 is selected would
+							// produce a prompt expecting abstractions with none available.
+							// Downgrade to Auto (which resolves to Tier 4).
+							if (!value && this.plugin.settings.privacyTier === 3) {
+								this.plugin.settings.privacyTier = null;
+							}
 							await this.plugin.saveSettings();
 							this.display();
 						})
 				);
 
 			if (this.plugin.settings.enableClassification) {
-				new Setting(containerEl)
+				new Setting(advContent)
 					.setName("Classification model")
 					.setDesc(
 						"Local model for event classification. Leave blank to use " +
-						"the same model as AI summarization. " +
-						"Recommended: qwen2.5:7b-instruct (strong JSON output, lower resource use than 14B)."
+						"the same model as AI summarization."
 					)
 					.addText((text) =>
 						text
@@ -773,8 +727,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 
-				new Setting(containerEl)
-					.setName("Batch size")
+				new Setting(advContent)
+					.setName("Classification batch size")
 					.setDesc(
 						"Number of events per classification batch. " +
 						"Larger batches are faster but may reduce accuracy."
@@ -790,103 +744,119 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 
-				const classifyCallout = containerEl.createDiv({
+				const classifyCallout = advContent.createDiv({
 					cls: "dd-settings-callout",
 				});
 				classifyCallout.createEl("p", {
 					text:
 						"Classification always runs locally on your machine. " +
 						"It adds ~2-5 seconds per batch but ensures only structured " +
-						"abstractions (topics, entities, activity types) reach " +
-						"external APIs. Raw data never leaves your machine.",
-				});
-
-				if (this.plugin.settings.aiProvider === "anthropic") {
-					const privacyCallout = containerEl.createDiv({
-						cls: "dd-settings-callout dd-settings-callout-info",
-					});
-					privacyCallout.createEl("p", {
-						text:
-							"With Anthropic selected: classification is highly recommended. " +
-							"When enabled, the AI summary prompt contains only activity types, " +
-							"topics, and entity names — zero raw URLs, search queries, " +
-							"or Claude Code prompts are sent to Anthropic.",
-					});
-				}
-
-				// Pattern extraction settings (patterns always run — free, on-device)
-				new Setting(containerEl)
-					.setName("Co-occurrence window")
-					.setDesc(
-						"Time window in minutes for detecting topic co-occurrences. " +
-						"Events within the same window are considered related."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(10, 120, 10)
-							.setValue(this.plugin.settings.patternCooccurrenceWindow)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.patternCooccurrenceWindow = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Minimum cluster size")
-					.setDesc(
-						"Minimum number of events to form a temporal cluster. " +
-						"Lower values detect more clusters but may include noise."
-					)
-					.addSlider((slider) =>
-						slider
-							.setLimits(2, 10, 1)
-							.setValue(this.plugin.settings.patternMinClusterSize)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								this.plugin.settings.patternMinClusterSize = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				new Setting(containerEl)
-					.setName("Track recurrence")
-					.setDesc(
-						"Persist topic history across days to detect recurring interests, " +
-						"returning topics, and rising trends. Stored locally in your vault " +
-						"under .daily-digest/topic-history.json."
-					)
-					.addToggle((toggle) =>
-						toggle
-							.setValue(this.plugin.settings.trackRecurrence)
-							.onChange(async (value) => {
-								this.plugin.settings.trackRecurrence = value;
-								await this.plugin.saveSettings();
-							})
-					);
-
-				const patternCallout = containerEl.createDiv({
-					cls: "dd-settings-callout",
-				});
-				patternCallout.createEl("p", {
-					text:
-						"Pattern extraction always runs — it is entirely local and statistical (no LLM calls). " +
-						"It analyzes events to find activity clusters, topic connections, " +
-						"and curiosity patterns. Results appear as new sections in your daily note.",
+						"abstractions reach external APIs.",
 				});
 			}
-		} else {
-			const depCallout = containerEl.createDiv({
-				cls: "dd-settings-callout",
-			});
-			depCallout.createEl("p", {
-				text:
-					"Pattern extraction and knowledge delta analysis require " +
-					"event classification to be enabled. Enable classification " +
-					"above to unlock these features.",
-			});
+
+
+			// ── Prompt templates ─────────────────────
+			new Setting(advContent)
+				.setName("Prompt templates directory")
+				.setDesc("Path to custom prompt templates (standard.txt, rag.txt, etc.). Leave empty for built-in prompts.")
+				.addText((text) =>
+					text
+						.setPlaceholder("e.g. ~/prompts/daily-digest")
+						.setValue(this.plugin.settings.promptsDir)
+						.onChange(async (value) => {
+							this.plugin.settings.promptsDir = value;
+							await this.plugin.saveSettings();
+						})
+				);
 		}
 
+		// ── Pattern extraction (always runs — free, on-device, no LLM) ──
+		const patternLabel = new Setting(advContent)
+			.setName("Pattern extraction")
+			.setDesc(
+				"Pattern extraction always runs — it is entirely local and statistical " +
+				"(no LLM calls). These settings tune cluster detection and recurrence tracking."
+			);
+		patternLabel.settingEl.addClass("dd-subsection-label");
+
+		new Setting(advContent)
+			.setName("Co-occurrence window")
+			.setDesc(
+				"Time window in minutes for detecting topic co-occurrences. " +
+				"Events within the same window are considered related."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(10, 120, 10)
+					.setValue(this.plugin.settings.patternCooccurrenceWindow)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.patternCooccurrenceWindow = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(advContent)
+			.setName("Minimum cluster size")
+			.setDesc(
+				"Minimum number of events to form a temporal cluster. " +
+				"Lower values detect more clusters but may include noise."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(2, 10, 1)
+					.setValue(this.plugin.settings.patternMinClusterSize)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.patternMinClusterSize = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(advContent)
+			.setName("Track recurrence")
+			.setDesc(
+				"Persist topic history across days to detect recurring interests " +
+				"and rising trends. Stored in .daily-digest/topic-history.json."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.trackRecurrence)
+					.onChange(async (value) => {
+						this.plugin.settings.trackRecurrence = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── Debug mode ───────────────────────────────
+		new Setting(advContent)
+			.setName("Debug mode")
+			.setDesc(
+				"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
+				"For development use only."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.debugMode)
+					.onChange(async (value) => {
+						this.plugin.settings.debugMode = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ── Reset onboarding ─────────────────────────
+		new Setting(advContent)
+			.setName("Reset privacy onboarding")
+			.setDesc("Re-show the first-run privacy disclosure modal on next settings open.")
+			.addButton((btn) =>
+				btn.setButtonText("Reset").onClick(async () => {
+					this.plugin.settings.hasCompletedOnboarding = false;
+					this.plugin.settings.privacyConsentVersion = 0;
+					await this.plugin.saveSettings();
+					new Notice("Privacy onboarding will re-appear next time you open settings.");
+				})
+			);
 	}
 
 	/** Prepend a Lucide icon before the text content of a heading element. */

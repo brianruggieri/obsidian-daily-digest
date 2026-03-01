@@ -1,4 +1,4 @@
-import type { DailyDigestSettings } from "../src/settings/types";
+import type { DailyDigestSettings, SensitivityPreset } from "../src/settings/types";
 import type { SensitivityCategory } from "../src/types";
 
 export type PresetOverride = Partial<DailyDigestSettings>;
@@ -42,13 +42,11 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	gitParentDir: "~/git",
 
 	// Privacy & sanitization
-	enableSanitization: true,
 	excludedDomains: "",
-	redactPaths: false,
-	scrubEmails: true,
 	enableSensitivityFilter: true,
+	sensitivityPreset: "recommended" as SensitivityPreset,
 	sensitivityAction: "exclude",
-	sensitivityCategories: ["adult", "gambling", "dating"] as SensitivityCategory[],
+	sensitivityCategories: ["adult", "gambling", "dating", "health", "drugs"] as SensitivityCategory[],
 	sensitivityCustomDomains: "",
 
 	// Rendering

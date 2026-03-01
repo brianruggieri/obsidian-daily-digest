@@ -150,7 +150,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 		const sanitized = sanitizeCollectedData(
 			rawVisits, rawSearches, rawClaude, rawGit,
-			{ enabled: true, excludedDomains: [], redactPaths: false, scrubEmails: true }
+			{ excludedDomains: [] }
 		);
 		if (stage === "sanitized") {
 			return {
@@ -237,14 +237,12 @@ export default class DailyDigestPlugin extends Plugin {
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
+		// Build sanitization config (always on — secrets, paths, emails, IPs)
 		const sanitizeConfig: SanitizeConfig = {
-			enabled: this.settings.enableSanitization,
 			excludedDomains: this.settings.excludedDomains
 				.split(",")
 				.map((d) => d.trim())
 				.filter((d) => d),
-			redactPaths: this.settings.redactPaths,
-			scrubEmails: this.settings.scrubEmails,
 		};
 
 		// Build sensitivity config

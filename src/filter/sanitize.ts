@@ -113,10 +113,16 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 
 // ── URL Sanitization ─────────────────────────────────────
 
+/** Always strips to protocol + host (includes port) + pathname (no query strings, no fragments). */
 export function sanitizeUrl(rawUrl: string): string {
 	try {
 		const url = new URL(rawUrl);
-
+		// Non-hierarchical schemes (mailto:, about:, data:, etc.) don't have
+		// a meaningful hostname — redact them entirely rather than producing
+		// malformed output like "about://blank".
+		if (!url.protocol.startsWith("http")) {
+			return `${url.protocol}[REDACTED]`;
+		}
 		// Reduce to protocol + host (includes port) + path only.
 		// Query strings never carry useful signal after collection (search queries
 		// are extracted earlier from raw URLs), and stripping them removes tracking
@@ -162,26 +168,11 @@ export function scrubSecrets(text: string): string {
 	return text;
 }
 
-function scrubText(
-	text: string,
-	config: SanitizeConfig
-): string {
-	// Always scrub secrets
+function scrubText(text: string): string {
 	let result = scrubSecrets(text);
-
-	// Scrub IPs
 	result = scrubIPs(result);
-
-	// Optional: redact file paths
-	if (config.redactPaths) {
-		result = redactPaths(result);
-	}
-
-	// Optional: scrub email addresses
-	if (config.scrubEmails) {
-		result = scrubEmails(result);
-	}
-
+	result = redactPaths(result);
+	result = scrubEmails(result);
 	return result;
 }
 
@@ -228,24 +219,18 @@ export function filterExcludedDomains(
 
 // ── Per-Type Sanitizers ──────────────────────────────────
 
-function sanitizeBrowserVisit(
-	visit: BrowserVisit,
-	config: SanitizeConfig
-): BrowserVisit {
+function sanitizeBrowserVisit(visit: BrowserVisit): BrowserVisit {
 	return {
 		...visit,
 		url: scrubSecrets(sanitizeUrl(visit.url)),
-		title: scrubText(visit.title || "", config),
+		title: scrubText(visit.title || ""),
 	};
 }
 
-function sanitizeSearchQuery(
-	query: SearchQuery,
-	config: SanitizeConfig
-): SearchQuery {
+function sanitizeSearchQuery(query: SearchQuery): SearchQuery {
 	return {
 		...query,
-		query: scrubText(query.query, config),
+		query: scrubText(query.query),
 	};
 }
 
@@ -267,20 +252,17 @@ function stripClaudeXmlArtifacts(text: string): string {
 	return result.replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function sanitizeClaudeSession(
-	session: ClaudeSession,
-	config: SanitizeConfig
-): ClaudeSession {
+function sanitizeClaudeSession(session: ClaudeSession): ClaudeSession {
 	return {
 		...session,
-		prompt: scrubText(stripClaudeXmlArtifacts(session.prompt), config),
+		prompt: scrubText(stripClaudeXmlArtifacts(session.prompt)),
 	};
 }
 
-function sanitizeGitCommit(commit: GitCommit, config: SanitizeConfig): GitCommit {
+function sanitizeGitCommit(commit: GitCommit): GitCommit {
 	return {
 		...commit,
-		message: scrubText(commit.message, config),
+		message: scrubText(commit.message),
 	};
 }
 
@@ -301,27 +283,17 @@ export function sanitizeCollectedData(
 	gitCommits: GitCommit[],
 	config: SanitizeConfig
 ): SanitizedOutput {
-	if (!config.enabled) {
-		return {
-			visits,
-			searches,
-			claudeSessions,
-			gitCommits,
-			excludedVisitCount: 0,
-		};
-	}
-
 	// 1. Filter excluded domains
 	const { kept, excludedCount } = filterExcludedDomains(
 		visits,
 		config.excludedDomains
 	);
 
-	// 2. Sanitize each data type
-	const sanitizedVisits = kept.map((v) => sanitizeBrowserVisit(v, config));
-	const sanitizedSearches = searches.map((s) => sanitizeSearchQuery(s, config));
-	const sanitizedClaude = claudeSessions.map((s) => sanitizeClaudeSession(s, config));
-	const sanitizedGit = gitCommits.map((c) => sanitizeGitCommit(c, config));
+	// 2. Sanitize each data type (always on — secrets, paths, emails, IPs)
+	const sanitizedVisits = kept.map((v) => sanitizeBrowserVisit(v));
+	const sanitizedSearches = searches.map((s) => sanitizeSearchQuery(s));
+	const sanitizedClaude = claudeSessions.map((s) => sanitizeClaudeSession(s));
+	const sanitizedGit = gitCommits.map((c) => sanitizeGitCommit(c));
 
 	return {
 		visits: sanitizedVisits,

@@ -164,7 +164,7 @@ async function main(): Promise<void> {
 	// ── Stage: sanitized ─────────────────────────────────
 	const sanitized = sanitizeCollectedData(
 		raw.visits, raw.searches, raw.claudeSessions, raw.gitCommits,
-		{ enabled: true, excludedDomains: [], redactPaths: false, scrubEmails: true }
+		{ excludedDomains: [] }
 	);
 	const visitResult = filterSensitiveDomains(sanitized.visits, {
 		enabled: true, categories: ["adult", "gambling", "dating", "tracker", "auth"], customDomains: [], action: "exclude",
