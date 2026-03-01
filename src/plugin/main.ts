@@ -28,6 +28,7 @@ import { clusterArticles } from "../analyze/clusters";
 import { cleanTitle } from "../collect/browser";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "../render/merge";
 import * as log from "./log";
+import { setDebugEnabled } from "./log";
 
 export default class DailyDigestPlugin extends Plugin {
 	settings!: DailyDigestSettings;
@@ -35,6 +36,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		setDebugEnabled(this.settings.debugMode);
 
 		// Ribbon icon
 		this.addRibbonIcon("calendar-clock", "Daily Digest: Generate daily note", () => {
@@ -130,6 +132,7 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		setDebugEnabled(this.settings.debugMode);
 	}
 
 	async runPipelineStage(dateStr: string, stage: string): Promise<unknown> {

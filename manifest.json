@@ -5,5 +5,6 @@
 	"minAppVersion": "1.11.4",
 	"description": "Compile browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits into an AI-summarized daily note.",
 	"author": "Brian Ruggieri",
+	"authorUrl": "https://github.com/brianruggieri",
 	"isDesktopOnly": true
 }

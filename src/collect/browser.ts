@@ -181,7 +181,7 @@ export function unwrapGoogleRedirect(rawUrl: string): string | null {
  * acceptable because the downstream canonical-URL dedup in dedup.ts
  * catches any remaining near-duplicates regardless of timestamp.
  */
-function minuteKey(time: Date | null): number {
+export function minuteKey(time: Date | null): number {
 	if (!time) return 0;
 	return Math.floor(time.getTime() / 60_000);
 }
@@ -230,7 +230,7 @@ export function collapseNearDuplicates(visits: BrowserVisit[]): BrowserVisit[] {
 
 // ── Browser History ──────────────────────────────
 
-function chromeEpochToDate(ts: number): Date {
+export function chromeEpochToDate(ts: number): Date {
 	return new Date((ts / 1_000_000 - 11644473600) * 1000);
 }
 
