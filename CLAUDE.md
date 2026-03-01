@@ -52,8 +52,8 @@ src/
     prompt-templates.ts Prompt templates loaded from .txt files
     ai-client.ts        Anthropic + local model provider abstraction
     compress.ts         Token-budget-aware activity compression
-    chunker.ts          RAG chunking pipeline
-    embeddings.ts       Vector embeddings and similarity search
+    chunker.ts          (dead code — tracked in #96 for removal)
+    embeddings.ts       (dead code — tracked in #96 for removal)
   render/
     renderer.ts         Markdown note generation with frontmatter
     merge.ts            Safe content merging and timestamped backups
@@ -114,8 +114,8 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 - **All data sources are opt-in** (disabled by default)
 - **Sanitization runs before any processing** — never pass raw collected data to AI
 - **4-tier privacy escalation chain** for Anthropic API calls:
-  - Tier 1: Standard with full sanitized context
-  - Tier 2: RAG-selected chunks only
+  - Tier 1: Full sanitized context (all visits, queries, commits)
+  - Tier 2: Budget-compressed activity summaries
   - Tier 3: Classified abstractions (no raw URLs)
   - Tier 4: Aggregated statistics only
 - **Never store API keys in plugin settings** — use Obsidian's SecretStorage API (`SECRET_ID`)
@@ -133,7 +133,7 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 
 ## Important Gotchas
 
-- `settings.ts` is the largest file (~1,350 lines) — changes here need care
+- `ui.ts` is the largest file (~1,120 lines) — changes here need care
 - Browser history is read from **locked SQLite databases** via sql.js WASM — the plugin copies the DB file before reading to avoid lock conflicts
 - The `styles.css` uses Obsidian CSS custom properties for theme compatibility
 - `main.js` is **gitignored** — it is built locally for development (`npm run build`) and attached to GitHub Releases by the release workflow. Do not edit or commit it directly
