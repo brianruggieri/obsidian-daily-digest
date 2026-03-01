@@ -8,7 +8,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 
 - [⚙️ General](#general) (2 settings)
 - [🗄️ Data sources](#data-sources) (10 settings)
-- [🛡️ Privacy & filtering](#privacy-filtering) (9 settings)
+- [🛡️ Privacy & filtering](#privacy-filtering) (10 settings)
 - [✨ AI summarization](#ai-summarization) (7 settings)
 - [🧠 Advanced AI processing](#advanced-ai-processing) (6 settings)
 - [🔧 Meta](#meta) (2 settings)
@@ -300,7 +300,7 @@ Anthropic model to use for summarization when the Anthropic provider is selected
 
 **Prompt templates directory**
 
-Path to a directory containing custom prompt templates (standard.txt, classified.txt, etc.). Leave empty to use the built-in prompts.
+Path to a directory containing custom prompt templates (standard.txt, rag.txt, etc.). Leave empty to use the built-in prompts.
 
 - **Type:** Text
 - **Default:** *(empty)*
