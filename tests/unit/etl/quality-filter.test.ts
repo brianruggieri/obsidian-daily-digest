@@ -40,7 +40,7 @@ describe("hasConsecutiveDigitSegments", () => {
 	});
 
 	it("accepts domains with a single digit segment", () => {
-		expect(hasConsecutiveDigitSegments("site123.com")).toBe(false);
+		expect(hasConsecutiveDigitSegments("123.example.com")).toBe(false);
 	});
 
 	it("rejects domains with 3 consecutive digit segments", () => {
@@ -79,11 +79,11 @@ describe("hasSuspiciousTld", () => {
 });
 
 describe("isLowValueCcTld", () => {
-	it("rejects ccTLD domains ranked below threshold", () => {
+	it("rejects ccTLD domains with rank exceeding the threshold (less popular)", () => {
 		expect(isLowValueCcTld("obscure-site.de", 25_000)).toBe(true);
 	});
 
-	it("accepts ccTLD domains ranked above threshold", () => {
+	it("accepts ccTLD domains with rank below the threshold (more popular)", () => {
 		expect(isLowValueCcTld("popular-site.de", 5_000)).toBe(false);
 	});
 
