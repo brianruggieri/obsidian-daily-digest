@@ -10,6 +10,25 @@ import { expandHome } from "./browser-profiles";
 // ── Git History ──────────────────────────────────────────
 
 /**
+ * Matches git stash commit messages.
+ * `git stash` creates up to 3 commits per stash entry:
+ *   - "On <branch>: <message>"         (stash commit)
+ *   - "index on <branch>: <hash> <msg>" (index state)
+ *   - "untracked files on <branch>: <hash> <msg>" (untracked files)
+ *
+ * These are internal bookkeeping commits, not real developer work.
+ */
+const STASH_MESSAGE_RE = /^(On |index on |untracked files on )\S+:/;
+
+/**
+ * Returns true if a commit message matches a git stash pattern.
+ * Exported for testing.
+ */
+export function isStashCommit(message: string): boolean {
+	return STASH_MESSAGE_RE.test(message);
+}
+
+/**
  * Parse raw `git log --pretty=format:"%H|%D|%s|%aI" --numstat` output
  * into GitCommit objects. Exported for testing.
  *
@@ -94,9 +113,14 @@ export function parseGitLogOutput(raw: string, repoName: string): GitCommit[] {
 			i++;
 		}
 
+		const message = scrubSecrets(rawMessage);
+
+		// Skip git stash bookkeeping commits — not real developer work
+		if (isStashCommit(message)) continue;
+
 		commits.push({
 			hash,
-			message: scrubSecrets(rawMessage),
+			message,
 			time,
 			repo: repoName,
 			filesChanged,
