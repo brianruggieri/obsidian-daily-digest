@@ -37,6 +37,7 @@
 		"matrix:scenario:cost-benefit": "SCENARIO=cost-benefit npm run matrix:validate",
 		"matrix:scenario:privacy-audit": "SCENARIO=privacy-audit npm run matrix:validate",
 		"matrix:scenario:regression": "SCENARIO=regression npm run matrix:validate",
+		"etl:categories": "tsx --tsconfig scripts/tsconfig.json scripts/etl/build-categories.ts",
 		"prepare": "husky"
 	},
 	"keywords": [],
