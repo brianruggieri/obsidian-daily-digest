@@ -95,6 +95,20 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 		/\b[0-9a-f]{40,}\b/gi,
 		"[HEX_TOKEN_REDACTED]",
 	],
+	// Credit card numbers (major networks: Visa, MasterCard, Amex, Discover, Diners).
+	// Uses network-specific prefixes and grouping to avoid false positives on timestamps,
+	// build numbers, and other benign digit sequences. Supports AmEx 4-6-5 grouping
+	// as well as standard 4-4-4-4 and contiguous digit forms.
+	// Ref: https://www.regular-expressions.info/creditcard.html
+	[
+		/\b(?:4\d{3}(?:[ -]?\d{4}){3}|5[1-5]\d{2}(?:[ -]?\d{4}){3}|6(?:011|5\d{2})(?:[ -]?\d{4}){3}|3[47]\d{2}[ -]?\d{6}[ -]?\d{5}|3(?:0[0-5]|[68]\d)\d[ -]?\d{6}[ -]?\d{4})\b/g,
+		"[CREDIT_CARD_REDACTED]",
+	],
+	// US Social Security Numbers (NNN-NN-NNNN)
+	[
+		/\b\d{3}-\d{2}-\d{4}\b/g,
+		"[SSN_REDACTED]",
+	],
 ];
 
 // ── URL Sanitization ─────────────────────────────────────
@@ -208,7 +222,7 @@ export function filterExcludedDomains(
 function sanitizeBrowserVisit(visit: BrowserVisit): BrowserVisit {
 	return {
 		...visit,
-		url: sanitizeUrl(visit.url),
+		url: scrubSecrets(sanitizeUrl(visit.url)),
 		title: scrubText(visit.title || ""),
 	};
 }
@@ -248,7 +262,7 @@ function sanitizeClaudeSession(session: ClaudeSession): ClaudeSession {
 function sanitizeGitCommit(commit: GitCommit): GitCommit {
 	return {
 		...commit,
-		message: scrubSecrets(commit.message),
+		message: scrubText(commit.message),
 	};
 }
 
