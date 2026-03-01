@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterAll } from "vitest";
 import { requestUrl } from "obsidian";
 
 // ── Mock setup ──────────────────────────────────────────
@@ -12,8 +12,13 @@ vi.mock("obsidian", async () => {
 });
 
 const mockRequestUrl = vi.mocked(requestUrl);
+const originalFetch = global.fetch;
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
+
+afterAll(() => {
+	global.fetch = originalFetch;
+});
 
 import { callAnthropic, callLocal, callAI, AICallConfig } from "../../../src/summarize/ai-client";
 
