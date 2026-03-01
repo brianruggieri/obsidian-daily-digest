@@ -52,8 +52,7 @@ src/
     prompt-templates.ts Prompt templates loaded from .txt files
     ai-client.ts        Anthropic + local model provider abstraction
     compress.ts         Token-budget-aware activity compression
-    chunker.ts          (dead code — tracked in #96 for removal)
-    embeddings.ts       (dead code — tracked in #96 for removal)
+    chunker.ts          Token estimation utility (estimateTokens)
   render/
     renderer.ts         Markdown note generation with frontmatter
     merge.ts            Safe content merging and timestamped backups
