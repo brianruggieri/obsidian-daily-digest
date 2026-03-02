@@ -239,16 +239,6 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 
 	// ── Advanced ─────────────────────────────────────────────────────────────
 	{
-		key: "excludedDomains",
-		label: "Excluded domains",
-		description:
-			"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
-			"matches any domain containing that text (mybank.com, us.mybank.com, etc.).",
-		section: "Advanced",
-		type: "string",
-		defaultValue: "",
-	},
-	{
 		key: "sensitivityAction",
 		label: "Sensitivity filter action",
 		description:

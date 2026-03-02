@@ -28,7 +28,6 @@ export interface DailyDigestSettings {
 	enableClassification: boolean;
 	classificationModel: string;
 	classificationBatchSize: number;
-	excludedDomains: string;
 	enableSensitivityFilter: boolean;
 	sensitivityPreset: SensitivityPreset;
 	sensitivityCategories: SensitivityCategory[];
@@ -74,7 +73,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "",
 	classificationBatchSize: 8,
-	excludedDomains: "",
 	enableSensitivityFilter: true,
 	sensitivityPreset: "recommended" as SensitivityPreset,
 	sensitivityCategories: [] as SensitivityCategory[],

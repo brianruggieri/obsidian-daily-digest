@@ -42,7 +42,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	gitParentDir: "~/git",
 
 	// Privacy & sanitization
-	excludedDomains: "",
 	enableSensitivityFilter: true,
 	sensitivityPreset: "recommended" as SensitivityPreset,
 	sensitivityAction: "exclude",

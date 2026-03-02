@@ -5,8 +5,6 @@ import {
 	scrubEmails,
 	scrubIPs,
 	scrubSecrets,
-	filterExcludedDomains,
-	isExcludedDomain,
 	sanitizeCollectedData,
 } from "../../../src/filter/sanitize";
 import { BrowserVisit } from "../../../src/types";
@@ -251,58 +249,9 @@ describe("scrubIPs", () => {
 	});
 });
 
-// ── Domain Exclusion ────────────────────────────────────
-
-describe("isExcludedDomain", () => {
-	it("matches exact domain", () => {
-		expect(isExcludedDomain("mybank.com", ["mybank.com"])).toBe(true);
-	});
-
-	it("matches substring", () => {
-		expect(isExcludedDomain("mybank.com", ["bank"])).toBe(true);
-	});
-
-	it("returns false for non-match", () => {
-		expect(isExcludedDomain("github.com", ["bank"])).toBe(false);
-	});
-
-	it("is case-insensitive", () => {
-		expect(isExcludedDomain("MyBank.COM", ["mybank"])).toBe(true);
-	});
-});
-
-describe("filterExcludedDomains", () => {
-	const visits: BrowserVisit[] = [
-		{ url: "https://github.com/repo", title: "Repo", time: new Date(), domain: "github.com" },
-		{ url: "https://mybank.com/account", title: "Account", time: new Date(), domain: "mybank.com" },
-		{ url: "https://google.com/search?q=test", title: "Search", time: new Date(), domain: "google.com" },
-	];
-
-	it("filters matching domains", () => {
-		const result = filterExcludedDomains(visits, ["bank"]);
-		expect(result.kept).toHaveLength(2);
-		expect(result.excludedCount).toBe(1);
-	});
-
-	it("returns all when no exclusions", () => {
-		const result = filterExcludedDomains(visits, []);
-		expect(result.kept).toHaveLength(3);
-		expect(result.excludedCount).toBe(0);
-	});
-
-	it("handles multiple exclusion patterns", () => {
-		const result = filterExcludedDomains(visits, ["bank", "google"]);
-		expect(result.kept).toHaveLength(1);
-		expect(result.excludedCount).toBe(2);
-	});
-});
-
 // ── Master Orchestrator ─────────────────────────────────
 
 describe("sanitizeCollectedData", () => {
-	const defaultConfig = { excludedDomains: [] as string[] };
-
-	const excludeConfig = { excludedDomains: ["bank"] };
 
 	const visits: BrowserVisit[] = [
 		{ url: "https://mybank.com/account?token=abc", title: "Bank", time: new Date() },
@@ -310,17 +259,17 @@ describe("sanitizeCollectedData", () => {
 	];
 
 	it("always sanitizes (sanitization is always on)", () => {
-		const result = sanitizeCollectedData(visits, [], [], [], defaultConfig);
+		const result = sanitizeCollectedData(visits, [], [], []);
 		// URLs should be stripped to protocol+host+path
 		expect(result.visits[0].url).toBe("https://mybank.com/account");
 		expect(result.visits[0].url).not.toContain("token=abc");
 	});
 
-	it("filters excluded domains and sanitizes remaining", () => {
-		const result = sanitizeCollectedData(visits, [], [], [], excludeConfig);
-		expect(result.visits).toHaveLength(1); // bank filtered
-		expect(result.excludedVisitCount).toBe(1);
-		expect(result.visits[0].url).toContain("github.com");
+	it("sanitizes all visits (no domain exclusion — handled by sensitivity filter)", () => {
+		const result = sanitizeCollectedData(visits, [], [], []);
+		expect(result.visits).toHaveLength(2); // both kept
+		expect(result.visits[0].url).toBe("https://mybank.com/account");
+		expect(result.visits[1].url).toContain("github.com");
 	});
 
 	it("redacts paths in Claude sessions", () => {
@@ -329,14 +278,14 @@ describe("sanitizeCollectedData", () => {
 			time: new Date(),
 			project: "test",
 		}];
-		const result = sanitizeCollectedData([], [], claude, [], defaultConfig);
+		const result = sanitizeCollectedData([], [], claude, []);
 		expect(result.claudeSessions[0].prompt).not.toContain("/Users/brian");
 		expect(result.claudeSessions[0].prompt).toContain("~");
 	});
 
 	it("scrubs emails in search queries", () => {
 		const searches = [{ query: "settings for user@example.com", time: new Date(), engine: "google.com" }];
-		const result = sanitizeCollectedData([], searches, [], [], defaultConfig);
+		const result = sanitizeCollectedData([], searches, [], []);
 		expect(result.searches[0].query).toContain("[EMAIL]");
 	});
 });
@@ -344,15 +293,13 @@ describe("sanitizeCollectedData", () => {
 // ── Claude XML Artifact Stripping ────────────────────────
 
 describe("sanitizeClaudeSession – XML artifact stripping", () => {
-	const config = { excludedDomains: [] as string[] };
-
 	function makeSession(prompt: string) {
 		return [{ prompt, time: new Date(), project: "test-project", isConversationOpener: true, conversationFile: "session.jsonl", conversationTurnCount: 1 }];
 	}
 
 	it("strips <image>…</image> blocks entirely", () => {
 		const prompt = "Here is my screenshot <image>base64dataabc123==</image> please review it";
-		const result = sanitizeCollectedData([], [], makeSession(prompt), [], config);
+		const result = sanitizeCollectedData([], [], makeSession(prompt), []);
 		expect(result.claudeSessions[0].prompt).not.toContain("<image>");
 		expect(result.claudeSessions[0].prompt).not.toContain("base64dataabc123==");
 		expect(result.claudeSessions[0].prompt).not.toContain("</image>");
@@ -362,7 +309,7 @@ describe("sanitizeClaudeSession – XML artifact stripping", () => {
 
 	it("strips multiline <image> blocks", () => {
 		const prompt = "Before\n<image>\n/Users/brian/screenshots/screenshot.png\nsome-base64-data==\n</image>\nAfter";
-		const result = sanitizeCollectedData([], [], makeSession(prompt), [], config);
+		const result = sanitizeCollectedData([], [], makeSession(prompt), []);
 		expect(result.claudeSessions[0].prompt).not.toContain("<image>");
 		expect(result.claudeSessions[0].prompt).not.toContain("</image>");
 		expect(result.claudeSessions[0].prompt).not.toContain("some-base64-data");
@@ -372,7 +319,7 @@ describe("sanitizeClaudeSession – XML artifact stripping", () => {
 
 	it("strips <turn_aborted> tags", () => {
 		const prompt = "Start of session <turn_aborted> rest of session";
-		const result = sanitizeCollectedData([], [], makeSession(prompt), [], config);
+		const result = sanitizeCollectedData([], [], makeSession(prompt), []);
 		expect(result.claudeSessions[0].prompt).not.toContain("<turn_aborted>");
 		expect(result.claudeSessions[0].prompt).toContain("Start of session");
 		expect(result.claudeSessions[0].prompt).toContain("rest of session");
@@ -380,7 +327,7 @@ describe("sanitizeClaudeSession – XML artifact stripping", () => {
 
 	it("strips self-closing <turn_aborted/> variant", () => {
 		const prompt = "Before<turn_aborted/>After";
-		const result = sanitizeCollectedData([], [], makeSession(prompt), [], config);
+		const result = sanitizeCollectedData([], [], makeSession(prompt), []);
 		expect(result.claudeSessions[0].prompt).not.toContain("<turn_aborted/>");
 		expect(result.claudeSessions[0].prompt).toContain("Before");
 		expect(result.claudeSessions[0].prompt).toContain("After");
@@ -388,7 +335,7 @@ describe("sanitizeClaudeSession – XML artifact stripping", () => {
 
 	it("does not strip unrelated XML-like tags (e.g. <strong>)", () => {
 		const prompt = "This is <strong>important</strong> content";
-		const result = sanitizeCollectedData([], [], makeSession(prompt), [], config);
+		const result = sanitizeCollectedData([], [], makeSession(prompt), []);
 		expect(result.claudeSessions[0].prompt).toContain("<strong>important</strong>");
 	});
 });

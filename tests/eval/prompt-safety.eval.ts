@@ -17,7 +17,7 @@ import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patte
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { ClassificationResult, StructuredEvent, BrowserVisit, SearchQuery, ClaudeSession } from "../../src/types";
 import { fullStackDeveloper } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import {
 	skipIfNoAI,
 	evaluateWithRubric,
@@ -32,8 +32,7 @@ const TODAY = "2025-06-15";
 function buildPipelinePrompts() {
 	const persona = fullStackDeveloper(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
@@ -243,8 +242,7 @@ ${deidentified.slice(-800)}
 			];
 
 			const sanitized = sanitizeCollectedData(
-				dirtyVisits, dirtySearches, dirtyClaude, [],
-				defaultSanitizeConfig()
+				dirtyVisits, dirtySearches, dirtyClaude, []
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(

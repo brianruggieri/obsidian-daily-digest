@@ -21,7 +21,7 @@ import {
 	scatteredContextSwitcher,
 	learningDay,
 } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import {
 	skipIfNoAI,
 	evaluateWithRubric,
@@ -35,8 +35,7 @@ const TODAY = "2025-06-15";
 function generateKnowledgeForPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(

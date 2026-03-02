@@ -66,7 +66,6 @@ import { renderMarkdown } from "../src/render/renderer";
 import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../src/summarize/summarize";
 
 import type {
-	SanitizeConfig,
 	SensitivityConfig,
 	ClassificationResult,
 	PatternConfig,
@@ -163,18 +162,11 @@ async function runPreset(
 
 	// ── 3. Sanitize ──────────────────────────────────────
 	// Sanitization is always on — secrets, paths, emails, IPs.
-	const sanitizeConfig: SanitizeConfig = {
-		excludedDomains: settings.excludedDomains
-			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
-			: [],
-	};
-
 	const sanitized = sanitizeCollectedData(
 		rawVisits,
 		rawSearches,
 		raw.claudeSessions,
-		raw.gitCommits,
-		sanitizeConfig
+		raw.gitCommits
 	);
 	const visits = sanitized.visits;
 	const searches = sanitized.searches;

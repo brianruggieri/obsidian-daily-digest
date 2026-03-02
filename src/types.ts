@@ -262,9 +262,9 @@ export const EXCLUDE_DOMAINS = new Set([
 
 // ── Sanitization Types ───────────────────────────────────
 
-export interface SanitizeConfig {
-	excludedDomains: string[];
-}
+// SanitizeConfig was removed — sanitization is always-on with no config.
+// The old `excludedDomains` field was merged into the sensitivity filter's
+// `sensitivityCustomDomains` setting (see SensitivityConfig).
 
 // ── Classification Types (Phase 2) ──────────────────────
 

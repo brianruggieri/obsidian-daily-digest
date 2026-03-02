@@ -31,7 +31,7 @@ import {
 
 // Fixtures
 import { PersonaOutput } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import { ADVERSARY_PERSONAS } from "../fixtures/adversary-personas";
 import { getAllSecrets, SENSITIVE_DOMAINS } from "../fixtures/sensitive-data";
 import type {
@@ -85,15 +85,12 @@ interface PipelineResult {
  *   → patterns → compress → build tier options → build prose prompt
  */
 function runFullPipeline(persona: PersonaOutput): PipelineResult {
-	const sanitizeConfig = defaultSanitizeConfig();
-
 	// 1. Sanitize all collected data
 	const sanitized = sanitizeCollectedData(
 		persona.visits,
 		persona.searches,
 		[...persona.claude, ...(persona.codex ?? [])],
-		persona.git ?? [],
-		sanitizeConfig
+		persona.git ?? []
 	);
 
 	// 2. Sensitivity filter (visits + searches)

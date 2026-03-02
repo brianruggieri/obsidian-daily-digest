@@ -42,7 +42,6 @@ import type {
 	SearchQuery,
 	ClaudeSession,
 	GitCommit,
-	SanitizeConfig,
 	SensitivityConfig,
 	ClassificationResult,
 	PatternConfig,
@@ -881,24 +880,17 @@ async function runPipeline(
 
 	// ── 2. Sanitize ──────────────────────────────────────
 
-	const sanitizeConfig: SanitizeConfig = {
-		excludedDomains: settings.excludedDomains
-			? settings.excludedDomains.split(",").map((d) => d.trim()).filter(Boolean)
-			: [],
-	};
 	let sanitized!: ReturnType<typeof sanitizeCollectedData>;
 	await stage("sanitize", () => {
 		sanitized = sanitizeCollectedData(
 			raw.visits,
 			raw.searches,
 			raw.claudeSessions,
-			raw.gitCommits,
-			sanitizeConfig
+			raw.gitCommits
 		);
 		return {
 			detail: "always-on",
 			output: {
-				config: { excludedDomains: sanitizeConfig.excludedDomains },
 				counts: {
 					visits: sanitized.visits.length,
 					searches: sanitized.searches.length,

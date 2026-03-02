@@ -3,7 +3,6 @@ import {
 	SearchQuery,
 	ClaudeSession,
 	GitCommit,
-	SanitizeConfig,
 } from "../types";
 import { stripAnsi } from "../render/escape";
 
@@ -176,46 +175,6 @@ function scrubText(text: string): string {
 	return result;
 }
 
-// ── Domain Exclusion ─────────────────────────────────────
-
-export function isExcludedDomain(
-	domain: string,
-	excludedPatterns: string[]
-): boolean {
-	const d = domain.toLowerCase();
-	return excludedPatterns.some((pattern) => d.includes(pattern.toLowerCase()));
-}
-
-export function filterExcludedDomains(
-	visits: BrowserVisit[],
-	excludedPatterns: string[]
-): { kept: BrowserVisit[]; excludedCount: number } {
-	if (excludedPatterns.length === 0) {
-		return { kept: visits, excludedCount: 0 };
-	}
-
-	const kept: BrowserVisit[] = [];
-	let excludedCount = 0;
-
-	for (const visit of visits) {
-		let domain = "";
-		try {
-			domain = new URL(visit.url).hostname.replace(/^www\./, "");
-		} catch {
-			// keep visits with unparseable URLs
-			kept.push(visit);
-			continue;
-		}
-
-		if (isExcludedDomain(domain, excludedPatterns)) {
-			excludedCount++;
-		} else {
-			kept.push(visit);
-		}
-	}
-
-	return { kept, excludedCount };
-}
 
 // ── Per-Type Sanitizers ──────────────────────────────────
 
@@ -273,24 +232,16 @@ export interface SanitizedOutput {
 	searches: SearchQuery[];
 	claudeSessions: ClaudeSession[];
 	gitCommits: GitCommit[];
-	excludedVisitCount: number;
 }
 
 export function sanitizeCollectedData(
 	visits: BrowserVisit[],
 	searches: SearchQuery[],
 	claudeSessions: ClaudeSession[],
-	gitCommits: GitCommit[],
-	config: SanitizeConfig
+	gitCommits: GitCommit[]
 ): SanitizedOutput {
-	// 1. Filter excluded domains
-	const { kept, excludedCount } = filterExcludedDomains(
-		visits,
-		config.excludedDomains
-	);
-
-	// 2. Sanitize each data type (always on — secrets, paths, emails, IPs)
-	const sanitizedVisits = kept.map((v) => sanitizeBrowserVisit(v));
+	// Sanitize each data type (always on — secrets, paths, emails, IPs)
+	const sanitizedVisits = visits.map((v) => sanitizeBrowserVisit(v));
 	const sanitizedSearches = searches.map((s) => sanitizeSearchQuery(s));
 	const sanitizedClaude = claudeSessions.map((s) => sanitizeClaudeSession(s));
 	const sanitizedGit = gitCommits.map((c) => sanitizeGitCommit(c));
@@ -300,6 +251,5 @@ export function sanitizeCollectedData(
 		searches: sanitizedSearches,
 		claudeSessions: sanitizedClaude,
 		gitCommits: sanitizedGit,
-		excludedVisitCount: excludedCount,
 	};
 }

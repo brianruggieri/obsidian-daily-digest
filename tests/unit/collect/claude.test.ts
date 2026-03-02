@@ -36,7 +36,6 @@ function makeSettings(overrides: Partial<DailyDigestSettings> = {}): DailyDigest
 		enableClassification: false,
 		classificationModel: "",
 		classificationBatchSize: 8,
-		excludedDomains: "",
 		enableSensitivityFilter: false,
 		sensitivityPreset: "off",
 		sensitivityCategories: [],

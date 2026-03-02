@@ -16,7 +16,7 @@ import {
 	DataPreviewModal,
 	shouldShowOnboarding,
 } from "./privacy";
-import { SanitizeConfig, SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
+import { SensitivityConfig, ClassificationConfig, ClassificationResult, PatternConfig, PatternAnalysis } from "../types";
 import { sanitizeCollectedData } from "../filter/sanitize";
 import { classifyEvents, classifyEventsRuleOnly } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
@@ -157,8 +157,7 @@ export default class DailyDigestPlugin extends Plugin {
 		}
 
 		const sanitized = sanitizeCollectedData(
-			rawVisits, rawSearches, rawClaude, rawGit,
-			{ excludedDomains: [] }
+			rawVisits, rawSearches, rawClaude, rawGit
 		);
 		if (stage === "sanitized") {
 			return {
@@ -166,7 +165,6 @@ export default class DailyDigestPlugin extends Plugin {
 				searches: sanitized.searches.length,
 				claude: sanitized.claudeSessions.length,
 				git: sanitized.gitCommits.length,
-				excluded: sanitized.excludedVisitCount,
 			};
 		}
 
@@ -245,14 +243,6 @@ export default class DailyDigestPlugin extends Plugin {
 		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
-		// Build sanitization config (always on — secrets, paths, emails, IPs)
-		const sanitizeConfig: SanitizeConfig = {
-			excludedDomains: this.settings.excludedDomains
-				.split(",")
-				.map((d) => d.trim())
-				.filter((d) => d),
-		};
-
 		// Build sensitivity config
 		const sensitivityConfig: SensitivityConfig = {
 			enabled: this.settings.enableSensitivityFilter,
@@ -304,19 +294,14 @@ export default class DailyDigestPlugin extends Plugin {
 			// ── Sanitize ────────────────────────
 			progressNotice.setMessage("Daily Digest: Sanitizing data\u2026");
 			const sanitized = sanitizeCollectedData(
-				rawVisits, rawSearches, rawClaudeSessions, rawGitCommits,
-				sanitizeConfig
+				rawVisits, rawSearches, rawClaudeSessions, rawGitCommits
 			);
 			const visits = sanitized.visits;
 			const searches = sanitized.searches;
 			const claudeSessions = sanitized.claudeSessions;
 			const gitCommits = sanitized.gitCommits;
-			const excludedCount = sanitized.excludedVisitCount;
 
-			const totalExcluded = excludedCount + sensitivityFiltered;
-			if (excludedCount > 0) {
-				log.debug(`Daily Digest: Excluded ${excludedCount} visits by domain filter`);
-			}
+			const totalExcluded = sensitivityFiltered;
 
 			// ── Categorize ───────────────────────
 			progressNotice.setMessage("Daily Digest: Categorizing activity\u2026");

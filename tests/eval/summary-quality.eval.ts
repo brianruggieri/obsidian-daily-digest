@@ -15,7 +15,7 @@ import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { fullStackDeveloper, researchKnowledgeWorker, scatteredContextSwitcher } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import {
 	skipIfNoAI,
 	evaluateWithRubric,
@@ -31,8 +31,7 @@ const TODAY = "2025-06-15";
 function buildPersonaClassifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
@@ -50,8 +49,7 @@ function buildPersonaClassifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof
 function buildPersonaDeidentifiedPrompt(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(

@@ -17,7 +17,7 @@ import { computeEngagementScore } from "../../src/analyze/engagement";
 import { linkSearchesToVisits } from "../../src/analyze/intent";
 import { clusterArticles } from "../../src/analyze/clusters";
 import { PersonaOutput } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import { getMockSummary } from "../../scripts/lib/mock-ai";
 import type { KnowledgeSections } from "../../src/analyze/knowledge";
 import type { AISummary } from "../../src/types";
@@ -58,8 +58,7 @@ export function renderForPersona(
 		persona.visits,
 		persona.searches,
 		[...persona.claude, ...(persona.codex ?? [])],
-		persona.git ?? [],
-		defaultSanitizeConfig()
+		persona.git ?? []
 	);
 
 	// 2. Categorize

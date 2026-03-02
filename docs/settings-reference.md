@@ -277,15 +277,6 @@ Path to a directory containing custom prompt templates (standard.txt, rag.txt, e
 
 ## 🧠 Advanced
 
-### `excludedDomains`
-
-**Excluded domains**
-
-Always-exclude list using simple pattern matching. A pattern like 'mybank' matches any domain containing that text (mybank.com, us.mybank.com, etc.).
-
-- **Type:** Text
-- **Default:** *(empty)*
-
 ### `sensitivityAction`
 
 **Sensitivity filter action**

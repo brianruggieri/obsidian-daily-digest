@@ -10,20 +10,18 @@ import { computeEngagementScore } from "../../src/analyze/engagement";
 import { linkSearchesToVisits } from "../../src/analyze/intent";
 import { clusterArticles } from "../../src/analyze/clusters";
 import { ALL_PERSONAS, PersonaOutput } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 
 const DATE = new Date("2025-06-15T00:00:00");
 const TODAY = "2025-06-15";
 
 function runPipeline(persona: PersonaOutput) {
 	// 1. Sanitize
-	const sanitizeConfig = defaultSanitizeConfig();
 	const sanitized = sanitizeCollectedData(
 		persona.visits,
 		persona.searches,
 		[...persona.claude, ...(persona.codex ?? [])],
-		persona.git ?? [],
-		sanitizeConfig
+		persona.git ?? []
 	);
 
 	// 2. Categorize

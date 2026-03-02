@@ -666,23 +666,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		// Move the toggle button before the content div
 		containerEl.insertBefore(advToggle.settingEl, advContent);
 
-		// ── Excluded domains ─────────────────────────
-		new Setting(advContent)
-			.setName("Excluded domains")
-			.setDesc(
-				"Always-exclude list using simple pattern matching. A pattern like 'mybank' " +
-				"matches any domain containing that text (mybank.com, us.mybank.com, etc.)."
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("e.g. mybank, internal.corp")
-					.setValue(this.plugin.settings.excludedDomains)
-					.onChange(async (value) => {
-						this.plugin.settings.excludedDomains = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		// ── Sensitivity action ───────────────────────
 		if (this.plugin.settings.enableSensitivityFilter) {
 			new Setting(advContent)

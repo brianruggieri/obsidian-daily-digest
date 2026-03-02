@@ -15,7 +15,7 @@ import { classifyEventsRuleOnly } from "../../src/filter/classify";
 import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
 import { sanitizeCollectedData } from "../../src/filter/sanitize";
 import { fullStackDeveloper, devopsInfrastructureDay } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig, createPrivacyTestScenario } from "../fixtures/scenarios";
+import { defaultPatternConfig, createPrivacyTestScenario } from "../fixtures/scenarios";
 import {
 	skipIfNoAI,
 	evaluateAbsence,
@@ -30,8 +30,7 @@ const TODAY = "2025-06-15";
 function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
@@ -44,8 +43,7 @@ function buildClassifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof f
 function buildDeidentifiedFromPersona(personaFn: (d?: Date) => ReturnType<typeof fullStackDeveloper>) {
 	const persona = personaFn(DATE);
 	const sanitized = sanitizeCollectedData(
-		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-		defaultSanitizeConfig()
+		persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 	);
 	const categorized = categorizeVisits(sanitized.visits);
 	const classification = classifyEventsRuleOnly(
@@ -175,8 +173,7 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("dirty data is properly sanitized before reaching prompts", async () => {
 			const dirty = createPrivacyTestScenario();
 			const sanitized = sanitizeCollectedData(
-				dirty.dirtyVisits, dirty.dirtySearches, dirty.dirtyClaude, [],
-				defaultSanitizeConfig()
+				dirty.dirtyVisits, dirty.dirtySearches, dirty.dirtyClaude, []
 			);
 
 			// Build a summary of what was sanitized
@@ -218,8 +215,7 @@ Score 0.0 = both prompts have the same level of detail.`,
 		it.skipIf(SKIP)("three prompt tiers have correct privacy ordering", async () => {
 			const persona = fullStackDeveloper(DATE);
 			const sanitized = sanitizeCollectedData(
-				persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], [],
-				defaultSanitizeConfig()
+				persona.visits, persona.searches, [...persona.claude, ...(persona.codex ?? [])], []
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(

@@ -51,7 +51,7 @@ import {
 	academicResearcher,
 } from "../fixtures/personas";
 import type { PersonaOutput } from "../fixtures/personas";
-import { defaultSanitizeConfig, defaultPatternConfig } from "../fixtures/scenarios";
+import { defaultPatternConfig } from "../fixtures/scenarios";
 import type {
 	ClassificationResult,
 	PatternAnalysis,
@@ -78,14 +78,11 @@ interface AnalysisResult {
 }
 
 function runAnalysis(persona: PersonaOutput): AnalysisResult {
-	const sanitizeConfig = defaultSanitizeConfig();
-
 	const sanitized = sanitizeCollectedData(
 		persona.visits,
 		persona.searches,
 		[...persona.claude, ...(persona.codex ?? [])],
-		persona.git ?? [],
-		sanitizeConfig
+		persona.git ?? []
 	);
 
 	const categorized = categorizeVisits(sanitized.visits);
@@ -188,7 +185,7 @@ describe("investigation: classificationBatchSize (#84)", () => {
 			const sanitized = sanitizeCollectedData(
 				persona.visits, persona.searches,
 				[...persona.claude, ...(persona.codex ?? [])],
-				persona.git ?? [], defaultSanitizeConfig()
+				persona.git ?? []
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 
@@ -207,7 +204,7 @@ describe("investigation: classificationBatchSize (#84)", () => {
 			const sanitized = sanitizeCollectedData(
 				persona.visits, persona.searches,
 				[...persona.claude, ...(persona.codex ?? [])],
-				persona.git ?? [], defaultSanitizeConfig()
+				persona.git ?? []
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 
@@ -421,7 +418,7 @@ describe("investigation: classificationBatchSize (#84)", () => {
 			const sanitized = sanitizeCollectedData(
 				persona.visits, persona.searches,
 				[...persona.claude, ...(persona.codex ?? [])],
-				persona.git ?? [], defaultSanitizeConfig()
+				persona.git ?? []
 			);
 			const categorized = categorizeVisits(sanitized.visits);
 			const classification = classifyEventsRuleOnly(

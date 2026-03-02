@@ -7,7 +7,6 @@ import {
 	BrowserVisit,
 	SearchQuery,
 	ClaudeSession,
-	SanitizeConfig,
 	SensitivityConfig,
 	PatternConfig,
 	ClassificationConfig,
@@ -94,10 +93,9 @@ export function createPrivacyTestScenario(): PrivacyTestScenario {
 
 // ── Default Configs ─────────────────────────────────────
 
-export function defaultSanitizeConfig(): SanitizeConfig {
-	return {
-		excludedDomains: [],
-	};
+/** @deprecated SanitizeConfig was removed — sanitization is always-on with no config. Kept for call-site compatibility. */
+export function defaultSanitizeConfig(): Record<string, never> {
+	return {};
 }
 
 export function defaultSensitivityConfig(): SensitivityConfig {
