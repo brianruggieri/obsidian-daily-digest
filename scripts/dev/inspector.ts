@@ -20,22 +20,22 @@ import { createServer } from "http";
 import type { IncomingMessage, ServerResponse } from "http";
 
 import { PRESETS, resolvePreset } from "./presets";
-import { collectFixtureData, collectRealData } from "./lib/collector-shim";
-import type { CollectedData } from "./lib/collector-shim";
-import { getMockSummary } from "./lib/mock-ai";
-import { createPromptLog, appendPromptEntry, estimateTokens } from "./lib/prompt-logger";
-import type { PromptLog } from "./lib/prompt-logger";
+import { collectFixtureData, collectRealData } from "../lib/collector-shim";
+import type { CollectedData } from "../lib/collector-shim";
+import { getMockSummary } from "../lib/mock-ai";
+import { createPromptLog, appendPromptEntry, estimateTokens } from "../../src/plugin/prompt-logger";
+import type { PromptLog } from "../../src/plugin/prompt-logger";
 
 // src/ imports — obsidian is shimmed via tsconfig.scripts.json paths alias
-import { sanitizeCollectedData } from "../src/filter/sanitize";
-import { filterSensitiveDomains } from "../src/filter/sensitivity";
-import { categorizeVisits } from "../src/filter/categorize";
-import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../src/analyze/patterns";
-import { generateKnowledgeSections } from "../src/analyze/knowledge";
-import type { KnowledgeSections } from "../src/analyze/knowledge";
-import { renderMarkdown } from "../src/render/renderer";
-import { buildPrompt, summarizeDay } from "../src/summarize/summarize";
+import { sanitizeCollectedData } from "../../src/filter/sanitize";
+import { filterSensitiveDomains } from "../../src/filter/sensitivity";
+import { categorizeVisits } from "../../src/filter/categorize";
+import { classifyEventsRuleOnly, classifyEvents } from "../../src/filter/classify";
+import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../../src/analyze/patterns";
+import { generateKnowledgeSections } from "../../src/analyze/knowledge";
+import type { KnowledgeSections } from "../../src/analyze/knowledge";
+import { renderMarkdown } from "../../src/render/renderer";
+import { buildPrompt, summarizeDay } from "../../src/summarize/summarize";
 
 import type {
 	BrowserVisit,
@@ -47,8 +47,8 @@ import type {
 	PatternConfig,
 	PatternAnalysis,
 	AISummary,
-} from "../src/types";
-import type { AICallConfig } from "../src/summarize/ai-client";
+} from "../../src/types";
+import type { AICallConfig } from "../../src/summarize/ai-client";
 
 // ── Stage data snapshot helpers ──────────────────────────
 // Build compact summaries of stage output for the inspector UI.

@@ -9,8 +9,8 @@
  * Exits with code 1 if any keys are missing or unknown, so CI can gate on it.
  */
 
-import { SETTINGS_REGISTRY } from "../src/settings-registry";
-import { DEFAULT_SETTINGS } from "../src/settings/types";
+import { SETTINGS_REGISTRY } from "../../src/settings-registry";
+import { DEFAULT_SETTINGS } from "../../src/settings/types";
 
 const settingsKeys = new Set(Object.keys(DEFAULT_SETTINGS));
 const registryKeyList = SETTINGS_REGISTRY.map((m) => m.key);

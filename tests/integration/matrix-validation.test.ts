@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { MatrixValidator, BatchConfig } from "../../scripts/matrix-validator";
+import { MatrixValidator, BatchConfig } from "../../scripts/gen/matrix-validator";
 
 /**
  * Integration tests for the Matrix Batch Validator orchestration layer.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { collectFixtureData, CollectedData } from "../../scripts/lib/collector-shim";
-import { BASE_SETTINGS } from "../../scripts/presets";
+import { BASE_SETTINGS } from "../../scripts/dev/presets";
 
 describe("CollectorShim (fixtures mode)", () => {
 	it("returns CollectedData with all four arrays", async () => {

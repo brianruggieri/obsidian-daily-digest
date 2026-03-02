@@ -1,5 +1,5 @@
-import type { DailyDigestSettings, SensitivityPreset } from "../src/settings/types";
-import type { SensitivityCategory } from "../src/types";
+import type { DailyDigestSettings, SensitivityPreset } from "../../src/settings/types";
+import type { SensitivityCategory } from "../../src/types";
 
 export type PresetOverride = Partial<DailyDigestSettings>;
 

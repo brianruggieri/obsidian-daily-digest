@@ -11,7 +11,7 @@ import {
 } from "../types";
 import { AIProvider } from "../settings/types";
 import { KnowledgeSections } from "../analyze/knowledge";
-import { formatDetailsBlock, type PromptLog } from "../../scripts/lib/prompt-logger";
+import { formatDetailsBlock, type PromptLog } from "../plugin/prompt-logger";
 import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml } from "./escape";
 import { cleanUrlForDisplay } from "./url-display";
 
