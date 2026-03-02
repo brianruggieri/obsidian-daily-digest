@@ -21,16 +21,26 @@ function tmpPath(suffix: string): string {
 // works on macOS, Windows, and Linux. The WASM binary is shipped as a separate
 // file (sql-wasm.wasm) alongside main.js rather than inlined in the bundle,
 // keeping main.js ~600 KB smaller.
+//
+// Call initBrowserCollection(pluginDir) from Plugin.onload() to register the
+// absolute filesystem path to the plugin directory. The WASM is read from there
+// on first use. Development scripts (tsx) fall back to node_modules/.
 
+let _pluginDir: string | undefined;
 let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
+
+/** Register the absolute path to the plugin directory. Call from Plugin.onload(). */
+export function initBrowserCollection(pluginDir: string): void {
+	_pluginDir = pluginDir;
+}
+
 async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
 	if (_wasmBinary) return _wasmBinary;
-	try {
-		// CJS bundle (plugin context): __dirname is the plugin directory.
-		// sql-wasm.wasm is shipped alongside main.js in the plugin release.
-		_wasmBinary = readFileSync(join(__dirname, "sql-wasm.wasm"));
-	} catch {
-		// ESM / tsx context (development scripts): fall back to node_modules.
+	if (_pluginDir) {
+		// Plugin context: sql-wasm.wasm is shipped alongside main.js in the release.
+		_wasmBinary = readFileSync(join(_pluginDir, "sql-wasm.wasm"));
+	} else {
+		// tsx dev scripts running from the project root: fall back to node_modules.
 		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
 	}
 	return _wasmBinary;
