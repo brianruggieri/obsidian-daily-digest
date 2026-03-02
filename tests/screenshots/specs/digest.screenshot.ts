@@ -11,7 +11,7 @@ import {
 	dismissOnboarding,
 	collapseSidebars,
 	openNoteInReadingView,
-	scrollToHeading,
+	scrollToCalloutTitle,
 	captureFullPage,
 } from "../helpers/screenshot";
 
@@ -47,14 +47,12 @@ describe("Daily Digest Note Screenshots", () => {
 		});
 
 		it("should capture browser activity section", async () => {
-			// Browser Activity is now a collapsed callout, scroll to its callout title text
-			await scrollToHeading("Browser Activity");
+			await scrollToCalloutTitle("Browser Activity");
 			await captureFullPage("digest-browser");
 		});
 
 		it("should capture searches and Claude sections", async () => {
-			// Searches is now a collapsed callout, scroll to its callout title text
-			await scrollToHeading("Searches");
+			await scrollToCalloutTitle("Searches");
 			await captureFullPage("digest-searches-claude");
 		});
 	});

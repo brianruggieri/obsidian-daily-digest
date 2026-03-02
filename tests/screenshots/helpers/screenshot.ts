@@ -189,3 +189,53 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 
 	await browser.pause(RENDER_SETTLE_MS);
 }
+
+/**
+ * Scroll to an Obsidian callout by matching its title text in the file content.
+ *
+ * Callouts are NOT in Obsidian's metadata cache, and Obsidian's virtual
+ * scroller only renders visible sections — so we can't query the DOM for
+ * offscreen callouts. Instead, we find the callout's line number from the
+ * raw file content and use the preview renderer's applyScroll() to bring
+ * that section into view (same approach as scrollToHeading).
+ */
+export async function scrollToCalloutTitle(titleText: string): Promise<void> {
+	const found = await browser.executeObsidian(async ({ app }, text) => {
+		const leaf = app.workspace.activeLeaf;
+		if (!leaf?.view) return false;
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const file = (leaf.view as any).file;
+		if (!file) return false;
+
+		// Read the file content and find the line containing the callout title
+		const content = await app.vault.cachedRead(file);
+		if (typeof content !== "string") return false;
+
+		const lines = content.split("\n");
+		let targetLine = -1;
+		for (let i = 0; i < lines.length; i++) {
+			// Callout lines look like: > [!info]- 🌐 Browser Activity (20 visits, 3 categories)
+			if (lines[i].includes("[!") && lines[i].includes(text)) {
+				targetLine = i;
+				break;
+			}
+		}
+		if (targetLine === -1) return false;
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const previewMode = (leaf.view as any).previewMode;
+		if (previewMode?.renderer?.applyScroll) {
+			previewMode.renderer.applyScroll(targetLine);
+			return true;
+		}
+
+		return false;
+	}, titleText);
+
+	if (!found) {
+		throw new Error(`Callout title "${titleText}" not found in reading view`);
+	}
+
+	await browser.pause(RENDER_SETTLE_MS);
+}
