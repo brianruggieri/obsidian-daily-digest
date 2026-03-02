@@ -31,6 +31,13 @@ import {
 import { groupCommitsIntoWorkUnits } from "./commits";
 import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "./task-sessions";
 
+// ── Pattern defaults ───────────────────────────────────
+
+/** Time window in minutes for topic co-occurrence detection. */
+export const DEFAULT_COOCCURRENCE_WINDOW = 30;
+/** Minimum event count required to form a temporal cluster. */
+export const DEFAULT_MIN_CLUSTER_SIZE = 3;
+
 // ── Temporal Clustering ────────────────────────────────
 
 interface HourBucket {

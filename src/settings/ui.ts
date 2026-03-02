@@ -761,7 +761,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			// ── Prompt templates ─────────────────────
 			new Setting(advContent)
 				.setName("Prompt templates directory")
-				.setDesc("Path to a folder containing custom prompt templates (prose-high.txt, prose-balanced.txt, prose-lite.txt). Leave empty to use the built-in prompts.")
+				.setDesc(
+					"Path to a folder containing custom prompt templates. Any built-in template " +
+					"(prose-high.txt, prose-balanced.txt, prose-lite.txt, standard.txt, " +
+					"compressed.txt, classified.txt, deidentified.txt) can be overridden by " +
+					"placing a .txt file with the same name here. Missing files fall back to " +
+					"the built-in versions. Leave empty to use only the built-in prompts."
+				)
 				.addText((text) =>
 					text
 						.setPlaceholder("e.g. ~/prompts/daily-digest")

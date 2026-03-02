@@ -20,7 +20,7 @@ import { SensitivityConfig, ClassificationConfig, ClassificationResult, PatternC
 import { sanitizeCollectedData } from "../filter/sanitize";
 import { classifyEvents, classifyEventsRuleOnly } from "../filter/classify";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../filter/sensitivity";
-import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory } from "../analyze/patterns";
+import { extractPatterns, TopicHistory, buildEmptyTopicHistory, updateTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../analyze/patterns";
 import { generateKnowledgeSections, KnowledgeSections } from "../analyze/knowledge";
 import { linkSearchesToVisits } from "../analyze/intent";
 import { computeEngagementScore } from "../analyze/engagement";
@@ -352,8 +352,8 @@ export default class DailyDigestPlugin extends Plugin {
 				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
 				const patternConfig: PatternConfig = {
 					enabled: true,
-					cooccurrenceWindow: 30,
-					minClusterSize: 3,
+					cooccurrenceWindow: DEFAULT_COOCCURRENCE_WINDOW,
+					minClusterSize: DEFAULT_MIN_CLUSTER_SIZE,
 					trackRecurrence: this.settings.trackRecurrence,
 				};
 

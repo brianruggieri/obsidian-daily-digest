@@ -31,7 +31,7 @@ import { sanitizeCollectedData } from "../src/filter/sanitize";
 import { filterSensitiveDomains } from "../src/filter/sensitivity";
 import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
+import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import type { KnowledgeSections } from "../src/analyze/knowledge";
 import { renderMarkdown } from "../src/render/renderer";
@@ -1007,8 +1007,8 @@ async function runPipeline(
 		await stage("patterns", () => {
 			const patternConfig: PatternConfig = {
 				enabled: true,
-				cooccurrenceWindow: 30,
-				minClusterSize: 3,
+				cooccurrenceWindow: DEFAULT_COOCCURRENCE_WINDOW,
+				minClusterSize: DEFAULT_MIN_CLUSTER_SIZE,
 				trackRecurrence: settings.trackRecurrence,
 			};
 			patterns = extractPatterns(classification!, patternConfig, buildEmptyTopicHistory(), dateStr);

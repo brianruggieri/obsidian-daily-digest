@@ -53,7 +53,7 @@ import { sanitizeCollectedData } from "../src/filter/sanitize";
 import { filterSensitiveDomains, filterSensitiveSearches } from "../src/filter/sensitivity";
 import { categorizeVisits } from "../src/filter/categorize";
 import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
+import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../src/analyze/patterns";
 import { generateKnowledgeSections } from "../src/analyze/knowledge";
 import { clusterArticles } from "../src/analyze/clusters";
 import { linkSearchesToVisits } from "../src/analyze/intent";
@@ -226,8 +226,8 @@ async function runPreset(
 	if (classification.events.length > 0) {
 		const patternConfig: PatternConfig = {
 			enabled: true,
-			cooccurrenceWindow: 30,
-			minClusterSize: 3,
+			cooccurrenceWindow: DEFAULT_COOCCURRENCE_WINDOW,
+			minClusterSize: DEFAULT_MIN_CLUSTER_SIZE,
 			trackRecurrence: settings.trackRecurrence,
 		};
 		const topicHistory = buildEmptyTopicHistory();

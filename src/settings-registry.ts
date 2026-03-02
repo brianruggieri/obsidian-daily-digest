@@ -265,8 +265,9 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		key: "debugMode",
 		label: "Debug mode",
 		description:
-			"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
-			"For development use only.",
+			"Adds an 'Inspect pipeline stage' command so you can see exactly what data " +
+			"was collected and processed at each stage. Useful for troubleshooting or " +
+			"understanding what the plugin knows about your day.",
 		section: "Advanced",
 		type: "boolean",
 		defaultValue: "false",
@@ -360,8 +361,11 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		key: "promptsDir",
 		label: "Prompt templates directory",
 		description:
-			"Path to a folder containing custom prompt templates " +
-			"(prose-high.txt, prose-balanced.txt, prose-lite.txt). Leave empty to use the built-in prompts.",
+			"Path to a folder containing custom prompt templates. You can override any built-in template " +
+			"by placing a .txt file with the same name in this folder " +
+			"(prose-high.txt, prose-balanced.txt, prose-lite.txt, standard.txt, " +
+			"compressed.txt, classified.txt, deidentified.txt). Missing files fall back to " +
+			"the built-in versions. Leave empty to use the built-in prompts.",
 		section: "AI summarization",
 		type: "string",
 		defaultValue: "",
