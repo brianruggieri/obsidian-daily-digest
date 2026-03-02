@@ -1,7 +1,7 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { FileSystemAdapter, Notice, Plugin, TFile } from "obsidian";
 import { DailyDigestSettings, DEFAULT_SETTINGS, SECRET_ID } from "../settings/types";
 import { DailyDigestSettingTab } from "../settings/ui";
-import { collectBrowserHistory } from "../collect/browser";
+import { collectBrowserHistory, initBrowserCollection } from "../collect/browser";
 import { readClaudeSessions } from "../collect/claude";
 import { readCodexSessions } from "../collect/codex";
 import { readGitHistory } from "../collect/git";
@@ -37,6 +37,13 @@ export default class DailyDigestPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		setDebugEnabled(this.settings.debugMode);
+
+		// Register the plugin directory so browser.ts can locate sql-wasm.wasm at runtime.
+		// FileSystemAdapter.getFullPath() returns the absolute filesystem path for a
+		// vault-relative path; this.manifest.dir is e.g. ".obsidian/plugins/daily-digest".
+		if (this.app.vault.adapter instanceof FileSystemAdapter && this.manifest.dir) {
+			initBrowserCollection(this.app.vault.adapter.getFullPath(this.manifest.dir));
+		}
 
 		// Ribbon icon
 		this.addRibbonIcon("calendar-clock", "Daily Digest: Generate daily note", () => {
