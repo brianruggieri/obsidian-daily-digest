@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { SETTINGS_REGISTRY, type SettingMeta, type SettingSection } from "../../src/settings-registry";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, "../..");
 const OUTPUT_PATH = path.join(ROOT, "docs", "settings-reference.md");
 
 const SECTION_ORDER: SettingSection[] = [
