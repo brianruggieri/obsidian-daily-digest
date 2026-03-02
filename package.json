@@ -33,7 +33,7 @@
 		"inspector": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig scripts/tsconfig.json scripts/dev/inspector.ts",
 		"matrix:diff": "NODE_OPTIONS='--experimental-loader ./scripts/lib/txt-loader.mjs' tsx --tsconfig scripts/tsconfig.json scripts/dev/privacy-diff.ts",
 		"matrix:validate": "tsx --tsconfig scripts/tsconfig.json scripts/gen/matrix-validator.ts",
-		"matrix:validate:phase1": "tsx --tsconfig scripts/tsconfig.json scripts/gen/matrix-validator.ts --phase 1",
+		"matrix:validate:phase1": "npm run matrix:validate",
 		"matrix:cost-analysis": "tsx --tsconfig scripts/tsconfig.json scripts/gen/matrix-cost-analyzer.ts",
 		"matrix:ci-gate": "tsx --tsconfig scripts/tsconfig.json scripts/gen/matrix-ci-gate.ts",
 		"matrix:scenario:cost-benefit": "SCENARIO=cost-benefit npm run matrix:validate",
