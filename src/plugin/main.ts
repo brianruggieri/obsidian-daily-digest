@@ -7,7 +7,7 @@ import { readCodexSessions } from "../collect/codex";
 import { readGitHistory } from "../collect/git";
 import { categorizeVisits } from "../filter/categorize";
 import { compressActivity } from "../summarize/compress";
-import { summarizeDay, buildPrompt, buildSummaryPrompt, summarizeDayWithPrompt } from "../summarize/summarize";
+import { summarizeDay, buildSummaryPrompt, summarizeDayWithPrompt } from "../summarize/summarize";
 import { PipelineDebugModal } from "./pipeline-debug";
 import { AICallConfig } from "../summarize/ai-client";
 import { renderMarkdown } from "../render/renderer";
@@ -71,16 +71,19 @@ export default class DailyDigestPlugin extends Plugin {
 		// Settings tab
 		this.addSettingTab(new DailyDigestSettingTab(this.app, this));
 
-		// Debug command — only registered when debug mode is enabled
-		if (this.settings.debugMode) {
-			this.addCommand({
-				id: "pipeline-inspect",
-				name: "Inspect pipeline stage (debug)",
-				callback: () => {
-					new PipelineDebugModal(this.app, this).open();
-				},
-			});
-		}
+		// Debug command — always registered; guards at invocation so enabling debug
+		// mode mid-session doesn't require an Obsidian reload to surface the command.
+		this.addCommand({
+			id: "pipeline-inspect",
+			name: "Inspect pipeline stage (debug)",
+			callback: () => {
+				if (!this.settings.debugMode) {
+					new Notice("Enable Debug mode in Daily Digest settings first.", 4000);
+					return;
+				}
+				new PipelineDebugModal(this.app, this).open();
+			},
+		});
 
 		// Privacy onboarding check
 		if (shouldShowOnboarding(this.settings)) {
@@ -180,14 +183,6 @@ export default class DailyDigestPlugin extends Plugin {
 			const cats: Record<string, number> = {};
 			for (const [cat, vs] of Object.entries(categorized)) cats[cat] = vs.length;
 			return cats;
-		}
-
-		if (stage === "prompt") {
-			return buildPrompt(
-				date, categorized, sanitized.searches,
-				sanitized.claudeSessions, this.settings.profile, sanitized.gitCommits,
-				this.settings.promptsDir
-			);
 		}
 
 		return { error: `Stage '${stage}' not supported in debug modal` };

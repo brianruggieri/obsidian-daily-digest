@@ -1,7 +1,7 @@
 import { Modal, App, Setting } from "obsidian";
 import type DailyDigestPlugin from "./main";
 
-type DebugStage = "raw" | "sanitized" | "categorized" | "prompt";
+type DebugStage = "raw" | "sanitized" | "categorized";
 
 export class PipelineDebugModal extends Modal {
 	private plugin: DailyDigestPlugin;
@@ -28,12 +28,12 @@ export class PipelineDebugModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Stage")
+			.setDesc("To preview the actual AI prompt, use Generate → eye icon (Data Preview).")
 			.addDropdown(drop => drop
 				.addOptions({
 					raw: "raw — collected counts",
-					sanitized: "sanitized — after filtering",
-					categorized: "categorized — browser categories",
-					prompt: "prompt — LLM prompt text",
+					sanitized: "sanitized — after secret scrubbing & sensitivity filter",
+					categorized: "categorized — browser visits by category",
 				})
 				.setValue(this.selectedStage)
 				.onChange(v => { this.selectedStage = v as DebugStage; }));
