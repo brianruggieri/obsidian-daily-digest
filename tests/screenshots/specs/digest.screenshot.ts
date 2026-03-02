@@ -57,6 +57,7 @@ describe("Daily Digest Note Screenshots", () => {
 			await openNoteInReadingView("2025-06-18");
 			await scrollToCalloutTitle("Browser Activity");
 			await expandCallout("Browser Activity");
+			await expandCallout("Dev & Engineering");
 			await captureFullPage("digest-browser");
 		});
 	});

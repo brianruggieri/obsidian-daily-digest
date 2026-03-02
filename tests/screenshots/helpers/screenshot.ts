@@ -70,6 +70,21 @@ export async function captureSettingsSection(
 	// Find the heading element by partial text content
 	const heading = await $(`.setting-item-heading*=${headingText}`);
 	await heading.scrollIntoView({ block: "start" });
+
+	// Scroll the settings container back a bit so the heading isn't
+	// jammed against the top edge of the modal
+	await browser.execute((text: string) => {
+		const headings = document.querySelectorAll(".setting-item-heading");
+		for (const h of headings) {
+			if (!h.textContent?.includes(text)) continue;
+			const container = h.closest(".vertical-tab-content");
+			if (container) {
+				container.scrollTop = Math.max(0, container.scrollTop - 40);
+			}
+			break;
+		}
+	}, headingText);
+
 	await browser.pause(RENDER_SETTLE_MS);
 
 	// Capture the viewport from this scroll position

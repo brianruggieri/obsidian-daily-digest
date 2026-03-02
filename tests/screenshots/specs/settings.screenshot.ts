@@ -101,6 +101,19 @@ describe("Settings Panel Screenshots", () => {
 
 	it("should capture advanced AI pipeline (classification + patterns)", async () => {
 		await applyPreset("advancedPipeline");
-		await captureSettingsSection("Advanced AI", "settings-advanced-ai");
+
+		// The Advanced section is collapsed by default — click the toggle to expand it
+		await browser.execute(() => {
+			const buttons = document.querySelectorAll(".dd-settings-group button");
+			for (const btn of buttons) {
+				if (btn.textContent?.includes("Show advanced settings")) {
+					(btn as HTMLElement).click();
+					return;
+				}
+			}
+		});
+		await browser.pause(300);
+
+		await captureSettingsSection("Advanced", "settings-advanced-ai");
 	});
 });
