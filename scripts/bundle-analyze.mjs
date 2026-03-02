@@ -5,14 +5,20 @@
  *   npm run build:analyze
  *
  * Outputs the top 30 contributors to bundle size (by unminified byte count),
- * and writes /tmp/metafile.json for use with https://esbuild.github.io/analyze/
+ * and writes a metafile to the system temp directory for use with
+ * https://esbuild.github.io/analyze/
  */
 
 import esbuild from "esbuild";
 import { builtinModules } from "node:module";
 import { writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import process from "process";
+
+const tmp = tmpdir();
+const outfile = join(tmp, "main-analyze.js");
+const metafilePath = join(tmp, "metafile.json");
 
 const result = await esbuild.build({
 	entryPoints: ["src/plugin/main.ts"],
@@ -36,13 +42,12 @@ const result = await esbuild.build({
 	format: "cjs",
 	target: "es2018",
 	treeShaking: true,
-	outfile: "/tmp/main-analyze.js",
+	outfile,
 	metafile: true,
 	minify: true,
 	logLevel: "silent",
 });
 
-const metafilePath = "/tmp/metafile.json";
 writeFileSync(metafilePath, JSON.stringify(result.metafile, null, 2));
 
 const inputs = result.metafile.inputs;
@@ -52,7 +57,7 @@ const sorted = Object.entries(inputs)
 	.slice(0, 30);
 
 const totalInput = Object.values(inputs).reduce((s, v) => s + v.bytes, 0);
-const outSize = statSync("/tmp/main-analyze.js").size;
+const outSize = statSync(outfile).size;
 
 console.log("\nBundle composition (top 30 by unminified size):\n");
 console.log("   Size     File");

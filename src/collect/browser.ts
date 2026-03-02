@@ -28,6 +28,7 @@ function tmpPath(suffix: string): string {
 
 let _pluginDir: string | undefined;
 let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
+let _wasmLoadError: Error | undefined;
 
 /** Register the absolute path to the plugin directory. Call from Plugin.onload(). */
 export function initBrowserCollection(pluginDir: string): void {
@@ -36,12 +37,21 @@ export function initBrowserCollection(pluginDir: string): void {
 
 async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
 	if (_wasmBinary) return _wasmBinary;
-	if (_pluginDir) {
-		// Plugin context: sql-wasm.wasm is shipped alongside main.js in the release.
-		_wasmBinary = readFileSync(join(_pluginDir, "sql-wasm.wasm"));
-	} else {
-		// tsx dev scripts running from the project root: fall back to node_modules.
-		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
+	// Cache failure so repeated calls don't retry disk I/O or re-log spam.
+	if (_wasmLoadError) throw _wasmLoadError;
+
+	const wasmPath = _pluginDir
+		? join(_pluginDir, "sql-wasm.wasm")
+		: join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm");
+
+	try {
+		_wasmBinary = readFileSync(wasmPath);
+	} catch {
+		_wasmLoadError = new Error(
+			`sql-wasm.wasm not found at "${wasmPath}". ` +
+			"Ensure the plugin was installed or deployed correctly (npm run deploy).",
+		);
+		throw _wasmLoadError;
 	}
 	return _wasmBinary;
 }

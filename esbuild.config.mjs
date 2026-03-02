@@ -61,7 +61,7 @@ if (prod) {
 			`\nERROR: main.js (${sizeKB} KB) exceeds the ${BUNDLE_SIZE_LIMIT_KB} KB size budget.`,
 		);
 		console.error(
-			"Audit new dependencies with: node --input-type=module esbuild.config.mjs --metafile",
+			"Audit new dependencies with: npm run build:analyze",
 		);
 		process.exit(1);
 	}
