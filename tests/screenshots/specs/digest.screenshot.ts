@@ -9,6 +9,7 @@
 
 import {
 	dismissOnboarding,
+	collapseSidebars,
 	openNoteInReadingView,
 	scrollToHeading,
 	captureFullPage,
@@ -32,6 +33,7 @@ describe("Daily Digest Note Screenshots", () => {
 	// but this ensures digest specs work when run in isolation too.
 	before(async () => {
 		await dismissOnboarding();
+		await collapseSidebars();
 	});
 
 	describe("Deep-focus dev day (2025-06-18)", () => {

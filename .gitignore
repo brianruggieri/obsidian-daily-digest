@@ -23,7 +23,12 @@ Thumbs.db
 # Screenshot automation
 tests/screenshots/output/
 tests/screenshots/vault/
+/screenshots/
 .obsidian-cache/
+
+# Brand assets (generated — not committed to repo)
+docs/brand/
+scripts/generate-brand-assets.mjs
 
 # ETL pipeline (cached downloads + generated output)
 scripts/etl/data/

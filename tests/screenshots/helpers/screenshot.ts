@@ -22,7 +22,7 @@ export async function dismissOnboarding(): Promise<void> {
 
 		// Mark onboarding as completed so the modal won't reappear
 		plugin.settings.hasCompletedOnboarding = true;
-		plugin.settings.privacyConsentVersion = 3; // CURRENT_PRIVACY_VERSION
+		plugin.settings.privacyConsentVersion = 4; // CURRENT_PRIVACY_VERSION
 		await plugin.saveSettings();
 
 		// Close any open modal (the onboarding modal that fired on load)
@@ -99,6 +99,19 @@ export async function closeSettings(): Promise<void> {
 		app.setting.close();
 	});
 	await browser.pause(200);
+}
+
+/**
+ * Collapse both sidebars to maximise the content area for screenshots.
+ */
+export async function collapseSidebars(): Promise<void> {
+	await browser.executeObsidian(({ app }) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const workspace = app.workspace as any;
+		workspace.leftSplit?.collapse();
+		workspace.rightSplit?.collapse();
+	});
+	await browser.pause(300);
 }
 
 /**

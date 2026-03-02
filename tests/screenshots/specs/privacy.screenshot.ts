@@ -10,6 +10,7 @@
 
 import {
 	dismissOnboarding,
+	collapseSidebars,
 	captureFullPage,
 } from "../helpers/screenshot";
 
@@ -20,6 +21,7 @@ describe("Privacy Onboarding Modal Screenshots", () => {
 		// to render fully.
 		const modal = await $(".daily-digest-onboarding-modal");
 		await modal.waitForExist({ timeout: 10000 });
+		await collapseSidebars();
 		await browser.pause(500);
 
 		await captureFullPage("privacy-onboarding");
