@@ -23,8 +23,8 @@ import { PRESETS, resolvePreset } from "./presets";
 import { collectFixtureData, collectRealData } from "./lib/collector-shim";
 import type { CollectedData } from "./lib/collector-shim";
 import { getMockSummary } from "./lib/mock-ai";
-import { createPromptLog, appendPromptEntry, estimateTokens } from "./lib/prompt-logger";
-import type { PromptLog } from "./lib/prompt-logger";
+import { createPromptLog, appendPromptEntry, estimateTokens } from "../src/plugin/prompt-logger";
+import type { PromptLog } from "../src/plugin/prompt-logger";
 
 // src/ imports — obsidian is shimmed via tsconfig.scripts.json paths alias
 import { sanitizeCollectedData } from "../src/filter/sanitize";

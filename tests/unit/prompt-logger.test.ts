@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createPromptLog, appendPromptEntry, formatDetailsBlock, estimateTokens } from "../../scripts/lib/prompt-logger";
+import { createPromptLog, appendPromptEntry, formatDetailsBlock, estimateTokens } from "../../src/plugin/prompt-logger";
 
 describe("PromptLogger", () => {
   it("starts empty", () => {

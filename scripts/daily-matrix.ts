@@ -43,8 +43,8 @@ if (existsSync(envPath)) {
 import { PRESETS, resolvePreset, getPresetFilename } from "./presets";
 import { collectFixtureData, collectRealData } from "./lib/collector-shim";
 import { getMockSummary } from "./lib/mock-ai";
-import { createPromptLog, appendPromptEntry, estimateTokens } from "./lib/prompt-logger";
-import type { PromptLog } from "./lib/prompt-logger";
+import { createPromptLog, appendPromptEntry, estimateTokens } from "../src/plugin/prompt-logger";
+import type { PromptLog } from "../src/plugin/prompt-logger";
 import { runAssertions, writeReport } from "./lib/assertion-runner";
 import type { MatrixReport, PresetReport } from "./lib/assertion-runner";
 
