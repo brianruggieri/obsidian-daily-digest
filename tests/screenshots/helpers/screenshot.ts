@@ -191,6 +191,36 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 }
 
 /**
+ * Expand a collapsed callout by clicking its fold icon.
+ *
+ * Must be called after scrollToCalloutTitle() has brought the callout
+ * into the DOM. Finds the `.callout-title-inner` containing the text,
+ * walks up to the `.callout` container, and clicks the fold icon to
+ * toggle it open. No-ops if the callout is already expanded.
+ */
+export async function expandCallout(titleText: string): Promise<void> {
+	await browser.execute((text: string) => {
+		const titles = document.querySelectorAll(".callout-title-inner");
+		for (const el of titles) {
+			if (!el.textContent?.includes(text)) continue;
+			const callout = el.closest(".callout");
+			if (!callout) continue;
+			// If already expanded (no "is-collapsed" class), skip
+			if (!callout.classList.contains("is-collapsed")) return;
+			// Click the fold icon to expand
+			const fold = callout.querySelector(".callout-fold") as HTMLElement | null;
+			if (fold) {
+				fold.click();
+				return;
+			}
+			// Fallback: click the title itself
+			(el as HTMLElement).click();
+		}
+	}, titleText);
+	await browser.pause(RENDER_SETTLE_MS);
+}
+
+/**
  * Scroll to an Obsidian callout by matching its title text in the file content.
  *
  * Callouts are NOT in Obsidian's metadata cache, and Obsidian's virtual
