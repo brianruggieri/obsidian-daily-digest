@@ -70,6 +70,21 @@ export async function captureSettingsSection(
 	// Find the heading element by partial text content
 	const heading = await $(`.setting-item-heading*=${headingText}`);
 	await heading.scrollIntoView({ block: "start" });
+
+	// Scroll the settings container back a bit so the heading isn't
+	// jammed against the top edge of the modal
+	await browser.execute((text: string) => {
+		const headings = document.querySelectorAll(".setting-item-heading");
+		for (const h of headings) {
+			if (!h.textContent?.includes(text)) continue;
+			const container = h.closest(".vertical-tab-content");
+			if (container) {
+				container.scrollTop = Math.max(0, container.scrollTop - 40);
+			}
+			break;
+		}
+	}, headingText);
+
 	await browser.pause(RENDER_SETTLE_MS);
 
 	// Capture the viewport from this scroll position
@@ -185,6 +200,87 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 
 	if (!found) {
 		throw new Error(`Heading "${headingText}" not found in reading view`);
+	}
+
+	await browser.pause(RENDER_SETTLE_MS);
+}
+
+/**
+ * Expand a collapsed callout by clicking its fold icon.
+ *
+ * Must be called after scrollToCalloutTitle() has brought the callout
+ * into the DOM. Finds the `.callout-title-inner` containing the text,
+ * walks up to the `.callout` container, and clicks the fold icon to
+ * toggle it open. No-ops if the callout is already expanded.
+ */
+export async function expandCallout(titleText: string): Promise<void> {
+	await browser.execute((text: string) => {
+		const titles = document.querySelectorAll(".callout-title-inner");
+		for (const el of titles) {
+			if (!el.textContent?.includes(text)) continue;
+			const callout = el.closest(".callout");
+			if (!callout) continue;
+			// If already expanded (no "is-collapsed" class), skip
+			if (!callout.classList.contains("is-collapsed")) return;
+			// Click the fold icon to expand
+			const fold = callout.querySelector(".callout-fold") as HTMLElement | null;
+			if (fold) {
+				fold.click();
+				return;
+			}
+			// Fallback: click the title itself
+			(el as HTMLElement).click();
+			return;
+		}
+	}, titleText);
+	await browser.pause(RENDER_SETTLE_MS);
+}
+
+/**
+ * Scroll to an Obsidian callout by matching its title text in the file content.
+ *
+ * Callouts are NOT in Obsidian's metadata cache, and Obsidian's virtual
+ * scroller only renders visible sections — so we can't query the DOM for
+ * offscreen callouts. Instead, we find the callout's line number from the
+ * raw file content and use the preview renderer's applyScroll() to bring
+ * that section into view (same approach as scrollToHeading).
+ */
+export async function scrollToCalloutTitle(titleText: string): Promise<void> {
+	const found = await browser.executeObsidian(async ({ app }, text) => {
+		const leaf = app.workspace.activeLeaf;
+		if (!leaf?.view) return false;
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const file = (leaf.view as any).file;
+		if (!file) return false;
+
+		// Read the file content and find the line containing the callout title
+		const content = await app.vault.cachedRead(file);
+		if (typeof content !== "string") return false;
+
+		const lines = content.split("\n");
+		let targetLine = -1;
+		for (let i = 0; i < lines.length; i++) {
+			// Callout lines look like: > [!info]- 🌐 Browser Activity (20 visits, 3 categories)
+			if (lines[i].includes("[!") && lines[i].includes(text)) {
+				targetLine = i;
+				break;
+			}
+		}
+		if (targetLine === -1) return false;
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const previewMode = (leaf.view as any).previewMode;
+		if (previewMode?.renderer?.applyScroll) {
+			previewMode.renderer.applyScroll(targetLine);
+			return true;
+		}
+
+		return false;
+	}, titleText);
+
+	if (!found) {
+		throw new Error(`Callout title "${titleText}" not found in reading view`);
 	}
 
 	await browser.pause(RENDER_SETTLE_MS);

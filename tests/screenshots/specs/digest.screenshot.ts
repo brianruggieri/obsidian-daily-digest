@@ -11,7 +11,8 @@ import {
 	dismissOnboarding,
 	collapseSidebars,
 	openNoteInReadingView,
-	scrollToHeading,
+	scrollToCalloutTitle,
+	expandCallout,
 	captureFullPage,
 } from "../helpers/screenshot";
 
@@ -37,25 +38,27 @@ describe("Daily Digest Note Screenshots", () => {
 	});
 
 	describe("Deep-focus dev day (2025-06-18)", () => {
-		before(async () => {
-			await openNoteInReadingView("2025-06-18");
-		});
-
 		it("should capture hero shot (title + summary + notable)", async () => {
+			await openNoteInReadingView("2025-06-18");
 			await scrollToTop();
 			await captureFullPage("digest-hero");
 		});
 
-		it("should capture browser activity section", async () => {
-			// Browser Activity is now a collapsed callout, scroll to its callout title text
-			await scrollToHeading("Browser Activity");
-			await captureFullPage("digest-browser");
+		it("should capture searches and Claude sections", async () => {
+			// Re-open the note to reset all callout states (collapsed)
+			await openNoteInReadingView("2025-06-18");
+			await scrollToCalloutTitle("Searches");
+			await expandCallout("Searches");
+			await captureFullPage("digest-searches-claude");
 		});
 
-		it("should capture searches and Claude sections", async () => {
-			// Searches is now a collapsed callout, scroll to its callout title text
-			await scrollToHeading("Searches");
-			await captureFullPage("digest-searches-claude");
+		it("should capture browser activity section", async () => {
+			// Re-open the note to reset all callout states (collapsed)
+			await openNoteInReadingView("2025-06-18");
+			await scrollToCalloutTitle("Browser Activity");
+			await expandCallout("Browser Activity");
+			await expandCallout("Dev & Engineering");
+			await captureFullPage("digest-browser");
 		});
 	});
 

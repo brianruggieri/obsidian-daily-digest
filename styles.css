@@ -190,30 +190,44 @@
 	font-size: 0.8em;
 }
 
-/* ── Data Source Groups ─────────────────── */
+/* ── Settings Groups ─────────────────────── */
 
 /*
- * Each data source (browser, shell, Claude, Codex, git) is wrapped in
- * dd-source-group. A top border separates sources from each other.
- * Within a group, setting-item borders are suppressed so items read
- * as a unit rather than a list of independent rows.
+ * Wrap related settings in a .dd-settings-group or .dd-source-group div
+ * to get Obsidian's native grouped appearance: one rounded card per section
+ * with thin dividers between rows instead of individual boxes per item.
+ *
+ * Headings and callouts sit on containerEl directly (above/between cards).
  */
+.dd-settings-group,
 .dd-source-group {
-	padding: 4px 0;
-	border-top: 1px solid var(--background-modifier-border);
+	background-color: var(--background-primary-alt);
+	padding: 0 var(--size-4-4, 16px);
+	border-radius: var(--radius-l, 8px);
+	margin-bottom: var(--size-4-4, 16px);
 }
 
-/* Remove inter-item borders within a group */
+/* Strip per-item box styling; items become flat rows */
+.dd-settings-group .setting-item,
 .dd-source-group .setting-item {
-	border-top: none;
-	padding-top: 6px;
-	padding-bottom: 6px;
+	background-color: transparent;
+	border-radius: 0;
+	border: none;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-left: 0;
+	padding-right: 0;
+	margin-bottom: 0;
 }
 
-/* Master toggle (first item) keeps full Obsidian padding */
+/* First setting item in a group has no top divider */
+.dd-settings-group > .setting-item:first-child,
 .dd-source-group > .setting-item:first-child {
-	padding-top: 14px;
-	padding-bottom: 8px;
+	border-top: none;
+}
+
+/* Callouts inside source groups (e.g. browser privacy note) */
+.dd-source-group .dd-settings-callout {
+	margin: 8px 0;
 }
 
 /* ── Compact Profile Rows ────────────────── */

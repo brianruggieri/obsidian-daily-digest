@@ -20,6 +20,7 @@
 		"version": "node scripts/version-bump.mjs && git add manifest.json versions.json",
 		"deploy": "npm run build && node scripts/deploy.mjs",
 		"deploy:dev": "node esbuild.config.mjs production && node scripts/deploy.mjs",
+		"generate:examples": "tsx --tsconfig scripts/tsconfig.json scripts/generate-examples.ts",
 		"docs:generate": "tsx --tsconfig scripts/tsconfig.json scripts/generate-settings-docs.ts",
 		"docs:check": "tsx --tsconfig scripts/tsconfig.json scripts/check-settings-registry.ts",
 		"screenshots:setup": "bash tests/screenshots/setup.sh",

@@ -24,7 +24,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const generalHeading = new Setting(containerEl).setName("General").setHeading();
 		this.prependIcon(generalHeading.nameEl, "settings");
 
-		new Setting(containerEl)
+		const generalGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+
+		new Setting(generalGroup)
 			.setName("Daily notes folder")
 			.setDesc("Folder within your vault for daily notes")
 			.addText((text) =>
@@ -37,7 +39,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(generalGroup)
 			.setName("Filename template")
 			.setDesc("Date format for filenames (supports YYYY, MM, DD tokens, e.g. YYYY-MM-DD)")
 			.addText((text) =>
@@ -50,7 +52,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(generalGroup)
 			.setName("Unified timeline")
 			.setDesc("Render a cross-source chronological timeline in the daily note")
 			.addToggle((toggle: ToggleComponent) =>
@@ -175,7 +177,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 		}
 
-		new Setting(containerEl)
+		const limitsGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+		new Setting(limitsGroup)
 			.setName("Max visits per domain")
 			.setDesc("Maximum unique page visits shown per domain in the daily note.")
 			.addSlider((slider) =>
@@ -254,7 +257,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		const totalDomains = getTotalBuiltinDomains();
 
-		new Setting(containerEl)
+		const sensitivityGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+
+		new Setting(sensitivityGroup)
 			.setName("Sensitivity filter")
 			.setDesc(
 				`Filter visits to sensitive domains (${totalDomains} built-in across 11 categories). ` +
@@ -289,7 +294,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		// Show custom domains when filter is active
 		if (this.plugin.settings.enableSensitivityFilter) {
-			new Setting(containerEl)
+			new Setting(sensitivityGroup)
 				.setName("Custom sensitive domains")
 				.setDesc(
 					"Additional domains to filter. Subdomains match automatically " +
@@ -312,7 +317,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			const catInfo = getCategoryInfo();
 			const enabledCats = new Set(this.plugin.settings.sensitivityCategories);
 
-			const catContainer = containerEl.createDiv({ cls: "dd-sensitivity-categories" });
+			const catContainer = sensitivityGroup.createDiv({ cls: "dd-sensitivity-categories" });
 			new Setting(catContainer)
 				.setName("Categories")
 				.setDesc(
@@ -346,7 +351,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const aiHeading = new Setting(containerEl).setName("AI summarization").setHeading();
 		this.prependIcon(aiHeading.nameEl, "sparkles");
 
-		new Setting(containerEl)
+		const aiEnableGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+		new Setting(aiEnableGroup)
 			.setName("Enable AI summaries")
 			.setDesc(
 				"Use an AI model to generate daily summaries, themes, and reflections. " +
@@ -364,7 +370,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			);
 
 		if (this.plugin.settings.enableAI) {
-			new Setting(containerEl)
+			const aiBaseGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+			new Setting(aiBaseGroup)
 				.setName("Profile hint")
 				.setDesc("Context hint for AI summaries (e.g. 'software engineer at a SaaS startup')")
 				.addText((text) =>
@@ -377,7 +384,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						})
 				);
 
-			new Setting(containerEl)
+			new Setting(aiBaseGroup)
 				.setName("AI provider")
 				.setDesc(
 					"Local: runs on your machine via Ollama, LM Studio, or any OpenAI-compatible " +
@@ -398,7 +405,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 			if (this.plugin.settings.aiProvider === "local") {
 				// ── Local model settings ─────────────
-				new Setting(containerEl)
+				const localGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+				new Setting(localGroup)
 					.setName("Local server endpoint")
 					.setDesc(
 						"URL of your local inference server. Ollama defaults to " +
@@ -415,7 +423,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 
-				new Setting(containerEl)
+				new Setting(localGroup)
 					.setName("Local model")
 					.setDesc(
 						"Model name to use (e.g. qwen2.5:14b-instruct, llama3.2). " +
@@ -519,7 +527,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				// ── Anthropic settings ───────────────
 				const currentKey = this.plugin.app.secretStorage.getSecret(SECRET_ID) ?? "";
 
-				new Setting(containerEl)
+				const anthropicKeyGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+				new Setting(anthropicKeyGroup)
 					.setName("Anthropic API key")
 					.setDesc(
 						"Your Anthropic API key. Stored securely in Obsidian's secret " +
@@ -544,7 +553,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 						"from your vault files. It will not be synced or committed to git.",
 				});
 
-				new Setting(containerEl)
+				// ── Privacy tier (Anthropic only) ────
+				const anthropicConfigGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+				new Setting(anthropicConfigGroup)
 					.setName("AI model")
 					.setDesc("Anthropic model for summarization")
 					.addDropdown((dropdown) =>
@@ -559,8 +570,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 							})
 					);
 
-				// ── Privacy tier (Anthropic only) ────
-				new Setting(containerEl)
+				new Setting(anthropicConfigGroup)
 					.setName("Privacy tier")
 					.setDesc(
 						"Controls what data is sent to Anthropic. Higher tiers send less data. " +
@@ -612,7 +622,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 
 				// ── Prompt preview (Anthropic only) ──
-				new Setting(containerEl)
+				const anthropicExtrasGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+				new Setting(anthropicExtrasGroup)
 					.setName("Show prompt preview")
 					.setDesc(
 						"Display the exact prompt in the data preview modal before sending " +
@@ -628,8 +639,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					);
 			}
 
-			// Prompt detail budget (moved here from Data Sources — only relevant for AI)
-			new Setting(containerEl)
+			// Prompt detail budget (only relevant for AI)
+			const budgetGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+			new Setting(budgetGroup)
 				.setName("Prompt detail budget")
 				.setDesc(
 					"Target token budget for the data section of AI prompts. " +
@@ -651,10 +663,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const advHeading = new Setting(containerEl).setName("Advanced").setHeading();
 		this.prependIcon(advHeading.nameEl, "sliders-horizontal");
 
-		const advContent = containerEl.createDiv({ cls: "dd-advanced-section" });
+		const advWrapper = containerEl.createDiv({ cls: "dd-settings-group" });
+
+		const advContent = advWrapper.createDiv({ cls: "dd-advanced-section" });
 		advContent.style.display = "none";
 
-		const advToggle = new Setting(containerEl)
+		const advToggle = new Setting(advWrapper)
 			.setDesc("Fine-tune filtering, classification, pattern extraction, and other power-user settings.")
 			.addButton((btn) =>
 				btn.setButtonText("Show advanced settings").onClick(() => {
@@ -663,8 +677,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					btn.setButtonText(visible ? "Show advanced settings" : "Hide advanced settings");
 				})
 			);
-		// Move the toggle button before the content div
-		containerEl.insertBefore(advToggle.settingEl, advContent);
+		// Move the toggle setting before advContent so it renders above the expandable area
+		advWrapper.insertBefore(advToggle.settingEl, advContent);
 
 		// ── Sensitivity action ───────────────────────
 		if (this.plugin.settings.enableSensitivityFilter) {

@@ -1,115 +1,86 @@
 # Screenshot Capture Guide
 
-How to capture screenshots for the README and docs. Open the example files in
-Obsidian with a clean theme (default or Minimal recommended) and capture each
-shot as described below.
+Screenshots are **fully automated** via WebDriverIO + wdio-obsidian-service.
+No manual capture is needed — run the suite and baseline PNGs are regenerated.
 
-Save all screenshots to `examples/screenshots/`.
+## Quick Start
 
----
+```bash
+npm run screenshots:setup   # symlink examples into test vault
+npm run screenshots         # run WDIO suite (setup + capture)
+```
 
-## Required Screenshots
+Output: `tests/screenshots/output/actual/*.png`
+Baseline: `tests/screenshots/baseline/*.png`
 
-### 1. `daily-digest-hero.png` — Hero / Overview Shot
-**File:** `2025-06-18.md`
-**What to capture:** Full page from the title ("Wednesday, June 18, 2025")
-through the end of the Notable section. This is the "above the fold" view a
-user sees when they open their daily note.
-**Shows:** AI headline, TL;DR summary, themes, stats bar, notable items.
-**Framing:** Reading view (not edit mode). ~1200px wide. Obsidian sidebar
-collapsed or just barely visible for context.
-**Why:** First impression — shows the value proposition at a glance.
+## Regenerating Example Notes
 
-### 2. `browser-activity.png` — Categorized Browser History
-**File:** `2025-06-18.md`
-**What to capture:** The "Browser Activity" section — show at least the
-"Dev & Engineering" and "Work" categories with their domain groupings.
-**Shows:** Automatic categorization, domain grouping, AI category summaries,
-clickable links with timestamps.
-**Framing:** Reading view, cropped to just the browser section. ~1200px wide.
-**Why:** Shows the core data transformation — raw URLs become organized,
-summarized intelligence.
+The 3 example markdown files are generated from persona fixtures via the
+real pipeline + renderer. Re-run after any renderer change:
 
-### 3. `searches-and-claude.png` — Search & AI Work Sections
-**File:** `2025-06-18.md`
-**What to capture:** The Searches section and Claude / AI Work section together.
-**Shows:** Search engine badges, query text, timestamps, Claude project tags,
-prompt summaries.
-**Framing:** Reading view, cropped to both sections. ~1200px wide.
-**Why:** Shows how the plugin captures your research trail and AI conversations.
+```bash
+npm run generate:examples
+```
 
-### 4. `meeting-heavy-day.png` — Mixed / Meeting Day Overview
-**File:** `2025-06-19.md`
-**What to capture:** Title through Notable section — showing a different kind
-of day (meetings + code review + research).
-**Shows:** How the plugin adapts its summary to different day types. Different
-themes, different activity distribution.
-**Framing:** Same as hero shot. ~1200px wide.
-**Why:** Demonstrates the plugin works for varied workflows, not just "heads
-down coding" days.
+This produces:
+- `docs/examples/2025-06-18.md` — deep-focus dev day (with AI)
+- `docs/examples/2025-06-19.md` — meeting-heavy PM day (with AI)
+- `docs/examples/2025-06-20-no-ai.md` — freelancer day (no AI)
 
-### 5. `no-ai-mode.png` — Without AI Summary
-**File:** `2025-06-20-no-ai.md`
-**What to capture:** Full title + stats line + beginning of Searches section.
-**Shows:** Clean output without AI — still useful as a structured activity log.
-**Framing:** Reading view. ~1200px wide.
-**Why:** Shows the plugin is useful even without an API key. Lowers the barrier
-to trying it.
+## Screenshot Inventory
 
-### 6. `settings-panel.png` — Plugin Settings
-**What to capture:** The plugin settings panel in Obsidian (Settings > Daily
-Digest). Show all sections: General, Data Sources, Limits, AI.
-**Shows:** Configurable options — folder, browsers, limits, AI toggle, model
-selection.
-**Framing:** Obsidian settings modal, ~1000px wide.
-**Why:** Shows ease of configuration and the privacy controls available.
+### Digest Note Screenshots (5)
 
----
+| File | Source Note | What It Shows |
+|---|---|---|
+| `digest-hero.png` | 2025-06-18 | Title + AI summary + notable items |
+| `digest-searches-claude.png` | 2025-06-18 | Searches + Claude sessions (expanded) |
+| `digest-browser.png` | 2025-06-18 | Browser Activity + Dev & Engineering (expanded) |
+| `digest-meeting-day.png` | 2025-06-19 | Meeting-heavy day overview |
+| `digest-no-ai.png` | 2025-06-20 | No-AI mode output |
 
-## Optional / Nice-to-Have Screenshots
+### Settings Panel Screenshots (9)
 
-### 7. `dark-mode.png` — Dark Theme Variant
-**File:** `2025-06-18.md`
-**What to capture:** Same as hero shot but in Obsidian dark mode.
-**Why:** Many Obsidian users prefer dark themes; shows it looks great either way.
+| File | Preset | What It Shows |
+|---|---|---|
+| `settings-default.png` | default | First-run / factory state |
+| `settings-sources.png` | sourcesExpanded | All data sources enabled |
+| `settings-browser-profiles.png` | browserProfiles | Detected browser profiles |
+| `settings-privacy-warn.png` | privacyWarn | Privacy warning (Anthropic + all sources) |
+| `settings-sanitization.png` | sanitizationExpanded | Privacy section |
+| `settings-sensitivity.png` | sensitivityRecommended | Sensitivity filter categories |
+| `settings-ai-local.png` | aiLocal | AI with local provider (Ollama) |
+| `settings-ai-anthropic.png` | aiAnthropic | AI with Anthropic provider |
+| `settings-advanced-ai.png` | advancedPipeline | Advanced section (classification + patterns) |
 
-### 8. `frontmatter-tags.png` — Tag Cloud / Graph View
-**What to capture:** Obsidian's graph view or tag pane showing the auto-generated
-tags (daily-digest, dev, oauth, react, authentication, etc.).
-**Shows:** How generated tags integrate with Obsidian's knowledge graph.
-**Framing:** Graph view with daily-digest notes highlighted. ~800px wide.
-**Why:** Powerful for Obsidian power users — shows the notes connect to your
-existing vault.
+### Privacy Screenshots (1)
 
-### 9. `calendar-view.png` — Monthly Calendar with Digests
-**What to capture:** Obsidian Calendar plugin showing a month with daily digest
-notes linked on each day.
-**Shows:** Daily digest integrates with the Calendar community plugin.
-**Framing:** Calendar sidebar + a daily note open. ~1200px wide.
-**Why:** Shows the daily ritual workflow.
+| File | What It Shows |
+|---|---|
+| `privacy-onboarding.png` | First-run consent modal |
 
-### 10. `command-palette.png` — Running the Plugin
-**What to capture:** Obsidian command palette with "Daily Digest: Generate
-today's digest" highlighted.
-**Shows:** How to trigger the plugin.
-**Framing:** Command palette overlay. ~600px wide.
-**Why:** Shows it's a one-click operation.
+## Architecture
 
-### 11. `mobile-view.png` — Mobile Reading (if applicable)
-**What to capture:** The daily digest rendered on Obsidian Mobile.
-**Shows:** Responsive, readable on mobile.
-**Framing:** Phone screenshot. ~375px wide.
-**Why:** Many Obsidian users review notes on mobile.
+```
+tests/screenshots/
+├── helpers/
+│   ├── screenshot.ts        # capture utilities (scroll, expand, capture)
+│   └── settings-presets.ts  # preset configs for settings screenshots
+├── specs/
+│   ├── privacy.screenshot.ts   # onboarding modal
+│   ├── digest.screenshot.ts    # digest note scenarios
+│   └── settings.screenshot.ts  # settings panel scenarios
+├── baseline/                # committed reference PNGs
+├── output/actual/           # latest capture (gitignored)
+├── vault/                   # test vault (gitignored, built by setup.sh)
+├── setup.sh                 # vault setup + symlinks
+└── wdio.conf.ts             # WDIO configuration
+```
 
----
+## Updating Baselines
 
-## Capture Tips
+After verifying new screenshots look correct:
 
-- **Theme:** Use Obsidian's default theme or "Minimal" for clean screenshots
-- **Font:** Default or a clean monospace (JetBrains Mono, SF Mono)
-- **Window:** Remove OS chrome if possible (use CleanShot or similar)
-- **Resolution:** Capture at 2x (Retina) then export at 1x for crisp images
-- **Format:** PNG for UI screenshots, WebP for README (smaller file size)
-- **Width:** Target 1200px display width (2400px at 2x)
-- **Annotations:** If annotating, use minimal, consistent style (e.g., red
-  rounded rectangles for callouts)
+```bash
+cp tests/screenshots/output/actual/*.png tests/screenshots/baseline/
+```
