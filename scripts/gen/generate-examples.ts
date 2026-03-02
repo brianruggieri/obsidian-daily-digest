@@ -25,19 +25,19 @@ import {
 	softwareEngineerDeepWork,
 	productManagerMeetings,
 	freelancerMultiProject,
-} from "../tests/fixtures/personas";
-import type { PersonaOutput } from "../tests/fixtures/personas";
-import { getPersonaMockSummary } from "./lib/mock-ai";
-import { BASE_SETTINGS } from "./presets";
-import { sanitizeCollectedData } from "../src/filter/sanitize";
-import { filterSensitiveDomains, filterSensitiveSearches } from "../src/filter/sensitivity";
-import { categorizeVisits } from "../src/filter/categorize";
-import { classifyEventsRuleOnly } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory } from "../src/analyze/patterns";
-import { generateKnowledgeSections } from "../src/analyze/knowledge";
-import { renderMarkdown } from "../src/render/renderer";
-import type { AISummary } from "../src/types";
-import type { AIProvider } from "../src/settings/types";
+} from "../../tests/fixtures/personas";
+import type { PersonaOutput } from "../../tests/fixtures/personas";
+import { getPersonaMockSummary } from "../lib/mock-ai";
+import { BASE_SETTINGS } from "../dev/presets";
+import { sanitizeCollectedData } from "../../src/filter/sanitize";
+import { filterSensitiveDomains, filterSensitiveSearches } from "../../src/filter/sensitivity";
+import { categorizeVisits } from "../../src/filter/categorize";
+import { classifyEventsRuleOnly } from "../../src/filter/classify";
+import { extractPatterns, buildEmptyTopicHistory } from "../../src/analyze/patterns";
+import { generateKnowledgeSections } from "../../src/analyze/knowledge";
+import { renderMarkdown } from "../../src/render/renderer";
+import type { AISummary } from "../../src/types";
+import type { AIProvider } from "../../src/settings/types";
 
 interface ExampleSpec {
 	/** Output filename relative to docs/examples/ */

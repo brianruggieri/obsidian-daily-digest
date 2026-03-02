@@ -41,29 +41,29 @@ if (existsSync(envPath)) {
 }
 
 import { PRESETS, resolvePreset, getPresetFilename } from "./presets";
-import { collectFixtureData, collectRealData } from "./lib/collector-shim";
-import { getMockSummary } from "./lib/mock-ai";
-import { createPromptLog, appendPromptEntry, estimateTokens } from "../src/plugin/prompt-logger";
-import type { PromptLog } from "../src/plugin/prompt-logger";
-import { runAssertions, writeReport } from "./lib/assertion-runner";
-import type { MatrixReport, PresetReport } from "./lib/assertion-runner";
+import { collectFixtureData, collectRealData } from "../lib/collector-shim";
+import { getMockSummary } from "../lib/mock-ai";
+import { createPromptLog, appendPromptEntry, estimateTokens } from "../../src/plugin/prompt-logger";
+import type { PromptLog } from "../../src/plugin/prompt-logger";
+import { runAssertions, writeReport } from "../lib/assertion-runner";
+import type { MatrixReport, PresetReport } from "../lib/assertion-runner";
 
 // src/ imports — obsidian is shimmed via tsconfig.scripts.json paths alias
-import { sanitizeCollectedData } from "../src/filter/sanitize";
-import { filterSensitiveDomains, filterSensitiveSearches } from "../src/filter/sensitivity";
-import { categorizeVisits } from "../src/filter/categorize";
-import { classifyEventsRuleOnly, classifyEvents } from "../src/filter/classify";
-import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../src/analyze/patterns";
-import { generateKnowledgeSections } from "../src/analyze/knowledge";
-import { clusterArticles } from "../src/analyze/clusters";
-import { linkSearchesToVisits } from "../src/analyze/intent";
-import { computeEngagementScore } from "../src/analyze/engagement";
-import { cleanTitle } from "../src/collect/browser";
-import { groupCommitsIntoWorkUnits } from "../src/analyze/commits";
-import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "../src/analyze/task-sessions";
-import { compressActivity } from "../src/summarize/compress";
-import { renderMarkdown } from "../src/render/renderer";
-import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../src/summarize/summarize";
+import { sanitizeCollectedData } from "../../src/filter/sanitize";
+import { filterSensitiveDomains, filterSensitiveSearches } from "../../src/filter/sensitivity";
+import { categorizeVisits } from "../../src/filter/categorize";
+import { classifyEventsRuleOnly, classifyEvents } from "../../src/filter/classify";
+import { extractPatterns, buildEmptyTopicHistory, DEFAULT_COOCCURRENCE_WINDOW, DEFAULT_MIN_CLUSTER_SIZE } from "../../src/analyze/patterns";
+import { generateKnowledgeSections } from "../../src/analyze/knowledge";
+import { clusterArticles } from "../../src/analyze/clusters";
+import { linkSearchesToVisits } from "../../src/analyze/intent";
+import { computeEngagementScore } from "../../src/analyze/engagement";
+import { cleanTitle } from "../../src/collect/browser";
+import { groupCommitsIntoWorkUnits } from "../../src/analyze/commits";
+import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "../../src/analyze/task-sessions";
+import { compressActivity } from "../../src/summarize/compress";
+import { renderMarkdown } from "../../src/render/renderer";
+import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../../src/summarize/summarize";
 
 import type {
 	SensitivityConfig,
@@ -72,9 +72,9 @@ import type {
 	PatternAnalysis,
 	AISummary,
 	ArticleCluster,
-} from "../src/types";
-import type { KnowledgeSections } from "../src/analyze/knowledge";
-import type { AICallConfig } from "../src/summarize/ai-client";
+} from "../../src/types";
+import type { KnowledgeSections } from "../../src/analyze/knowledge";
+import type { AICallConfig } from "../../src/summarize/ai-client";
 
 // ── Env vars ─────────────────────────────────────────────
 

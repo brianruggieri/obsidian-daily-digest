@@ -131,15 +131,16 @@ tests/
   fixtures/             Test data generators and persona definitions
   mocks/obsidian.ts     Obsidian API mock
 scripts/
-  daily-matrix.ts       Dev script: full pipeline run outside Obsidian
-  inspector.ts          Dev script: step-by-step pipeline inspector
-  presets.ts            Shared settings presets for scripts
+  build/                deploy.mjs, bundle-analyze.mjs, version-bump.mjs
+  dev/                  daily-matrix.ts, inspect.ts, inspector.ts, privacy-diff.ts, presets.ts
+  gen/                  generate-examples.ts, generate-settings-docs.ts, matrix-validator.ts, etc.
+  lib/                  assertion-runner.ts, collector-shim.ts, mock-ai.ts, txt-loader.mjs
   etl/                  Build-time domain list processing tools
 ```
 
 **Key invariants to maintain:**
-- `scripts/daily-matrix.ts` must mirror `src/plugin/main.ts` stage-for-stage. Update both when changing the pipeline.
-- `src/settings-registry.ts` must stay in sync with `DailyDigestSettings` in `src/settings/types.ts`. A check script enforces this: `scripts/check-settings-registry.ts`.
+- `scripts/dev/daily-matrix.ts` must mirror `src/plugin/main.ts` stage-for-stage. Update both when changing the pipeline.
+- `src/settings-registry.ts` must stay in sync with `DailyDigestSettings` in `src/settings/types.ts`. A check script enforces this: `scripts/gen/check-settings-registry.ts`.
 - Sanitization always runs before any data touches AI or the vault.
 
 ---
