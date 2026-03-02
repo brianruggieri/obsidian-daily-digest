@@ -265,8 +265,9 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		key: "debugMode",
 		label: "Debug mode",
 		description:
-			"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
-			"For development use only.",
+			"Adds an 'Inspect pipeline stage' command so you can see exactly what data " +
+			"was collected and processed at each stage. Useful for troubleshooting or " +
+			"understanding what the plugin knows about your day.",
 		section: "Advanced",
 		type: "boolean",
 		defaultValue: "false",
@@ -360,8 +361,11 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		key: "promptsDir",
 		label: "Prompt templates directory",
 		description:
-			"Path to a directory containing custom prompt templates " +
-			"(standard.txt, rag.txt, etc.). Leave empty to use the built-in prompts.",
+			"Path to a folder containing custom prompt templates. You can override any built-in template " +
+			"by placing a .txt file with the same name in this folder " +
+			"(prose-high.txt, prose-balanced.txt, prose-lite.txt, standard.txt, " +
+			"compressed.txt, classified.txt, deidentified.txt). Missing files fall back to " +
+			"the built-in versions. Leave empty to use the built-in prompts.",
 		section: "AI summarization",
 		type: "string",
 		defaultValue: "",
@@ -408,34 +412,12 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		dependsOn: "enableClassification",
 	},
 	{
-		key: "patternCooccurrenceWindow",
-		label: "Co-occurrence window",
-		description:
-			"Time window in minutes for detecting topic co-occurrences. " +
-			"Events within the same window are considered related.",
-		section: "Advanced",
-		type: "slider",
-		defaultValue: "30",
-		dependsOn: undefined,
-	},
-	{
-		key: "patternMinClusterSize",
-		label: "Minimum cluster size",
-		description:
-			"Minimum number of events required to form a temporal cluster. " +
-			"Lower values detect more clusters but may include noise.",
-		section: "Advanced",
-		type: "slider",
-		defaultValue: "3",
-		dependsOn: undefined,
-	},
-	{
 		key: "trackRecurrence",
 		label: "Track recurrence",
 		description:
-			"Persist topic history across days to detect recurring interests, " +
-			"returning topics, and rising trends. Stored locally in your vault " +
-			"under .daily-digest/topic-history.json.",
+			"Remember topics you visit across multiple days and highlight recurring interests " +
+			"in your daily notes. When enabled, a small topic-history file is stored locally " +
+			"in your vault (.daily-digest/topic-history.json).",
 		section: "Advanced",
 		type: "boolean",
 		defaultValue: "true",

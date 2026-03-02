@@ -10,7 +10,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 - [🗄️ Data sources](#data-sources) (9 settings)
 - [🛡️ Privacy](#privacy) (4 settings)
 - [✨ AI summarization](#ai-summarization) (10 settings)
-- [🧠 Advanced](#advanced) (9 settings)
+- [🧠 Advanced](#advanced) (6 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -269,7 +269,7 @@ Display the exact AI prompt in the data preview modal before sending to Anthropi
 
 **Prompt templates directory**
 
-Path to a directory containing custom prompt templates (standard.txt, rag.txt, etc.). Leave empty to use the built-in prompts.
+Path to a folder containing custom prompt templates. You can override any built-in template by placing a .txt file with the same name in this folder (prose-high.txt, prose-balanced.txt, prose-lite.txt, standard.txt, compressed.txt, classified.txt, deidentified.txt). Missing files fall back to the built-in versions. Leave empty to use the built-in prompts.
 
 - **Type:** Text
 - **Default:** *(empty)*
@@ -291,7 +291,7 @@ Exclude: remove matching visits entirely from the note. Redact: keep the visit b
 
 **Debug mode**
 
-Enables the 'Inspect pipeline stage' command for per-stage data inspection. For development use only.
+Adds an 'Inspect pipeline stage' command so you can see exactly what data was collected and processed at each stage. Useful for troubleshooting or understanding what the plugin knows about your day.
 
 - **Type:** Toggle
 - **Default:** `false`
@@ -327,29 +327,11 @@ Number of events per classification batch. Larger batches are faster but may red
 - **Default:** `8`
 - **Visible when:** `enableClassification` is enabled
 
-### `patternCooccurrenceWindow`
-
-**Co-occurrence window**
-
-Time window in minutes for detecting topic co-occurrences. Events within the same window are considered related.
-
-- **Type:** Slider
-- **Default:** `30`
-
-### `patternMinClusterSize`
-
-**Minimum cluster size**
-
-Minimum number of events required to form a temporal cluster. Lower values detect more clusters but may include noise.
-
-- **Type:** Slider
-- **Default:** `3`
-
 ### `trackRecurrence`
 
 **Track recurrence**
 
-Persist topic history across days to detect recurring interests, returning topics, and rising trends. Stored locally in your vault under .daily-digest/topic-history.json.
+Remember topics you visit across multiple days and highlight recurring interests in your daily notes. When enabled, a small topic-history file is stored locally in your vault (.daily-digest/topic-history.json).
 
 - **Type:** Toggle
 - **Default:** `true`

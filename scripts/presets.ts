@@ -65,8 +65,6 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	enableClassification: false,
 	classificationModel: "qwen2.5:7b-instruct",
 	classificationBatchSize: 8,
-	patternCooccurrenceWindow: 30,
-	patternMinClusterSize: 3,
 	trackRecurrence: false,
 
 	// Meta

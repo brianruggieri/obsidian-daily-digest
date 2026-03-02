@@ -1,5 +1,9 @@
 # Daily Digest for Obsidian
 
+[![version](https://img.shields.io/github/v/release/brianruggieri/obsidian-daily-digest?style=flat-square&label=version)](https://github.com/brianruggieri/obsidian-daily-digest/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/brianruggieri/obsidian-daily-digest/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/brianruggieri/obsidian-daily-digest/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
 **Your day, distilled.** Daily Digest is an Obsidian plugin that reads your browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits, then compiles them into an AI-summarized daily note.
 
 One command. One note. Everything you did today, in one place.
@@ -74,17 +78,11 @@ To collect activity data, the plugin reads files from outside your Obsidian vaul
 
 ## Installation
 
-### From Obsidian Community Plugins (coming soon)
-
-1. Open **Settings > Community plugins > Browse**
-2. Search for **Daily Digest**
-3. Click **Install**, then **Enable**
-
 ### Manual install
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/brianruggieri/obsidian-daily-digest/releases/latest)
+1. Download `main.js`, `manifest.json`, `styles.css`, and `sql-wasm.wasm` from the [latest release](https://github.com/brianruggieri/obsidian-daily-digest/releases/latest)
 2. Create a folder: `<your-vault>/.obsidian/plugins/daily-digest/`
-3. Drop the three files into that folder
+3. Drop all four files into that folder
 4. Restart Obsidian and enable the plugin in **Settings > Community plugins**
 
 ### Build from source
@@ -96,7 +94,7 @@ npm install
 npm run build
 ```
 
-Then copy `main.js`, `manifest.json`, and `styles.css` into your vault's plugin directory.
+Then copy `main.js`, `manifest.json`, `styles.css`, and `sql-wasm.wasm` into your vault's plugin directory, or run `npm run deploy` to do it automatically.
 
 ---
 
@@ -235,11 +233,11 @@ Turn on event classification and your raw activity gets transformed into structu
 - **Entities:** tools, libraries, and technologies mentioned
 - **Intent:** compare, implement, evaluate, troubleshoot, configure, explore
 
-Classification runs **locally** on your machine (requires a local model). The structured output powers both the privacy escalation chain and the pattern extraction below.
+Classification runs **locally** on your machine (requires a local model). When Anthropic is your AI provider, only the structured output — not raw URLs or queries — is sent to the cloud.
 
 ### Pattern extraction
 
-With classification enabled, Daily Digest can extract patterns from your day:
+Daily Digest extracts statistical patterns from your activity without any LLM calls:
 
 - **Temporal clusters** — when your activity concentrated and what you were doing
 - **Topic co-occurrences** — which topics appeared together
@@ -247,7 +245,7 @@ With classification enabled, Daily Digest can extract patterns from your day:
 - **Focus score** — a 0-100% measure of how scattered or focused your day was
 - **Recurrence signals** — tracks topics across days to spot rising interests, returning themes, and stable focus areas
 
-All pattern extraction is local and statistical — no LLM calls, just math on the classified events.
+With event classification enabled, pattern quality improves significantly — but patterns always run regardless.
 
 ### Dataview integration
 
@@ -268,33 +266,6 @@ WHERE answer_what_token_storage_strategy_is_safest_for_our_spa
 
 Frontmatter includes `focus_score`, `themes`, `categories`, and `tags` for cross-day queries.
 
-### Matrix Validation
-
-Before choosing your provider and privacy tier, **run the matrix validator** to see real-world cost/quality/privacy trade-offs:
-
-```bash
-npm run matrix:validate:phase1      # Free validation (Tier 4 only) — 2 minutes
-npm run matrix:validate             # Full matrix (all tiers) — 10 minutes, ~$0.04
-```
-
-This generates metrics for 4 real-world decision scenarios:
-
-| Scenario | Question | Decision |
-|----------|----------|----------|
-| **Cost-Benefit Analysis** | Should we use Claude instead of local LLM? | Recommend Claude or local based on quality gap vs. cost |
-| **Privacy Audit** | Do we comply with privacy requirements? | Pass/fail with leak detection per tier |
-| **Quality Regression** | Has quality dropped since last release? | Approve merge or block on quality loss |
-| **Persona Coverage** | Does each user type get appropriate quality? | Assess quality thresholds per persona segment |
-
-Reports are generated in multiple formats:
-- **JSON** — Machine-parseable for CI/CD automation
-- **Markdown** — Human-readable technical summary
-- **HTML** — Visual dashboard for stakeholders
-
-Use `npm run matrix:cost-analysis` for monthly/annual cost projections, and `npm run matrix:ci-gate` to block merges on privacy/quality failures.
-
-For details, see [Matrix Validation documentation](./docs/matrix-validation/README.md).
-
 ---
 
 ## Configuration
@@ -303,114 +274,20 @@ All settings live in **Settings > Daily Digest** within Obsidian.
 
 | Setting | Default | What it does |
 |---------|---------|-------------|
-| Daily notes folder | `daily` | Where notes are created in your vault |
-| Filename template | `YYYY-MM-DD` | Date format for filenames |
-| Lookback hours | 24 | How far back to collect activity |
-| Browsers | Chrome, Brave, Firefox, Safari | Which browsers to scan |
-| AI provider | Local | Where AI processing happens |
-| AI model | Claude Haiku 4.5 | Which model to use (if Anthropic) |
-| Sensitivity filter | Off | Domain-level content filtering |
-| Classification | Off | Local LLM event classification |
+| Daily notes folder | `daily` | Folder in your vault where notes are saved |
+| Filename template | `YYYY-MM-DD` | Date format for note filenames |
+| Browser history | Off | Collect browser visits and search queries |
+| Claude Code sessions | Off | Include AI coding session summaries |
+| Codex CLI sessions | Off | Include Codex CLI session summaries |
+| Git commits | Off | Collect commit history from local repos |
+| Enable AI summaries | Off | Add AI headline, themes, and reflection questions |
+| AI provider | Local | Local model (Ollama/LM Studio) or Anthropic API |
+| Anthropic model | claude-haiku-4-5 | Which model to use when Anthropic is selected |
+| Sensitivity filter | Off | Filter domains by category (adult, gambling, etc.) |
+| Event classification | Off | Structured activity tagging via local model |
+| Track recurrence | On | Highlight topics you return to across multiple days |
 
-See the settings panel for detailed descriptions of each option and inline setup guides for local models.
-
----
-
-## Development
-
-### Prerequisites
-
-- Node.js 22+ (see `.nvmrc` — run `nvm use` to switch automatically)
-- npm 10+
-
-### Setup
-
-```bash
-git clone https://github.com/brianruggieri/obsidian-daily-digest.git
-cd obsidian-daily-digest
-npm install
-```
-
-### Scripts
-
-```bash
-npm run dev              # Watch mode with hot reload
-npm run build            # Type-check and production build
-npm run lint             # ESLint
-npm test                 # Run all tests (unit + integration)
-npm run test:unit        # Unit tests only
-npm run test:integration # Integration tests only
-npm run test:eval        # AI evaluation tests (requires API key or local model)
-npm run test:eval:local  # AI eval tests against local model
-npm run test:coverage    # Coverage report (v8)
-npm run deploy           # Build and copy to your local Obsidian vault
-npm run deploy:dev       # Quick deploy without full rebuild
-npm run screenshots      # Capture all 15 screenshot scenarios
-```
-
-### Screenshot automation
-
-The screenshot suite uses [wdio-obsidian-service](https://github.com/obsidianmd/wdio-obsidian-service) to launch a sandboxed Obsidian instance, install the plugin, and capture UI screenshots for the README:
-
-```bash
-npm run build            # Build main.js first
-npm run screenshots      # Vault setup + capture 15 screenshots
-```
-
-Screenshots are saved to `tests/screenshots/output/`. Committed baselines live in `tests/screenshots/baseline/`. The CI workflow runs these on every push to `main` and uploads diffs as artifacts on failure.
-
-### Testing
-
-The test suite includes:
-
-- **Unit tests** — sanitization, categorization, classification, pattern extraction, knowledge generation, rendering, summarization, merge safety, browser profiles, secret storage, prompt templates, presets
-- **Integration tests** — full pipeline runs with 6 realistic personas, privacy escalation chain verification, merge safety, multi-day topic recurrence, matrix validation
-- **AI evaluation tests** — LLM-as-judge framework for summary quality, privacy auditing, knowledge value, prompt injection resistance, and fixture validation
-
-To run AI eval tests, copy `.env.example` to `.env` and configure your provider:
-
-```bash
-cp .env.example .env
-# Edit .env with your API key or local model settings
-npm run test:eval
-```
-
-### Project structure
-
-```
-src/
-  types.ts              TypeScript interfaces and constants
-  plugin/
-    main.ts             Plugin entry point, commands, vault integration
-    privacy.ts          Consent modals and onboarding flow
-  settings/
-    types.ts            Settings interface, defaults, constants
-    ui.ts               Settings tab UI
-  collect/
-    browser.ts          Browser history collection via sql.js
-    browser-profiles.ts Multi-browser, multi-profile detection
-    claude.ts           Claude Code session reading
-    codex.ts            Codex CLI session reading
-    git.ts              Git commit history collection
-  filter/
-    sanitize.ts         Defense-in-depth secret scrubbing
-    sensitivity.ts      419-domain sensitivity filter
-    categorize.ts       Rule-based domain categorization
-    classify.ts         Local LLM event classification
-  analyze/
-    patterns.ts         Statistical pattern extraction
-    knowledge.ts        Knowledge section generation
-  summarize/
-    summarize.ts        AI prompt building and routing
-    prompt-templates.ts Prompt templates
-    ai-client.ts        Anthropic + local model abstraction
-    compress.ts         Token-budget activity compression
-    chunker.ts          RAG chunking pipeline
-    embeddings.ts       Vector embeddings and retrieval
-  render/
-    renderer.ts         Markdown generation
-    merge.ts            Safe content merging with backups
-```
+See the settings panel for full descriptions and inline setup guides for local models.
 
 ---
 
@@ -427,7 +304,7 @@ Daily Digest is **desktop only** (`isDesktopOnly: true`) — it requires filesys
 | Codex CLI sessions | ✓ | ✓ | ✓ |
 | Git commits | ✓ | ✓ | ✓ |
 
-Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly) — no native binaries, no system dependencies. The wasm binary (~1.2 MB) is bundled inline.
+Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly) — no native binaries, no system dependencies. The WASM binary (~644 KB) ships as a separate file alongside `main.js` in each release.
 
 ---
 
@@ -437,7 +314,7 @@ Browser history is read using [sql.js](https://github.com/sql-js/sql.js) (SQLite
 Yes. The "Generate today's daily note (no AI)" command gives you a fully structured activity log with categorized browser visits, searches, and Claude Code sessions — just no headline, summary, or reflection questions.
 
 **Does my data leave my computer?**
-Only if you choose Anthropic as your AI provider. With a local model (or no AI), everything stays on your machine. Even with Anthropic, the privacy escalation chain minimizes what gets sent.
+Only if you choose Anthropic as your AI provider. With a local model (or no AI), everything stays on your machine. Even with Anthropic, the privacy escalation chain minimizes what gets sent, and a preview modal shows you exactly what will be transmitted before you confirm.
 
 **Will this slow down Obsidian?**
 No. Generation takes 3-6 seconds (mostly waiting for the AI response) and only runs when you trigger it. There are no background processes.
@@ -446,39 +323,23 @@ No. Generation takes 3-6 seconds (mostly waiting for the AI response) and only r
 Your custom content is preserved. Daily Digest extracts your notes, reflection answers, and any custom sections, creates a backup, then merges everything into the fresh note.
 
 **Can I use this with Obsidian Sync / iCloud / Dropbox?**
-Yes, but be aware that your daily notes (which contain your activity data) will be synced to those services. If you store an Anthropic API key in the plugin settings, that gets synced too — consider using the `ANTHROPIC_API_KEY` environment variable instead.
+Yes, but be aware that your daily notes (which contain your activity data) will be synced to those services. The API key is stored in Obsidian's secure credential store and is not synced.
 
 ---
 
 ## Roadmap
 
-Features already shipped are in the current release. The following are planned but **not yet implemented**:
+Features already shipped are in the current release. The following is planned but not yet implemented:
 
-**Cross-day embeddings**
-- Persist each day's embedding index and enable semantic search across a date range
-- Previously stubbed in `embeddings.ts`; stubs have been removed. Will be re-implemented when ready.
-
-**Platform expansion**
+**Cross-day embeddings** — Persist each day's embedding index and enable semantic search across a date range. Will be implemented in a future release.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! If you'd like to help:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing guide, project structure, and how to submit a pull request.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Make your changes with tests
-4. Run `npm test` and `npm run lint`
-5. Open a pull request
-
-Please open an issue first for major changes so we can discuss the approach.
-
-### AI-assisted contributions
-
-AI-assisted contributions are welcome. If you used AI tools (Copilot, Claude, Codex, etc.), mention it in your PR description with a brief note on scope (e.g., "Claude helped with the regex" or "Codex generated initial test scaffolding"). No need to disclose trivial autocomplete.
-
-What matters is that you understand the code you're submitting and can explain your changes during review.
+Bug reports and feature requests are welcome — please [open an issue](https://github.com/brianruggieri/obsidian-daily-digest/issues) first for major changes so we can discuss the approach.
 
 ---
 
@@ -492,4 +353,4 @@ All code is human-reviewed, tested, and maintained by [Brian Ruggieri](https://g
 
 ## License
 
-[MIT](LICENSE) - 2026 Brian Ruggieri
+[MIT](LICENSE) — 2026 Brian Ruggieri
