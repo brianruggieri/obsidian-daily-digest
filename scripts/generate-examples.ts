@@ -5,6 +5,10 @@
  * producing notes in docs/examples/ that always match the current renderer
  * output format. Re-run after any renderer change to keep examples in sync.
  *
+ * Note: Persona fixtures use randomized data (timestamps, entities, etc.),
+ * so each run produces slightly different content. The `generated:` timestamp
+ * in frontmatter is pinned to avoid unnecessary diff noise.
+ *
  * Usage:
  *   npm run generate:examples
  *
@@ -14,7 +18,7 @@
  *   freelancerMultiProject    → docs/examples/2025-06-20-no-ai.md (no AI)
  */
 
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { resolve } from "path";
 
 import {
@@ -124,7 +128,14 @@ function generateExample(spec: ExampleSpec): string {
 	let aiSummary: AISummary | null = null;
 	let aiProvider: AIProvider | "none" = "none";
 	if (spec.personaKey) {
-		aiSummary = getPersonaMockSummary(spec.personaKey);
+		const summary = getPersonaMockSummary(spec.personaKey);
+		if (!summary) {
+			throw new Error(
+				`[generate-examples] No mock AI summary found for personaKey "${spec.personaKey}". ` +
+				`Add it to PERSONA_SUMMARIES in scripts/lib/mock-ai.ts.`
+			);
+		}
+		aiSummary = summary;
 		aiProvider = "local";
 	}
 
@@ -146,10 +157,13 @@ function generateExample(spec: ExampleSpec): string {
 
 function main(): void {
 	const outDir = resolve("docs/examples");
+	mkdirSync(outDir, { recursive: true });
 	console.error("[generate-examples] Generating example notes...");
 
 	for (const spec of EXAMPLES) {
-		const md = generateExample(spec);
+		let md = generateExample(spec);
+		// Pin the generated timestamp so re-runs don't produce diff noise
+		md = md.replace(/^generated: .+$/m, `generated: ${spec.dateStr} 08:00`);
 		const outPath = resolve(outDir, spec.filename);
 		writeFileSync(outPath, md, "utf-8");
 		const aiLabel = spec.personaKey ? "with AI" : "no AI";

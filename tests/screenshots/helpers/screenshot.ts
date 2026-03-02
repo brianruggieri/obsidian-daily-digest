@@ -230,6 +230,7 @@ export async function expandCallout(titleText: string): Promise<void> {
 			}
 			// Fallback: click the title itself
 			(el as HTMLElement).click();
+			return;
 		}
 	}, titleText);
 	await browser.pause(RENDER_SETTLE_MS);
