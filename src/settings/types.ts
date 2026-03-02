@@ -35,8 +35,6 @@ export interface DailyDigestSettings {
 	sensitivityAction: "exclude" | "redact";
 	enableGit: boolean;
 	gitParentDir: string;
-	patternCooccurrenceWindow: number;
-	patternMinClusterSize: number;
 	trackRecurrence: boolean;
 	/** Max unique pages shown per domain in the daily note. Default: 5. Range: 1-20. */
 	maxVisitsPerDomain: number;
@@ -80,8 +78,6 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	sensitivityAction: "exclude" as "exclude" | "redact",
 	enableGit: false,
 	gitParentDir: "",
-	patternCooccurrenceWindow: 30,
-	patternMinClusterSize: 3,
 	trackRecurrence: true,
 	maxVisitsPerDomain: 5,
 	promptsDir: "",

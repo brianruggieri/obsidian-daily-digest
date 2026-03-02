@@ -226,8 +226,8 @@ async function runPreset(
 	if (classification.events.length > 0) {
 		const patternConfig: PatternConfig = {
 			enabled: true,
-			cooccurrenceWindow: settings.patternCooccurrenceWindow,
-			minClusterSize: settings.patternMinClusterSize,
+			cooccurrenceWindow: 30,
+			minClusterSize: 3,
 			trackRecurrence: settings.trackRecurrence,
 		};
 		const topicHistory = buildEmptyTopicHistory();

@@ -1007,8 +1007,8 @@ async function runPipeline(
 		await stage("patterns", () => {
 			const patternConfig: PatternConfig = {
 				enabled: true,
-				cooccurrenceWindow: settings.patternCooccurrenceWindow,
-				minClusterSize: settings.patternMinClusterSize,
+				cooccurrenceWindow: 30,
+				minClusterSize: 3,
 				trackRecurrence: settings.trackRecurrence,
 			};
 			patterns = extractPatterns(classification!, patternConfig, buildEmptyTopicHistory(), dateStr);

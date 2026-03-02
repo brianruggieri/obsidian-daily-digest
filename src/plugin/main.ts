@@ -357,8 +357,8 @@ export default class DailyDigestPlugin extends Plugin {
 				progressNotice.setMessage("Daily Digest: Extracting patterns\u2026");
 				const patternConfig: PatternConfig = {
 					enabled: true,
-					cooccurrenceWindow: this.settings.patternCooccurrenceWindow,
-					minClusterSize: this.settings.patternMinClusterSize,
+					cooccurrenceWindow: 30,
+					minClusterSize: 3,
 					trackRecurrence: this.settings.trackRecurrence,
 				};
 

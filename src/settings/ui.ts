@@ -761,7 +761,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			// ── Prompt templates ─────────────────────
 			new Setting(advContent)
 				.setName("Prompt templates directory")
-				.setDesc("Path to custom prompt templates (standard.txt, rag.txt, etc.). Leave empty for built-in prompts.")
+				.setDesc("Path to a folder containing custom prompt templates (prose-high.txt, prose-balanced.txt, prose-lite.txt). Leave empty to use the built-in prompts.")
 				.addText((text) =>
 					text
 						.setPlaceholder("e.g. ~/prompts/daily-digest")
@@ -773,54 +773,12 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 		}
 
-		// ── Pattern extraction (always runs — free, on-device, no LLM) ──
-		const patternLabel = new Setting(advContent)
-			.setName("Pattern extraction")
-			.setDesc(
-				"Pattern extraction always runs — it is entirely local and statistical " +
-				"(no LLM calls). These settings tune cluster detection and recurrence tracking."
-			);
-		patternLabel.settingEl.addClass("dd-subsection-label");
-
-		new Setting(advContent)
-			.setName("Co-occurrence window")
-			.setDesc(
-				"Time window in minutes for detecting topic co-occurrences. " +
-				"Events within the same window are considered related."
-			)
-			.addSlider((slider) =>
-				slider
-					.setLimits(10, 120, 10)
-					.setValue(this.plugin.settings.patternCooccurrenceWindow)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.patternCooccurrenceWindow = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(advContent)
-			.setName("Minimum cluster size")
-			.setDesc(
-				"Minimum number of events to form a temporal cluster. " +
-				"Lower values detect more clusters but may include noise."
-			)
-			.addSlider((slider) =>
-				slider
-					.setLimits(2, 10, 1)
-					.setValue(this.plugin.settings.patternMinClusterSize)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.patternMinClusterSize = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
 		new Setting(advContent)
 			.setName("Track recurrence")
 			.setDesc(
-				"Persist topic history across days to detect recurring interests " +
-				"and rising trends. Stored in .daily-digest/topic-history.json."
+				"Remember topics you visit across multiple days and highlight recurring interests " +
+				"in your daily notes. When enabled, a small topic-history file is stored locally " +
+				"in your vault (.daily-digest/topic-history.json)."
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -835,8 +793,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		new Setting(advContent)
 			.setName("Debug mode")
 			.setDesc(
-				"Enables the 'Inspect pipeline stage' command for per-stage data inspection. " +
-				"For development use only."
+				"Adds an 'Inspect pipeline stage' command so you can see exactly what data " +
+				"was collected and processed at each stage. Useful for troubleshooting or " +
+				"understanding what the plugin knows about your day."
 			)
 			.addToggle((toggle) =>
 				toggle
