@@ -39,6 +39,12 @@ jobs:
             exit 1
           fi
 
+      - name: Copy WASM artifact
+        run: |
+          # sql-wasm.wasm is not bundled in main.js; Obsidian loads it from the
+          # plugin directory at runtime. It must be included in every release.
+          cp node_modules/sql.js/dist/sql-wasm.wasm sql-wasm.wasm
+
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +52,7 @@ jobs:
           tag="${GITHUB_REF#refs/tags/}"
 
           # Build the list of assets to upload
-          assets=(main.js manifest.json)
+          assets=(main.js manifest.json sql-wasm.wasm)
           if [ -f styles.css ]; then
             assets+=(styles.css)
           fi

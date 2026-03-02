@@ -18,19 +18,40 @@ function tmpPath(suffix: string): string {
 
 // ── SQLite via sql.js (WebAssembly) ──────────────
 // Uses sql.js (SQLite compiled to WASM) — no native binaries, no CLI dependency,
-// works on macOS, Windows, and Linux. The wasm binary is bundled inline by esbuild.
+// works on macOS, Windows, and Linux. The WASM binary is shipped as a separate
+// file (sql-wasm.wasm) alongside main.js rather than inlined in the bundle,
+// keeping main.js ~600 KB smaller.
+//
+// Call initBrowserCollection(pluginDir) from Plugin.onload() to register the
+// absolute filesystem path to the plugin directory. The WASM is read from there
+// on first use. Development scripts (tsx) fall back to node_modules/.
 
-// esbuild inlines the .wasm via binary loader; tsx scripts fall back to readFileSync.
+let _pluginDir: string | undefined;
 let _wasmBinary: Uint8Array | ArrayBuffer | undefined;
+let _wasmLoadError: Error | undefined;
+
+/** Register the absolute path to the plugin directory. Call from Plugin.onload(). */
+export function initBrowserCollection(pluginDir: string): void {
+	_pluginDir = pluginDir;
+}
+
 async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
 	if (_wasmBinary) return _wasmBinary;
+	// Cache failure so repeated calls don't retry disk I/O or re-log spam.
+	if (_wasmLoadError) throw _wasmLoadError;
+
+	const wasmPath = _pluginDir
+		? join(_pluginDir, "sql-wasm.wasm")
+		: join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm");
+
 	try {
-		// @ts-expect-error — esbuild binary loader resolves .wasm to a Uint8Array default export
-		const { default: wasm } = await import("sql.js/dist/sql-wasm.wasm");
-		_wasmBinary = wasm as Uint8Array;
+		_wasmBinary = readFileSync(wasmPath);
 	} catch {
-		// tsx scripts: load from disk at runtime
-		_wasmBinary = readFileSync(join(process.cwd(), "node_modules/sql.js/dist/sql-wasm.wasm"));
+		_wasmLoadError = new Error(
+			`sql-wasm.wasm not found at "${wasmPath}". ` +
+			"Ensure the plugin was installed or deployed correctly (npm run deploy).",
+		);
+		throw _wasmLoadError;
 	}
 	return _wasmBinary;
 }
