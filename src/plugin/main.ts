@@ -654,7 +654,7 @@ export default class DailyDigestPlugin extends Plugin {
 				knowledgeSections,
 				undefined,  // promptLog
 				this.settings.enableTimeline,
-				this.settings.enableWikilinks,
+				this.settings.enableWikilinks ? this.settings.artifactFolders : undefined,
 				resurfaceLines,
 			);
 

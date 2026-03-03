@@ -500,7 +500,7 @@ export function renderMarkdown(
 	knowledge?: KnowledgeSections,
 	promptLog?: PromptLog,
 	enableTimeline = false,
-	enableWikilinks = false,
+	wikilinkFolders?: { topics: string; entities: string; seeds: string },
 	resurfaceLines: string[] = [],
 ): string {
 	const today = formatDate(date);
@@ -675,10 +675,10 @@ export function renderMarkdown(
 		knowledge.knowledgeDeltaLines.length > 0
 	);
 	if (hasKnowledgeContent && aiSummary) {
-		const wikilinkFolders = enableWikilinks
-			? { topics: "Topics", entities: "Entities" }
+		const kFolders = wikilinkFolders
+			? { topics: wikilinkFolders.topics, entities: wikilinkFolders.entities }
 			: undefined;
-		renderKnowledgeInsights(lines, knowledge!, true, wikilinkFolders);
+		renderKnowledgeInsights(lines, knowledge!, true, kFolders);
 	}
 
 	// ── Learnings (collapsed callout, moved to Layer 2) ─
@@ -703,9 +703,10 @@ export function renderMarkdown(
 	if (aiSummary?.note_seeds?.length) {
 		lines.push("> [!tip]- \u{1F331} Note Seeds");
 		for (const seed of aiSummary.note_seeds) {
-			if (enableWikilinks) {
+			if (wikilinkFolders) {
 				const slug = seedSlug(seed);
-				lines.push(`> - [[Seeds/${slug}|${escapeForMarkdown(seed)}]]`);
+				const seedPath = wikilinkFolders.seeds ? `${wikilinkFolders.seeds}/${slug}` : slug;
+				lines.push(`> - [[${seedPath}|${escapeForMarkdown(seed)}]]`);
 			} else {
 				lines.push(`> - [[${escapeForMarkdown(seed)}]]`);
 			}
@@ -930,10 +931,10 @@ export function renderMarkdown(
 
 	// ── Knowledge Insights (no-AI mode: open headings) ─
 	if (knowledge && !aiSummary) {
-		const wikilinkFolders = enableWikilinks
-			? { topics: "Topics", entities: "Entities" }
+		const kFolders = wikilinkFolders
+			? { topics: wikilinkFolders.topics, entities: wikilinkFolders.entities }
 			: undefined;
-		renderKnowledgeInsights(lines, knowledge, false, wikilinkFolders);
+		renderKnowledgeInsights(lines, knowledge, false, kFolders);
 	}
 
 	// ── Resurface ─────────────────────────────────

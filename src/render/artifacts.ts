@@ -92,12 +92,12 @@ export async function writeTopicNote(
 			await vault.modify(existing, updated);
 		}
 	} else {
-		const content = buildTopicNoteContent(topic, slug, dailyPath, dateStr);
+		const content = buildTopicNoteContent(topic, dailyPath, dateStr);
 		await vault.create(filePath, content);
 	}
 }
 
-function buildTopicNoteContent(topic: string, _slug: string, dailyPath: string, dateStr: string): string {
+function buildTopicNoteContent(topic: string, dailyPath: string, dateStr: string): string {
 	return `---
 type: topic
 created: ${dateStr}
@@ -138,12 +138,12 @@ export async function writeEntityNote(
 			await vault.modify(existing, updated);
 		}
 	} else {
-		const content = buildEntityNoteContent(entity, slug, dailyPath, dateStr);
+		const content = buildEntityNoteContent(entity, dailyPath, dateStr);
 		await vault.create(filePath, content);
 	}
 }
 
-function buildEntityNoteContent(entity: string, _slug: string, dailyPath: string, dateStr: string): string {
+function buildEntityNoteContent(entity: string, dailyPath: string, dateStr: string): string {
 	return `---
 type: entity
 created: ${dateStr}

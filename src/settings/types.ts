@@ -61,8 +61,6 @@ export interface DailyDigestSettings {
 	enableWikilinks: boolean;
 	/** Generate a Resurface block linking back to prior daily notes for recurring topics. Default: false. */
 	enableResurfacing: boolean;
-	/** Wrap raw activity sections (Browser, Searches, Git, Claude) in collapsible callouts with consistent formatting. Default: false. */
-	collapsibleRawSections: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -111,5 +109,4 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	},
 	enableWikilinks: false,
 	enableResurfacing: false,
-	collapsibleRawSections: false,
 };
