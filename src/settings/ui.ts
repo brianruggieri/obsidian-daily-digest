@@ -659,7 +659,111 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 		}
 
-		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+		// ━━ 5. Knowledge Artifacts ━━━━━━━━━━━━━━━━━━━
+		const artifactsHeading = new Setting(containerEl).setName("Knowledge artifacts").setHeading();
+		this.prependIcon(artifactsHeading.nameEl, "library");
+
+		const artifactsGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+
+		new Setting(artifactsGroup)
+			.setName("Artifact writer")
+			.setDesc(
+				"After each digest, create or update atomic notes for topics, entities, note seeds, " +
+				"and a weekly Map of Content. All artifact notes stay in your vault — nothing is sent externally."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableArtifactWriter)
+					.onChange(async (value) => {
+						this.plugin.settings.enableArtifactWriter = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableArtifactWriter) {
+			const folderGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+			new Setting(folderGroup)
+				.setName("Topics folder")
+				.setDesc("Vault folder for topic atomic notes (e.g. Topics)")
+				.addText((text) =>
+					text
+						.setPlaceholder("Topics")
+						.setValue(this.plugin.settings.artifactFolders.topics)
+						.onChange(async (value) => {
+							this.plugin.settings.artifactFolders.topics = value;
+							await this.plugin.saveSettings();
+						})
+				);
+			new Setting(folderGroup)
+				.setName("Entities folder")
+				.setDesc("Vault folder for entity atomic notes (e.g. Entities)")
+				.addText((text) =>
+					text
+						.setPlaceholder("Entities")
+						.setValue(this.plugin.settings.artifactFolders.entities)
+						.onChange(async (value) => {
+							this.plugin.settings.artifactFolders.entities = value;
+							await this.plugin.saveSettings();
+						})
+				);
+			new Setting(folderGroup)
+				.setName("Seeds folder")
+				.setDesc("Vault folder for note seed stubs (e.g. Seeds)")
+				.addText((text) =>
+					text
+						.setPlaceholder("Seeds")
+						.setValue(this.plugin.settings.artifactFolders.seeds)
+						.onChange(async (value) => {
+							this.plugin.settings.artifactFolders.seeds = value;
+							await this.plugin.saveSettings();
+						})
+				);
+			new Setting(folderGroup)
+				.setName("MOCs folder")
+				.setDesc("Vault folder for Maps of Content (e.g. MOCs)")
+				.addText((text) =>
+					text
+						.setPlaceholder("MOCs")
+						.setValue(this.plugin.settings.artifactFolders.mocs)
+						.onChange(async (value) => {
+							this.plugin.settings.artifactFolders.mocs = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		new Setting(artifactsGroup)
+			.setName("Wikilink rendering")
+			.setDesc(
+				"Render topic, entity, and seed names in Knowledge Insights as [[wikilinks]] " +
+				"pointing to their artifact notes. Requires artifact writer to be useful."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableWikilinks)
+					.onChange(async (value) => {
+						this.plugin.settings.enableWikilinks = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(artifactsGroup)
+			.setName("Spaced resurfacing")
+			.setDesc(
+				"Add a Resurface section to the daily note with links back to prior days " +
+				"where the same topics recurred. Fully local — no LLM calls."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableResurfacing)
+					.onChange(async (value) => {
+						this.plugin.settings.enableResurfacing = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// ━━ 6. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 		const advHeading = new Setting(containerEl).setName("Advanced").setHeading();
 		this.prependIcon(advHeading.nameEl, "sliders-horizontal");
 
