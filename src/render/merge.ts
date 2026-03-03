@@ -32,6 +32,7 @@ const GENERATED_HEADINGS = new Set([
 	"Remember",
 	"Note Seeds",
 	"Reflection",
+	"Resurface",
 ]);
 
 /** Normalize a heading by stripping leading emoji + whitespace. */

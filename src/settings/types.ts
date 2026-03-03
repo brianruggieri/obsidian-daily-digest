@@ -48,6 +48,21 @@ export interface DailyDigestSettings {
 	privacyTier: 4 | 3 | 2 | 1 | null;
 	/** Show the AI prompt in the data preview modal before sending to Anthropic. Default: true. */
 	enablePromptPreview: boolean;
+	/** Write atomic notes for topics, entities, seeds, and weekly MOCs after each digest generation. Default: false. */
+	enableArtifactWriter: boolean;
+	/** Folder paths for artifact writer outputs. */
+	artifactFolders: {
+		topics: string;
+		entities: string;
+		seeds: string;
+		mocs: string;
+	};
+	/** Render knowledge section topics/entities/seeds as [[wikilinks]] instead of plain text. Default: false. */
+	enableWikilinks: boolean;
+	/** Generate a Resurface block linking back to prior daily notes for recurring topics. Default: false. */
+	enableResurfacing: boolean;
+	/** Wrap raw activity sections (Browser, Searches, Git, Claude) in collapsible callouts with consistent formatting. Default: false. */
+	collapsibleRawSections: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -87,4 +102,14 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableTimeline: false,
 	privacyTier: null,
 	enablePromptPreview: true,
+	enableArtifactWriter: false,
+	artifactFolders: {
+		topics: "Topics",
+		entities: "Entities",
+		seeds: "Seeds",
+		mocs: "MOCs",
+	},
+	enableWikilinks: false,
+	enableResurfacing: false,
+	collapsibleRawSections: false,
 };
