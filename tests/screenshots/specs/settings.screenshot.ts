@@ -79,14 +79,19 @@ describe("Settings Panel Screenshots", () => {
 		await captureSettingsSection("Privacy", "settings-privacy-warn");
 	});
 
-	it("should capture sanitization section expanded", async () => {
-		await applyPreset("sanitizationExpanded");
-		await captureSettingsSection("Privacy", "settings-sanitization");
-	});
-
-	it("should capture sensitivity filter with recommended categories", async () => {
+	it("should capture sensitivity filter with recommended preset", async () => {
 		await applyPreset("sensitivityRecommended");
 		await captureSettingsSection("Privacy", "settings-sensitivity");
+	});
+
+	it("should capture sensitivity filter with custom preset (category checkboxes)", async () => {
+		await applyPreset("sensitivityCustom");
+		await captureSettingsSection("Privacy", "settings-sensitivity-custom");
+	});
+
+	it("should capture Codex CLI sessions toggle in Data Sources", async () => {
+		await applyPreset("codexEnabled");
+		await captureSettingsSection("Data sources", "settings-codex");
 	});
 
 	it("should capture AI section with local provider", async () => {
@@ -97,6 +102,16 @@ describe("Settings Panel Screenshots", () => {
 	it("should capture AI section with Anthropic provider", async () => {
 		await applyPreset("aiAnthropic");
 		await captureSettingsSection("AI summarization", "settings-ai-anthropic");
+	});
+
+	it("should capture Anthropic AI with prompt preview toggle", async () => {
+		await applyPreset("promptPreview");
+		await captureSettingsSection("AI summarization", "settings-prompt-preview");
+	});
+
+	it("should capture Anthropic AI with explicit privacy tier selector", async () => {
+		await applyPreset("privacyTierExplicit");
+		await captureSettingsSection("AI summarization", "settings-privacy-tier");
 	});
 
 	it("should capture advanced AI pipeline (classification + patterns)", async () => {

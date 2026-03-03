@@ -70,18 +70,21 @@ export const PRESETS = {
 		hasCompletedOnboarding: true,
 	},
 
-	/** Privacy section expanded. */
-	sanitizationExpanded: {
+	/** Sensitivity filter with the recommended preset active (default enabled state). */
+	sensitivityRecommended: {
+		enableSensitivityFilter: true,
+		sensitivityPreset: "recommended" as const,
 		hasCompletedOnboarding: true,
 	},
 
-	/** Sensitivity filter with recommended categories. */
-	sensitivityRecommended: {
+	/** Sensitivity filter with the custom preset — shows category checkboxes and domains textarea. */
+	sensitivityCustom: {
 		enableSensitivityFilter: true,
+		sensitivityPreset: "custom" as const,
 		sensitivityCategories: [
-			"adult", "gambling", "dating", "health", "drugs",
+			"adult", "gambling", "health", "finance",
 		] as SensitivityCategory[],
-		sensitivityAction: "exclude" as const,
+		sensitivityCustomDomains: "mybank.internal\nhr.company.com",
 		hasCompletedOnboarding: true,
 	},
 
@@ -120,6 +123,28 @@ export const PRESETS = {
 		enableCodex: true,
 		enableAI: true,
 		aiProvider: "anthropic" as const,
+		hasCompletedOnboarding: true,
+	},
+
+	/** Codex CLI sessions toggle visible in Data Sources. */
+	codexEnabled: {
+		enableCodex: true,
+		hasCompletedOnboarding: true,
+	},
+
+	/** Anthropic AI with prompt preview toggle and privacy tier selector visible. */
+	promptPreview: {
+		enableAI: true,
+		aiProvider: "anthropic" as const,
+		enablePromptPreview: true,
+		hasCompletedOnboarding: true,
+	},
+
+	/** Explicit privacy tier set — tier selector dropdown visible under Anthropic AI. */
+	privacyTierExplicit: {
+		enableAI: true,
+		aiProvider: "anthropic" as const,
+		privacyTier: 2 as const,
 		hasCompletedOnboarding: true,
 	},
 } as const satisfies Record<string, Partial<DailyDigestSettings>>;
