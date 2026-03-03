@@ -1,6 +1,126 @@
 import { requestUrl } from "obsidian";
 import { AIProvider } from "../settings/types";
 
+// ── Anthropic Message Batches API ───────────────────────
+
+export interface AnthropicBatchRequest {
+	custom_id: string;
+	params: {
+		model: string;
+		max_tokens: number;
+		messages: { role: string; content: string }[];
+		system?: string;
+	};
+}
+
+export interface AnthropicBatchResponse {
+	id: string;
+	processing_status: "in_progress" | "canceling" | "ended";
+	request_counts: {
+		processing: number;
+		succeeded: number;
+		errored: number;
+		canceled: number;
+		expired: number;
+	};
+	results_url?: string;
+}
+
+export interface AnthropicBatchResultItem {
+	custom_id: string;
+	result:
+		| { type: "succeeded"; message: { content: { type: string; text: string }[] } }
+		| { type: "errored"; error: { type: string; message: string } }
+		| { type: "canceled" }
+		| { type: "expired" };
+}
+
+/**
+ * Submit a batch of prompts to the Anthropic Message Batches API.
+ * Returns the batch response (including the batch ID).
+ */
+export async function submitAnthropicBatch(
+	requests: AnthropicBatchRequest[],
+	apiKey: string
+): Promise<AnthropicBatchResponse> {
+	const response = await requestUrl({
+		url: "https://api.anthropic.com/v1/messages/batches",
+		method: "POST",
+		contentType: "application/json",
+		headers: {
+			"x-api-key": apiKey,
+			"anthropic-version": "2023-06-01",
+			"anthropic-beta": "message-batches-2024-09-24",
+		},
+		body: JSON.stringify({ requests }),
+	});
+	if (response.status !== 200) {
+		throw new Error(`Batch submit failed: HTTP ${response.status}`);
+	}
+	return response.json as AnthropicBatchResponse;
+}
+
+/**
+ * Poll the Anthropic Message Batches API until the batch has ended.
+ * Rejects if the batch never completes within the maximum number of attempts.
+ */
+export async function pollAnthropicBatch(
+	batchId: string,
+	apiKey: string,
+	opts: { intervalMs?: number; maxAttempts?: number } = {}
+): Promise<AnthropicBatchResponse> {
+	const intervalMs = opts.intervalMs ?? 5000;
+	const maxAttempts = opts.maxAttempts ?? 1440; // 2 hrs at 5s intervals by default
+
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		const response = await requestUrl({
+			url: `https://api.anthropic.com/v1/messages/batches/${batchId}`,
+			method: "GET",
+			headers: {
+				"x-api-key": apiKey,
+				"anthropic-version": "2023-06-01",
+				"anthropic-beta": "message-batches-2024-09-24",
+			},
+		});
+		if (response.status !== 200) {
+			throw new Error(`Batch poll failed: HTTP ${response.status}`);
+		}
+		const batch = response.json as AnthropicBatchResponse;
+		if (batch.processing_status === "ended") {
+			return batch;
+		}
+		await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
+	}
+	throw new Error(`Batch ${batchId} did not complete within the maximum polling time`);
+}
+
+/**
+ * Retrieve and parse JSONL results for a completed batch.
+ * Returns one result item per request in the batch.
+ */
+export async function retrieveAnthropicBatchResults(
+	resultsUrl: string,
+	apiKey: string
+): Promise<AnthropicBatchResultItem[]> {
+	const response = await requestUrl({
+		url: resultsUrl,
+		method: "GET",
+		headers: {
+			"x-api-key": apiKey,
+			"anthropic-version": "2023-06-01",
+			"anthropic-beta": "message-batches-2024-09-24",
+		},
+	});
+	if (response.status !== 200) {
+		throw new Error(`Batch results fetch failed: HTTP ${response.status}`);
+	}
+	const text = response.text;
+	return text
+		.split("\n")
+		.filter((line) => line.trim())
+		.map((line) => JSON.parse(line) as AnthropicBatchResultItem);
+}
+
 // ── Anthropic caller ────────────────────────────────────
 
 export async function callAnthropic(

@@ -144,6 +144,40 @@ export async function requestUrl(opts: {
 		}
 		return { json, text, status: resp.status };
 	}
+
+	// Stub responses for Anthropic Message Batches API endpoints so that
+	// batch-mode matrix runs work in mock/test contexts without network access.
+	const BATCHES_BASE = "https://api.anthropic.com/v1/messages/batches";
+	if (opts.url === BATCHES_BASE && opts.method === "POST") {
+		// Batch submit — return a mock batch with processing_status "ended" so
+		// callers don't need to poll in tests.
+		const mockBatch = {
+			id: "msgbatch_mock001",
+			processing_status: "ended",
+			request_counts: { processing: 0, succeeded: 1, errored: 0, canceled: 0, expired: 0 },
+			results_url: `${BATCHES_BASE}/msgbatch_mock001/results`,
+		};
+		return { json: mockBatch, text: JSON.stringify(mockBatch), status: 200 };
+	}
+	if (opts.url.startsWith(BATCHES_BASE) && opts.url.endsWith("/results") && opts.method !== "POST") {
+		// Batch results download — return a single mock JSONL line with an empty text response.
+		const mockLine = JSON.stringify({
+			custom_id: "mock-preset",
+			result: { type: "succeeded", message: { content: [{ type: "text", text: "" }] } },
+		});
+		return { json: {}, text: mockLine, status: 200 };
+	}
+	if (opts.url.startsWith(BATCHES_BASE) && opts.method !== "POST") {
+		// Batch status poll — return "ended" immediately.
+		const mockBatch = {
+			id: opts.url.split("/").pop() ?? "msgbatch_mock001",
+			processing_status: "ended",
+			request_counts: { processing: 0, succeeded: 1, errored: 0, canceled: 0, expired: 0 },
+			results_url: `${opts.url}/results`,
+		};
+		return { json: mockBatch, text: JSON.stringify(mockBatch), status: 200 };
+	}
+
 	return { json: {}, text: "", status: 200 };
 }
 

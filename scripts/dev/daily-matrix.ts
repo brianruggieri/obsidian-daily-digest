@@ -1,24 +1,3 @@
-/**
- * daily-matrix.ts — Settings Matrix CLI runner
- *
- * Runs one or all presets through the full plugin pipeline and writes
- * rendered markdown notes to ~/obsidian-vaults/daily-digest-test/YYYY-MM-DD/.
- *
- * This script mirrors the plugin's pipeline in main.ts stage-for-stage so that
- * matrix runs produce output identical to what users would see in Obsidian.
- *
- * Invoke via:
- *   npx tsx --tsconfig tsconfig.scripts.json scripts/daily-matrix.ts
- * or through the npm scripts defined in package.json ("matrix", "matrix:real", etc.)
- *
- * Env vars:
- *   PRESET        — preset id to run, or "all" (default: all)
- *   AI_MODE       — "mock" | "real" (default: mock)
- *   DATA_MODE     — "fixtures" | "real" (default: fixtures)
- *   DATE          — ISO date string YYYY-MM-DD (default: today)
- *   MATRIX_ASSERT — "true" to run structural/quality assertions
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -41,6 +20,7 @@ if (existsSync(envPath)) {
 }
 
 import { PRESETS, resolvePreset, getPresetFilename } from "./presets";
+import type { Preset } from "./presets";
 import { collectFixtureData, collectRealData } from "../lib/collector-shim";
 import { getMockSummary } from "../lib/mock-ai";
 import { createPromptLog, appendPromptEntry, estimateTokens } from "../../src/plugin/prompt-logger";
@@ -64,6 +44,9 @@ import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSess
 import { compressActivity } from "../../src/summarize/compress";
 import { renderMarkdown } from "../../src/render/renderer";
 import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../../src/summarize/summarize";
+import { submitAnthropicBatch, pollAnthropicBatch, retrieveAnthropicBatchResults } from "../../src/summarize/ai-client";
+import type { AnthropicBatchRequest } from "../../src/summarize/ai-client";
+import { parseProseSections } from "../../src/summarize/prose-parser";
 
 import type {
 	SensitivityConfig,
@@ -72,6 +55,11 @@ import type {
 	PatternAnalysis,
 	AISummary,
 	ArticleCluster,
+	BrowserVisit,
+	SearchQuery,
+	ClaudeSession,
+	GitCommit,
+	CategorizedVisits,
 } from "../../src/types";
 import type { KnowledgeSections } from "../../src/analyze/knowledge";
 import type { AICallConfig } from "../../src/summarize/ai-client";
@@ -84,40 +72,48 @@ const PRESET_FILTER = process.env.PRESET ?? "all";
 const GROUP_FILTER = process.env.GROUP ?? "";  // "no-ai", "local", "cloud", or "" for all
 const DATE_STR = process.env.DATE ?? new Date().toISOString().slice(0, 10);
 const ASSERT = process.env.MATRIX_ASSERT === "true";
+const BATCH_MODE = process.argv.includes("--batch");
 
 const VAULT_ROOT = join(homedir(), "obsidian-vaults", "daily-digest-test");
 
-// ── Per-preset runner ────────────────────────────────
+// ── Preset pipeline data (stages 1–9) ───────────────────
+//
+// Carries all data produced by the non-AI pipeline stages so it can be
+// used both to build the prompt (stage 10) and to render the output (stage 11).
+
+interface PresetPipelineData {
+	presetId: string;
+	preset: Preset;
+	settings: ReturnType<typeof resolvePreset>;
+	visits: BrowserVisit[];
+	searches: SearchQuery[];
+	claudeSessions: ClaudeSession[];
+	gitCommits: GitCommit[];
+	categorized: CategorizedVisits;
+	classification: ClassificationResult;
+	patterns: PatternAnalysis | undefined;
+	knowledge: KnowledgeSections | undefined;
+	articleClusters: ArticleCluster[];
+	aiCallConfig: AICallConfig;
+	compressed: ReturnType<typeof compressActivity>;
+	prompt: string;
+	tier: 1 | 2 | 3 | 4;
+	promptLog: PromptLog;
+	aiProviderUsed: "none" | "anthropic" | "local";
+}
+
+// ── Stages 1–9: Collect → Semantic extraction ────────────
 //
 // KEEP IN SYNC WITH src/plugin/main.ts PIPELINE.
 //
 // This function mirrors the plugin's generateNote() method stage-for-stage.
 // Whenever main.ts gains a new pipeline stage, add it here in the same order.
-// Whenever summarizeDay() or resolvePrivacyTier() signatures change, update
-// both call sites below to match.
 // Verify with: npx tsc --project scripts/tsconfig.json --noEmit
-//
-// Current stage map (main.ts → runPreset):
-//   1. Collect                    ✓
-//   2. Sensitivity filter         ✓ (raw data, before sanitize)
-//   3. Sanitize                   ✓
-//   4. Categorize                 ✓
-//   5. Classify (LLM or rule)     ✓
-//   6. Article clustering         ✓
-//   7. Pattern extraction         ✓
-//   8. Knowledge sections         ✓
-//   9. Semantic extraction        ✓
-//  10. AI summary                 ✓
-//  11. Render markdown            ✓────
 
-async function runPreset(
+async function computePresetData(
 	presetId: string,
-	date: Date,
-	outputDir: string
-): Promise<PresetReport | null> {
-	const start = Date.now();
-	console.log(`\n[${presetId}] Starting...`);
-
+	date: Date
+): Promise<PresetPipelineData | null> {
 	const preset = PRESETS.find((p) => p.id === presetId);
 	if (!preset) {
 		console.error(`[${presetId}] ERROR: preset not found`);
@@ -127,8 +123,6 @@ async function runPreset(
 	const settings = resolvePreset(preset);
 
 	// ── 1. Collect ──────────────────────────────────────
-	// For real data: collect exactly the target calendar day (midnight → midnight).
-	// For fixtures: use synthetic persona data (date-independent).
 	const since = new Date(date);
 	since.setHours(0, 0, 0, 0);
 	const until = new Date(since);
@@ -139,7 +133,6 @@ async function runPreset(
 		: await collectFixtureData(settings);
 
 	// ── 2. Sensitivity filter ───────────────────────────
-	// Mirrors main.ts: run on RAW data before sanitization.
 	const sensitivityConfig: SensitivityConfig = {
 		enabled: settings.enableSensitivityFilter,
 		categories: settings.sensitivityCategories,
@@ -161,12 +154,8 @@ async function runPreset(
 	}
 
 	// ── 3. Sanitize ──────────────────────────────────────
-	// Sanitization is always on — secrets, paths, emails, IPs.
 	const sanitized = sanitizeCollectedData(
-		rawVisits,
-		rawSearches,
-		raw.claudeSessions,
-		raw.gitCommits
+		rawVisits, rawSearches, raw.claudeSessions, raw.gitCommits
 	);
 	const visits = sanitized.visits;
 	const searches = sanitized.searches;
@@ -177,8 +166,6 @@ async function runPreset(
 	const categorized = categorizeVisits(visits);
 
 	// ── 5. Classify ──────────────────────────────────────
-	// Always run rule-based classification (free, on-device).
-	// Optional: LLM-enriched classification when enableClassification && AI_MODE=real.
 	const useAI = settings.enableAI && settings.aiProvider !== "none";
 	let classification: ClassificationResult = classifyEventsRuleOnly(
 		visits, searches, claudeSessions, gitCommits, categorized
@@ -202,7 +189,6 @@ async function runPreset(
 	}
 
 	// ── 6. Article Clustering ────────────────────────────
-	// Mirrors main.ts: pure TF-IDF + engagement scoring, no LLM calls.
 	let articleClusters: ArticleCluster[] = [];
 	let knowledge: KnowledgeSections | undefined;
 	try {
@@ -220,7 +206,6 @@ async function runPreset(
 	}
 
 	// ── 7. Patterns ─────────────────────────────────────
-	// Always run (free, on-device computation)
 	let patterns: PatternAnalysis | undefined;
 
 	if (classification.events.length > 0) {
@@ -249,7 +234,6 @@ async function runPreset(
 	if (patterns) {
 		knowledge = generateKnowledgeSections(patterns);
 	}
-	// Attach article clusters to knowledgeSections even without patterns (mirrors main.ts)
 	if (articleClusters.length > 0) {
 		if (knowledge) {
 			knowledge.articleClusters = articleClusters;
@@ -264,7 +248,6 @@ async function runPreset(
 	}
 
 	// ── 9. Semantic extraction ───────────────────────────
-	// Mirrors main.ts: commit work units + Claude task sessions, no LLM calls.
 	if (gitCommits.length > 0 || claudeSessions.length > 0) {
 		try {
 			const commitWorkUnits = groupCommitsIntoWorkUnits(gitCommits);
@@ -294,110 +277,68 @@ async function runPreset(
 		}
 	}
 
-	// ── 10. AI summary + prompt log ──────────────────────
+	// ── Build prompt (for logging and batch submission) ──
+	const aiProviderUsed = (useAI ? settings.aiProvider : "none") as "none" | "anthropic" | "local";
 	const promptLog: PromptLog = createPromptLog();
-	let aiSummary: AISummary | null = null;
-	const aiProviderUsed = (useAI ? settings.aiProvider : "none") as
-		"none" | "anthropic" | "local";
+	const aiCallConfig: AICallConfig = {
+		provider: settings.aiProvider as "anthropic" | "local",
+		anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? (AI_MODE === "mock" ? "mock-key" : ""),
+		anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
+		localEndpoint: settings.localEndpoint,
+		localModel: settings.localModel,
+	};
+	const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
+	const tier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
+	const proseOptions = buildTierFilteredOptions(tier, {
+		categorized, searches, claudeSessions, gitCommits,
+		compressed, classification, patterns, articleClusters,
+	});
+	const modelName = aiCallConfig.provider === "anthropic" ? aiCallConfig.anthropicModel : aiCallConfig.localModel;
+	const capability = resolvePromptCapability(modelName, aiCallConfig.provider);
+	const prompt = buildProsePrompt(date, settings.profile, proseOptions, settings.promptsDir, capability, tier);
+	appendPromptEntry(promptLog, {
+		stage: "summarize",
+		model: aiCallConfig.provider === "local"
+			? (aiCallConfig.localModel ?? "local")
+			: (aiCallConfig.anthropicModel ?? (AI_MODE === "mock" ? "mock" : "unknown")),
+		tokenCount: estimateTokens(prompt),
+		privacyTier: tier,
+		prompt,
+	});
 
-	if (!useAI) {
-		console.log(`[${presetId}] AI: disabled`);
-	} else if (AI_MODE === "mock") {
-		// Build the prompt preview to log tier + token count
-		const aiCallConfig: AICallConfig = {
-			provider: settings.aiProvider as "anthropic" | "local",
-			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "mock-key",
-			anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
-			localEndpoint: settings.localEndpoint,
-			localModel: settings.localModel,
-		};
-		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
-		const mockTier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
-		const mockOptions = buildTierFilteredOptions(mockTier, {
-			categorized, searches, claudeSessions, gitCommits,
-			compressed, classification, patterns, articleClusters,
-		});
-		const mockModelName = aiCallConfig.provider === "anthropic" ? aiCallConfig.anthropicModel : aiCallConfig.localModel;
-		const mockCapability = resolvePromptCapability(mockModelName, aiCallConfig.provider);
-		const mockPrompt = buildProsePrompt(date, settings.profile, mockOptions, settings.promptsDir, mockCapability, mockTier);
-		appendPromptEntry(promptLog, {
-			stage: "summarize",
-			model: aiCallConfig.provider === "local"
-				? (aiCallConfig.localModel ?? "local")
-				: (aiCallConfig.anthropicModel ?? "mock"),
-			tokenCount: estimateTokens(mockPrompt),
-			privacyTier: mockTier,
-			prompt: mockPrompt,
-		});
-		aiSummary = getMockSummary(presetId);
-		console.log(`[${presetId}] AI: mock (tier ${mockTier}, ${estimateTokens(mockPrompt)} tokens)`);
-	} else {
-		// AI_MODE === "real" — call the real AI provider
-		const aiCallConfig: AICallConfig = {
-			provider: settings.aiProvider as "anthropic" | "local",
-			anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-			anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
-			localEndpoint: settings.localEndpoint,
-			localModel: settings.localModel,
-		};
+	return {
+		presetId, preset, settings,
+		visits, searches, claudeSessions, gitCommits,
+		categorized, classification, patterns, knowledge, articleClusters,
+		aiCallConfig, compressed, prompt, tier, promptLog, aiProviderUsed,
+	};
+}
 
-		const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
-		console.log(`[${presetId}] Compressed: ~${compressed.tokenEstimate} tokens (budget: ${settings.promptBudget})`);
+// ── Stage 11: Render + write ─────────────────────────────
 
-		// Log the prompt and tier that will be used.
-		const previewTier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
-		const previewOptions = buildTierFilteredOptions(previewTier, {
-			categorized, searches, claudeSessions, gitCommits,
-			compressed, classification, patterns, articleClusters,
-		});
-		const previewModelName = aiCallConfig.provider === "anthropic" ? aiCallConfig.anthropicModel : aiCallConfig.localModel;
-		const previewCapability = resolvePromptCapability(previewModelName, aiCallConfig.provider);
-		const previewPrompt = buildProsePrompt(date, settings.profile, previewOptions, settings.promptsDir, previewCapability, previewTier);
-		appendPromptEntry(promptLog, {
-			stage: "summarize",
-			model: aiCallConfig.provider === "local"
-				? (aiCallConfig.localModel ?? "local")
-				: (aiCallConfig.anthropicModel ?? "unknown"),
-			tokenCount: estimateTokens(previewPrompt),
-			privacyTier: previewTier,
-			prompt: previewPrompt,
-		});
+function renderAndWrite(
+	data: PresetPipelineData,
+	aiSummary: AISummary | null,
+	outputDir: string,
+	start: number
+): PresetReport | null {
+	const { presetId, preset, visits, searches, claudeSessions, gitCommits,
+		categorized, knowledge, promptLog, aiProviderUsed } = data;
 
-		aiSummary = await summarizeDay(
-			date, categorized, searches, claudeSessions,
-			aiCallConfig, settings.profile,
-			classification, patterns,
-			compressed, gitCommits,
-			settings.promptsDir,
-			articleClusters, settings.privacyTier
-		);
-		console.log(`[${presetId}] AI: real summary generated`);
-	}
-
-	// ── 11. Render markdown ──────────────────────────────
+	const date = new Date(`${DATE_STR}T12:00:00`);
 	const md = renderMarkdown(
-		date,
-		visits,
-		searches,
-		claudeSessions,
-		gitCommits,
-		categorized,
-		aiSummary,
-		aiProviderUsed,
-		knowledge,
-		promptLog
+		date, visits, searches, claudeSessions, gitCommits,
+		categorized, aiSummary, aiProviderUsed, knowledge, promptLog
 	);
 
-	// ── 12. Write file ───────────────────────────────────
 	const filePath = join(outputDir, `${getPresetFilename(preset)}.md`);
 	writeFileSync(filePath, md, "utf-8");
 	console.log(`[${presetId}] Written to ${filePath}`);
 
-	// ── 13. Assertions ───────────────────────────────────
 	if (ASSERT) {
 		const durationMs = Date.now() - start;
 		const report = runAssertions(md, presetId, filePath, durationMs, {
-			aiEnabled: settings.enableAI && settings.aiProvider !== "none",
+			aiEnabled: data.settings.enableAI && data.settings.aiProvider !== "none",
 		});
 		const status = report.passed ? "PASS" : "FAIL";
 		console.log(`[${presetId}] Assertions: ${status}`);
@@ -410,8 +351,185 @@ async function runPreset(
 		}
 		return report;
 	}
-
 	return null;
+}
+
+// ── Per-preset runner (sequential mode) ─────────────────
+//
+// Current stage map (main.ts → runPreset):
+//   1. Collect                    ✓
+//   2. Sensitivity filter         ✓ (raw data, before sanitize)
+//   3. Sanitize                   ✓
+//   4. Categorize                 ✓
+//   5. Classify (LLM or rule)     ✓
+//   6. Article clustering         ✓
+//   7. Pattern extraction         ✓
+//   8. Knowledge sections         ✓
+//   9. Semantic extraction        ✓
+//  10. AI summary                 ✓
+//  11. Render markdown            ✓
+
+async function runPreset(
+	presetId: string,
+	date: Date,
+	outputDir: string
+): Promise<PresetReport | null> {
+	const start = Date.now();
+	console.log(`\n[${presetId}] Starting...`);
+
+	const data = await computePresetData(presetId, date);
+	if (!data) return null;
+
+	const { settings, aiCallConfig, compressed, prompt, tier } = data;
+	const useAI = settings.enableAI && settings.aiProvider !== "none";
+
+	// ── 10. AI summary + prompt log ──────────────────────
+	let aiSummary: AISummary | null = null;
+
+	if (!useAI) {
+		console.log(`[${presetId}] AI: disabled`);
+	} else if (AI_MODE === "mock") {
+		aiSummary = getMockSummary(presetId);
+		console.log(`[${presetId}] AI: mock (tier ${tier}, ${estimateTokens(prompt)} tokens)`);
+	} else {
+		// AI_MODE === "real"
+		console.log(`[${presetId}] Compressed: ~${compressed.tokenEstimate} tokens (budget: ${settings.promptBudget})`);
+		aiSummary = await summarizeDay(
+			date, data.categorized, data.searches, data.claudeSessions,
+			aiCallConfig, settings.profile,
+			data.classification, data.patterns,
+			compressed, data.gitCommits,
+			settings.promptsDir,
+			data.articleClusters, settings.privacyTier
+		);
+		console.log(`[${presetId}] AI: real summary generated`);
+	}
+
+	// ── 11. Render markdown ──────────────────────────────
+	return renderAndWrite(data, aiSummary, outputDir, start);
+}
+
+// ── Batch mode runner ────────────────────────────────────
+//
+// Collects prompts for all cloud (Anthropic) presets, submits them as a
+// single Message Batches API request, then polls until the batch completes.
+// Non-Anthropic presets run sequentially as usual.
+
+async function runBatchMode(
+	presetsToRun: Preset[],
+	date: Date,
+	outputDir: string
+): Promise<PresetReport[]> {
+	console.log(`\nBatch mode: pre-computing pipeline for ${presetsToRun.length} presets...`);
+
+	// Stage 1–9 for all presets in parallel-ish (sequential to avoid I/O contention)
+	const allData: PresetPipelineData[] = [];
+	for (const preset of presetsToRun) {
+		console.log(`\n[${preset.id}] Pipeline (stages 1–9)...`);
+		const data = await computePresetData(preset.id, date);
+		if (data) allData.push(data);
+	}
+
+	// Separate cloud (Anthropic) presets from others
+	const anthropicData = allData.filter(
+		(d) => d.settings.enableAI && d.settings.aiProvider === "anthropic"
+	);
+	const nonAnthropicData = allData.filter(
+		(d) => !(d.settings.enableAI && d.settings.aiProvider === "anthropic")
+	);
+
+	const reports: PresetReport[] = [];
+	const startTimes: Map<string, number> = new Map(allData.map((d) => [d.presetId, Date.now()]));
+
+	// ── Run non-Anthropic presets sequentially ────────────
+	for (const data of nonAnthropicData) {
+		const useAI = data.settings.enableAI && data.settings.aiProvider !== "none";
+		let aiSummary: AISummary | null = null;
+
+		if (!useAI) {
+			console.log(`\n[${data.presetId}] AI: disabled`);
+		} else if (AI_MODE === "mock") {
+			aiSummary = getMockSummary(data.presetId);
+			console.log(`\n[${data.presetId}] AI: mock`);
+		} else {
+			aiSummary = await summarizeDay(
+				date, data.categorized, data.searches, data.claudeSessions,
+				data.aiCallConfig, data.settings.profile,
+				data.classification, data.patterns,
+				data.compressed, data.gitCommits,
+				data.settings.promptsDir,
+				data.articleClusters, data.settings.privacyTier
+			);
+			console.log(`\n[${data.presetId}] AI: real summary generated`);
+		}
+
+		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!);
+		if (ASSERT && report) reports.push(report);
+	}
+
+	// ── Submit Anthropic presets as a batch ───────────────
+	if (anthropicData.length === 0) {
+		return reports;
+	}
+
+	const apiKey = process.env.ANTHROPIC_API_KEY ?? "";
+	const summaryMap: Map<string, AISummary | null> = new Map();
+
+	if (AI_MODE === "mock") {
+		// In mock mode, skip the network call and use mock summaries
+		for (const data of anthropicData) {
+			summaryMap.set(data.presetId, getMockSummary(data.presetId));
+			console.log(`\n[${data.presetId}] AI: mock (batch mode)`);
+		}
+	} else {
+		// Build one batch request per preset
+		const batchRequests: AnthropicBatchRequest[] = anthropicData.map((data) => ({
+			custom_id: data.presetId,
+			params: {
+				model: data.aiCallConfig.anthropicModel,
+				max_tokens: 1500,
+				messages: [{ role: "user" as const, content: data.prompt }],
+			},
+		}));
+
+		console.log(`\nSubmitting batch with ${batchRequests.length} request(s) to Anthropic...`);
+		const batch = await submitAnthropicBatch(batchRequests, apiKey);
+		console.log(`Batch submitted: ${batch.id} (status: ${batch.processing_status})`);
+
+		// Poll until ended
+		const completed = await pollAnthropicBatch(batch.id, apiKey, { intervalMs: 5000 });
+		console.log(
+			`Batch ${completed.id} ended — ` +
+			`${completed.request_counts.succeeded} succeeded, ` +
+			`${completed.request_counts.errored} errored`
+		);
+
+		// Retrieve JSONL results
+		const resultsUrl = completed.results_url ?? `https://api.anthropic.com/v1/messages/batches/${completed.id}/results`;
+		const resultItems = await retrieveAnthropicBatchResults(resultsUrl, apiKey);
+
+		for (const item of resultItems) {
+			if (item.result.type === "succeeded") {
+				const text = item.result.message.content[0]?.text ?? "";
+				summaryMap.set(item.custom_id, parseProseSections(text));
+			} else {
+				const reason = item.result.type === "errored"
+					? item.result.error.message
+					: item.result.type;
+				console.warn(`[${item.custom_id}] Batch request ${item.result.type}: ${reason}`);
+				summaryMap.set(item.custom_id, null);
+			}
+		}
+	}
+
+	// ── Render all Anthropic preset results ──────────────
+	for (const data of anthropicData) {
+		const aiSummary = summaryMap.get(data.presetId) ?? null;
+		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!);
+		if (ASSERT && report) reports.push(report);
+	}
+
+	return reports;
 }
 
 // ── Main ──────────────────────────────────────────────────
@@ -427,6 +545,7 @@ async function main(): Promise<void> {
 	console.log(`  Data mode: ${DATA_MODE}`);
 	console.log(`  Preset:    ${PRESET_FILTER}`);
 	console.log(`  Group:     ${GROUP_FILTER || "all"}`);
+	console.log(`  Batch:     ${BATCH_MODE}`);
 	console.log(`  Output:    ${outputDir}`);
 	console.log(`  Assert:    ${ASSERT}`);
 
@@ -443,12 +562,17 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
-	// Run presets sequentially
-	const reports: PresetReport[] = [];
-	for (const preset of presetsToRun) {
-		const report = await runPreset(preset.id, date, outputDir);
-		if (ASSERT && report) {
-			reports.push(report);
+	let reports: PresetReport[] = [];
+
+	if (BATCH_MODE) {
+		reports = await runBatchMode(presetsToRun, date, outputDir);
+	} else {
+		// Run presets sequentially (default)
+		for (const preset of presetsToRun) {
+			const report = await runPreset(preset.id, date, outputDir);
+			if (ASSERT && report) {
+				reports.push(report);
+			}
 		}
 	}
 
