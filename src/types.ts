@@ -53,6 +53,39 @@ export function slugifyQuestion(question: string): string {
 		.slice(0, 60);                     // keep it reasonable
 }
 
+/** Convert a topic string to a kebab-case slug safe for vault paths and wikilinks. */
+export function topicSlug(topic: string): string {
+	return topic
+		.toLowerCase()
+		.replace(/['']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 60)
+		|| "topic";
+}
+
+/** Convert an entity string to a kebab-case slug safe for vault paths and wikilinks. */
+export function entitySlug(entity: string): string {
+	return entity
+		.toLowerCase()
+		.replace(/['']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 60)
+		|| "entity";
+}
+
+/** Convert a note seed string to a kebab-case slug safe for vault paths and wikilinks. */
+export function seedSlug(seed: string): string {
+	return seed
+		.toLowerCase()
+		.replace(/['']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 60)
+		|| "seed";
+}
+
 /** Normalize an LLM-generated theme string into a Dataview-safe kebab-case slug.
  *  Ensures the result is safe for YAML frontmatter values and Dataview inline field keys. */
 export function sanitizeReflectionId(raw: string): string {
