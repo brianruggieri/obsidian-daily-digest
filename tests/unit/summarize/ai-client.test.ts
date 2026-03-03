@@ -379,3 +379,183 @@ describe("MockAI", () => {
 		expect(getMockSummary("no-ai-full")).toBeNull();
 	});
 });
+
+// ─── Anthropic Message Batches API ─────────────────────
+
+import {
+	submitAnthropicBatch,
+	pollAnthropicBatch,
+	retrieveAnthropicBatchResults,
+	type AnthropicBatchRequest,
+	type AnthropicBatchResponse,
+} from "../../../src/summarize/ai-client";
+
+function batchSubmitResponse(id = "msgbatch_123", status = 200) {
+	const json: AnthropicBatchResponse = {
+		id,
+		processing_status: "in_progress",
+		request_counts: { processing: 1, succeeded: 0, errored: 0, canceled: 0, expired: 0 },
+	};
+	return { status, json, text: JSON.stringify(json) };
+}
+
+function batchStatusResponse(
+	id: string,
+	processingStatus: AnthropicBatchResponse["processing_status"],
+	resultsUrl?: string,
+	status = 200
+) {
+	const json: AnthropicBatchResponse = {
+		id,
+		processing_status: processingStatus,
+		request_counts: { processing: 0, succeeded: 1, errored: 0, canceled: 0, expired: 0 },
+		results_url: resultsUrl,
+	};
+	return { status, json, text: JSON.stringify(json) };
+}
+
+function batchResultsResponse(lines: object[], status = 200) {
+	const text = lines.map((l) => JSON.stringify(l)).join("\n");
+	return { status, json: {}, text };
+}
+
+const SAMPLE_REQUEST: AnthropicBatchRequest = {
+	custom_id: "preset-cloud-haiku-tier1",
+	params: {
+		model: "claude-haiku-4-5-20251001",
+		max_tokens: 1500,
+		messages: [{ role: "user", content: "Summarize today." }],
+	},
+};
+
+describe("submitAnthropicBatch", () => {
+	it("POSTs to /v1/messages/batches with the beta header", async () => {
+		mockRequestUrl.mockResolvedValue(batchSubmitResponse());
+		await submitAnthropicBatch([SAMPLE_REQUEST], "sk-key");
+
+		const opts = mockRequestUrl.mock.calls[0][0];
+		expect(opts.url).toBe("https://api.anthropic.com/v1/messages/batches");
+		expect(opts.method).toBe("POST");
+		expect(opts.headers?.["anthropic-beta"]).toBe("message-batches-2024-09-24");
+		expect(opts.headers?.["x-api-key"]).toBe("sk-key");
+	});
+
+	it("serialises requests in the body", async () => {
+		mockRequestUrl.mockResolvedValue(batchSubmitResponse());
+		await submitAnthropicBatch([SAMPLE_REQUEST], "sk-key");
+
+		const body = JSON.parse(mockRequestUrl.mock.calls[0][0].body as string);
+		expect(body.requests).toHaveLength(1);
+		expect(body.requests[0].custom_id).toBe("preset-cloud-haiku-tier1");
+		expect(body.requests[0].params.model).toBe("claude-haiku-4-5-20251001");
+	});
+
+	it("returns the parsed batch response", async () => {
+		mockRequestUrl.mockResolvedValue(batchSubmitResponse("msgbatch_abc"));
+		const result = await submitAnthropicBatch([SAMPLE_REQUEST], "sk-key");
+		expect(result.id).toBe("msgbatch_abc");
+		expect(result.processing_status).toBe("in_progress");
+	});
+
+	it("throws on non-200 status", async () => {
+		mockRequestUrl.mockResolvedValue(batchSubmitResponse("x", 429));
+		await expect(submitAnthropicBatch([SAMPLE_REQUEST], "sk-key")).rejects.toThrow(
+			"Batch submit failed: HTTP 429"
+		);
+	});
+});
+
+describe("pollAnthropicBatch", () => {
+	it("GETs /v1/messages/batches/{id} with the beta header", async () => {
+		mockRequestUrl.mockResolvedValue(
+			batchStatusResponse("msgbatch_123", "ended", "https://api.anthropic.com/v1/messages/batches/msgbatch_123/results")
+		);
+		await pollAnthropicBatch("msgbatch_123", "sk-key", { intervalMs: 0 });
+
+		const opts = mockRequestUrl.mock.calls[0][0];
+		expect(opts.url).toBe("https://api.anthropic.com/v1/messages/batches/msgbatch_123");
+		expect(opts.method).toBe("GET");
+		expect(opts.headers?.["anthropic-beta"]).toBe("message-batches-2024-09-24");
+	});
+
+	it("returns immediately when already ended", async () => {
+		mockRequestUrl.mockResolvedValue(
+			batchStatusResponse("msgbatch_123", "ended", "https://results.example.com")
+		);
+		const result = await pollAnthropicBatch("msgbatch_123", "sk-key", { intervalMs: 0 });
+		expect(result.processing_status).toBe("ended");
+		expect(mockRequestUrl).toHaveBeenCalledOnce();
+	});
+
+	it("polls until status is ended", async () => {
+		mockRequestUrl
+			.mockResolvedValueOnce(batchStatusResponse("b1", "in_progress"))
+			.mockResolvedValueOnce(batchStatusResponse("b1", "in_progress"))
+			.mockResolvedValueOnce(batchStatusResponse("b1", "ended", "https://r.example.com"));
+		const result = await pollAnthropicBatch("b1", "sk-key", { intervalMs: 0 });
+		expect(result.processing_status).toBe("ended");
+		expect(mockRequestUrl).toHaveBeenCalledTimes(3);
+	});
+
+	it("throws after maxAttempts without completion", async () => {
+		mockRequestUrl.mockResolvedValue(batchStatusResponse("b1", "in_progress"));
+		await expect(
+			pollAnthropicBatch("b1", "sk-key", { intervalMs: 0, maxAttempts: 2 })
+		).rejects.toThrow("did not complete");
+	});
+
+	it("throws on non-200 status", async () => {
+		mockRequestUrl.mockResolvedValue(batchStatusResponse("b1", "in_progress", undefined, 500));
+		await expect(
+			pollAnthropicBatch("b1", "sk-key", { intervalMs: 0 })
+		).rejects.toThrow("Batch poll failed: HTTP 500");
+	});
+});
+
+describe("retrieveAnthropicBatchResults", () => {
+	const RESULTS_URL = "https://api.anthropic.com/v1/messages/batches/msgbatch_123/results";
+
+	it("GETs the results URL with the beta header", async () => {
+		mockRequestUrl.mockResolvedValue(
+			batchResultsResponse([
+				{ custom_id: "preset-a", result: { type: "succeeded", message: { content: [{ type: "text", text: "ok" }] } } },
+			])
+		);
+		await retrieveAnthropicBatchResults(RESULTS_URL, "sk-key");
+
+		const opts = mockRequestUrl.mock.calls[0][0];
+		expect(opts.url).toBe(RESULTS_URL);
+		expect(opts.method).toBe("GET");
+		expect(opts.headers?.["anthropic-beta"]).toBe("message-batches-2024-09-24");
+	});
+
+	it("parses JSONL and returns one item per line", async () => {
+		const lines = [
+			{ custom_id: "a", result: { type: "succeeded", message: { content: [{ type: "text", text: "summary A" }] } } },
+			{ custom_id: "b", result: { type: "errored", error: { type: "api_error", message: "rate limited" } } },
+		];
+		mockRequestUrl.mockResolvedValue(batchResultsResponse(lines));
+		const results = await retrieveAnthropicBatchResults(RESULTS_URL, "sk-key");
+
+		expect(results).toHaveLength(2);
+		expect(results[0].custom_id).toBe("a");
+		expect(results[0].result.type).toBe("succeeded");
+		expect(results[1].custom_id).toBe("b");
+		expect(results[1].result.type).toBe("errored");
+	});
+
+	it("handles trailing newline in JSONL gracefully", async () => {
+		const text = '{"custom_id":"x","result":{"type":"succeeded","message":{"content":[{"type":"text","text":"ok"}]}}}\n';
+		mockRequestUrl.mockResolvedValue({ status: 200, json: {}, text });
+		const results = await retrieveAnthropicBatchResults(RESULTS_URL, "sk-key");
+		expect(results).toHaveLength(1);
+		expect(results[0].custom_id).toBe("x");
+	});
+
+	it("throws on non-200 status", async () => {
+		mockRequestUrl.mockResolvedValue({ status: 403, json: {}, text: "" });
+		await expect(retrieveAnthropicBatchResults(RESULTS_URL, "sk-key")).rejects.toThrow(
+			"Batch results fetch failed: HTTP 403"
+		);
+	});
+});
