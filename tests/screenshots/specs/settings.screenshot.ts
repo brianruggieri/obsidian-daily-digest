@@ -18,6 +18,7 @@ import {
 	closeSettings,
 	captureFullPage,
 	captureSettingsSection,
+	initCgWindowId,
 } from "../helpers/screenshot";
 
 /**
@@ -50,7 +51,7 @@ async function applyPreset(preset: PresetName): Promise<void> {
 
 describe("Settings Panel Screenshots", () => {
 	before(async () => {
-		// Dismiss the onboarding modal if it's still showing
+		initCgWindowId();
 		await dismissOnboarding();
 		await openPluginSettings();
 	});

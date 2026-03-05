@@ -12,9 +12,14 @@ import {
 	dismissOnboarding,
 	collapseSidebars,
 	captureFullPage,
+	initCgWindowId,
 } from "../helpers/screenshot";
 
 describe("Privacy Onboarding Modal Screenshots", () => {
+	before(() => {
+		initCgWindowId();
+	});
+
 	it("should capture the onboarding consent modal", async () => {
 		// The modal opens automatically on plugin load because
 		// hasCompletedOnboarding defaults to false. Wait for it

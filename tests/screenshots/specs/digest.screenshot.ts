@@ -14,6 +14,7 @@ import {
 	scrollToCalloutTitle,
 	expandCallout,
 	captureFullPage,
+	initCgWindowId,
 } from "../helpers/screenshot";
 
 /**
@@ -33,6 +34,7 @@ describe("Daily Digest Note Screenshots", () => {
 	// The privacy spec handles this when running the full suite,
 	// but this ensures digest specs work when run in isolation too.
 	before(async () => {
+		initCgWindowId();
 		await dismissOnboarding();
 		await collapseSidebars();
 	});

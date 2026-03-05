@@ -2,8 +2,9 @@
  * WebdriverIO configuration for automated Obsidian screenshots.
  *
  * Uses wdio-obsidian-service to launch a sandboxed Obsidian instance
- * with the plugin installed, and @wdio/visual-service for screenshot
- * capture + visual regression.
+ * with the plugin installed. Screenshots are captured via macOS-native
+ * `screencapture -l <cgWindowId>` (see helpers/screenshot.ts) to produce
+ * PNGs with window chrome — title bar, rounded corners, drop shadow.
  *
  * Run: npm run screenshots
  * Setup: npm run screenshots:setup (creates vault template first)
@@ -53,19 +54,7 @@ export const config: WebdriverIO.Config = {
 		timeout: 60000, // Screenshots need time for Obsidian to render
 	},
 
-	services: [
-		"obsidian",
-		[
-			"visual",
-			{
-				baselineFolder: path.resolve(__dirname, "baseline"),
-				screenshotPath: path.resolve(__dirname, "output"),
-				formatImageName: "{tag}",
-				misMatchPercentage: 2, // Allow 2% pixel diff (anti-aliasing, fonts)
-				clearRuntimeFolder: false,
-			},
-		],
-	],
+	services: ["obsidian"],
 
 	reporters: ["obsidian"],
 
