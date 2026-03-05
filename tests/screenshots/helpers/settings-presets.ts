@@ -84,7 +84,7 @@ export const PRESETS = {
 		sensitivityCategories: [
 			"adult", "gambling", "health", "finance",
 		] as SensitivityCategory[],
-		sensitivityCustomDomains: "mybank.internal\nhr.company.com",
+		sensitivityCustomDomains: "mybank.internal,hr.company.com",
 		hasCompletedOnboarding: true,
 	},
 
@@ -132,11 +132,11 @@ export const PRESETS = {
 		hasCompletedOnboarding: true,
 	},
 
-	/** Anthropic AI with prompt preview toggle and privacy tier selector visible. */
+	/** Anthropic AI with prompt preview toggle disabled — shows the off-state of the toggle. */
 	promptPreview: {
 		enableAI: true,
 		aiProvider: "anthropic" as const,
-		enablePromptPreview: true,
+		enablePromptPreview: false,
 		hasCompletedOnboarding: true,
 	},
 

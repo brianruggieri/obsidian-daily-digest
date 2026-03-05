@@ -32,13 +32,14 @@ cat > "$VAULT/.obsidian/community-plugins.json" << 'EOF'
 ["daily-digest"]
 EOF
 
-# Minimal appearance config — default theme, readable font size
+# Appearance config — force dark theme for deterministic screenshots
 cat > "$VAULT/.obsidian/appearance.json" << 'EOF'
 {
   "accentColor": "",
   "translucency": false,
   "baseFontSize": 16,
-  "cssTheme": ""
+  "cssTheme": "",
+  "theme": "obsidian"
 }
 EOF
 

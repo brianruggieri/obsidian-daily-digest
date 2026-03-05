@@ -104,7 +104,7 @@ describe("Settings Panel Screenshots", () => {
 		await captureSettingsSection("AI summarization", "settings-ai-anthropic");
 	});
 
-	it("should capture Anthropic AI with prompt preview toggle", async () => {
+	it("should capture Anthropic AI with prompt preview toggle disabled", async () => {
 		await applyPreset("promptPreview");
 		await captureSettingsSection("AI summarization", "settings-prompt-preview");
 	});
