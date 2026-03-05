@@ -42,6 +42,8 @@ The result is a note that looks like this:
 | **Codex CLI sessions** | Your prompts to Codex CLI (not responses) | `~/.codex/history/*.jsonl` |
 | **Git commits** | Commit messages, timestamps, file change stats | Local `.git` directories under a configurable parent folder |
 
+![Browser profile detection](tests/screenshots/baseline/settings-browser-profiles.png)
+
 ### Supported browsers
 
 Chrome, Brave, Edge, and Firefox on macOS, Windows, and Linux. Safari on macOS only.
@@ -52,6 +54,8 @@ Chrome, Brave, Edge, and Firefox on macOS, Windows, and Linux. Safari on macOS o
 - **Anthropic API** (Claude) — with a privacy escalation chain that controls exactly what gets sent
 
 You can also skip AI entirely and just get the raw, organized activity log.
+
+![No-AI mode — structured activity without a summary](tests/screenshots/baseline/digest-no-ai.png)
 
 ---
 
@@ -197,7 +201,7 @@ The plugin automatically selects the most private tier available based on your c
 
 When Anthropic is your provider, you also get a **data preview modal** before anything is sent — showing exactly what data will leave your machine, with the option to cancel or proceed without AI.
 
-![Settings panel](tests/screenshots/baseline/settings-default.png)
+![Privacy warning — Anthropic enabled with all data sources](tests/screenshots/baseline/settings-privacy-warn.png)
 
 ### What gets scrubbed
 
