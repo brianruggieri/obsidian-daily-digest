@@ -48,6 +48,20 @@ export interface DailyDigestSettings {
 	privacyTier: 4 | 3 | 2 | 1 | null;
 	/** Show the AI prompt in the data preview modal before sending to Anthropic. Default: true. */
 	enablePromptPreview: boolean;
+
+	// ── Live Collection ────────────────────────────────────
+	/** Enable background polling of all enabled data sources. Default: false. */
+	enableLiveCollection: boolean;
+	/** Minutes between incremental collection cycles. Range: 1-60. Default: 5. */
+	collectionIntervalMinutes: number;
+	/** Enable a scheduled full daily digest (with AI if configured). Default: false. */
+	enableScheduledDigest: boolean;
+	/** Time-of-day (HH:MM, 24h) to run the scheduled digest. Default: "00:00" (midnight). */
+	scheduledDigestTime: string;
+	/** Automatically update the daily note with raw activity on each collection cycle.
+	 *  When false the snapshot accumulates in memory only and renders on manual command
+	 *  or at the scheduled digest time. Default: false. */
+	enableAutoUpdate: boolean;
 }
 
 export const DEFAULT_SETTINGS: DailyDigestSettings = {
@@ -87,4 +101,11 @@ export const DEFAULT_SETTINGS: DailyDigestSettings = {
 	enableTimeline: false,
 	privacyTier: null,
 	enablePromptPreview: true,
+
+	// Live Collection defaults
+	enableLiveCollection: false,
+	collectionIntervalMinutes: 5,
+	enableScheduledDigest: false,
+	scheduledDigestTime: "00:00",
+	enableAutoUpdate: false,
 };

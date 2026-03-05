@@ -27,12 +27,14 @@ import { computeEngagementScore } from "../analyze/engagement";
 import { clusterArticles } from "../analyze/clusters";
 import { cleanTitle } from "../collect/browser";
 import { extractUserContent, mergeContent, createBackup, hasUserEdits, VaultAdapter } from "../render/merge";
+import { LiveCollectionWatcher } from "../collect/watcher";
 import * as log from "./log";
 import { setDebugEnabled } from "./log";
 
 export default class DailyDigestPlugin extends Plugin {
 	settings!: DailyDigestSettings;
 	statusBarItem!: HTMLElement;
+	private watcher: LiveCollectionWatcher | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -98,11 +100,58 @@ export default class DailyDigestPlugin extends Plugin {
 				).open();
 			});
 		}
+
+		// ── Live Collection ──────────────────────────────
+		// Command: toggle live collection
+		this.addCommand({
+			id: "toggle-live-collection",
+			name: "Toggle live collection",
+			callback: () => {
+				if (this.watcher && this.settings.enableLiveCollection) {
+					this.stopWatcher();
+					new Notice("Daily Digest: Live collection stopped.");
+				} else {
+					this.settings.enableLiveCollection = true;
+					void this.saveSettings();
+					this.startWatcher();
+					new Notice("Daily Digest: Live collection started.");
+				}
+			},
+		});
+
+		// Command: show watcher status
+		this.addCommand({
+			id: "watcher-status",
+			name: "Show live collection status",
+			callback: () => {
+				if (!this.watcher) {
+					new Notice("Daily Digest: Live collection is not running.", 4000);
+					return;
+				}
+				const status = this.watcher.getStatus();
+				const counts = status.snapshotCounts;
+				const total = counts.visits + counts.searches + counts.claudeSessions + counts.gitCommits;
+				new Notice(
+					`Daily Digest: Live collection ${status.state}\n` +
+					`Snapshot: ${total} items (${counts.visits}v ${counts.searches}s ${counts.claudeSessions}c ${counts.gitCommits}g)\n` +
+					(status.nextDigestAt ? `Next digest: ${new Date(status.nextDigestAt).toLocaleTimeString()}` : "No scheduled digest"),
+					8000,
+				);
+			},
+		});
+
+		// Start the watcher if enabled
+		if (this.settings.enableLiveCollection) {
+			// Delay start until layout is ready to avoid blocking Obsidian startup
+			this.app.workspace.onLayoutReady(() => {
+				this.startWatcher();
+			});
+		}
 	}
 
 	onunload(): void {
 		// Obsidian calls this on plugin disable / app quit.
-		// No persistent resources to tear down currently.
+		this.stopWatcher();
 	}
 
 	async loadSettings(): Promise<void> {
@@ -143,6 +192,46 @@ export default class DailyDigestPlugin extends Plugin {
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 		setDebugEnabled(this.settings.debugMode);
+		// Push setting changes to the watcher if it exists
+		if (this.watcher) {
+			this.watcher.updateSettings(this.settings);
+		}
+	}
+
+	// ── Live Collection Watcher ──────────────────────────
+
+	private startWatcher(): void {
+		if (this.watcher) return;
+		this.watcher = new LiveCollectionWatcher(
+			this.settings,
+			(status) => {
+				// Update status bar with live collection info
+				const counts = status.snapshotCounts;
+				const total = counts.visits + counts.searches + counts.claudeSessions + counts.gitCommits;
+				if (status.state === "collecting") {
+					this.statusBarItem.setText("Daily Digest: collecting\u2026");
+				} else if (status.state === "error") {
+					this.statusBarItem.setText("Daily Digest: collection error");
+				} else {
+					this.statusBarItem.setText(`Daily Digest: ${total} items collected`);
+				}
+			},
+			async () => {
+				// Scheduled digest callback — run full pipeline for today
+				this.generateToday();
+			},
+		);
+		this.watcher.start();
+		log.debug("Daily Digest: Live collection watcher started");
+	}
+
+	private stopWatcher(): void {
+		if (!this.watcher) return;
+		this.watcher.stop();
+		this.watcher = null;
+		this.settings.enableLiveCollection = false;
+		this.statusBarItem.setText("Daily Digest ready");
+		log.debug("Daily Digest: Live collection watcher stopped");
 	}
 
 	async runPipelineStage(dateStr: string, stage: string): Promise<unknown> {
