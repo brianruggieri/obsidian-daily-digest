@@ -71,6 +71,20 @@ export function initCgWindowId(): void {
 		throw new Error(`CGWindowID parse failed: received "${result.stdout.trim()}"`);
 	}
 	cgWindowId = parsed;
+
+	// Move the Obsidian window to a fixed position so the drop shadow is
+	// never edge-clipped, keeping screencapture -l dimensions deterministic
+	// across runs regardless of where the OS places the window at startup.
+	try {
+		execSync(
+			`osascript -e 'tell application "System Events" to set bounds of ` +
+			`(first window of (processes whose name is "Obsidian")) to {100, 50, 1236, 842}'`,
+			{ stdio: "ignore" }
+		);
+		execSync("sleep 0.3");
+	} catch {
+		// Non-fatal: proceed with capture even if repositioning fails.
+	}
 }
 
 /**
