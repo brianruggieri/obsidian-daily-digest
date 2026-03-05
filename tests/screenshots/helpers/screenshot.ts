@@ -2,9 +2,11 @@
  * Screenshot capture utilities for WDIO specs.
  *
  * Uses wdio-obsidian-service browser commands for Obsidian interaction.
- * Captures are taken via `screencapture -l <cgWindowId>` (macOS-native)
- * rather than @wdio/visual-service, producing PNGs with the macOS window
- * chrome — title bar, rounded corners, drop shadow, transparent background.
+ * Captures are taken via `screencapture -l -o <cgWindowId>` (macOS-native)
+ * rather than @wdio/visual-service, producing PNGs of the exact window frame
+ * (title bar, rounded corners) without drop shadow. Omitting the shadow keeps
+ * capture dimensions equal to the window's logical size regardless of its
+ * position on screen, which is required for deterministic CI comparisons.
  *
  * Call `initCgWindowId()` once before any captures (in the wdio.conf `before`
  * hook). The CGWindowID must be obtained while the Obsidian window is frontmost,
@@ -76,8 +78,10 @@ export function initCgWindowId(): void {
 /**
  * Capture the Obsidian window using screencapture -l.
  *
- * Produces a PNG with macOS window chrome: title bar, rounded corners,
- * drop shadow on a transparent background — identical to Shottr window capture.
+ * Produces a PNG of the window frame. The -o flag omits the drop shadow so
+ * capture dimensions equal the window's logical frame regardless of its
+ * position on screen. This keeps baseline comparisons deterministic across
+ * CI runs where window placement varies.
  * The -x flag suppresses the shutter sound.
  */
 async function captureWindow(tag: string): Promise<void> {
@@ -89,9 +93,10 @@ async function captureWindow(tag: string): Promise<void> {
 	fs.mkdirSync(ACTUAL_DIR, { recursive: true });
 	await browser.pause(RENDER_SETTLE_MS);
 	const outPath = path.join(ACTUAL_DIR, `${tag}.png`);
-	// -l: capture the specific window by CGWindowID (includes drop shadow)
+	// -l: capture the specific window by CGWindowID
+	// -o: omit drop shadow (deterministic dimensions independent of screen position)
 	// -x: suppress shutter sound
-	execSync(`screencapture -l ${cgWindowId} -x "${outPath}"`);
+	execSync(`screencapture -l ${cgWindowId} -o -x "${outPath}"`);
 }
 
 /**
