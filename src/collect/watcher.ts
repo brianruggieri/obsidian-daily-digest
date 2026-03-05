@@ -326,7 +326,7 @@ export class LiveCollectionWatcher {
 			const novelClaude = deduplicateBy(
 				this.snapshot.claudeSessions,
 				sanitized.claudeSessions,
-				(c) => `${c.conversationFile}|${c.time.getTime()}|${c.prompt.slice(0, 50)}`,
+				(c) => `${c.conversationFile}|${c.time.getTime()}|${c.prompt}`,
 			);
 			const novelGit = deduplicateBy(
 				this.snapshot.gitCommits,

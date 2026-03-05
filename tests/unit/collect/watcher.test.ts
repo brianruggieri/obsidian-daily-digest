@@ -160,16 +160,16 @@ describe("buildSensitivityConfig", () => {
 
 describe("LiveCollectionWatcher", () => {
 	let statusUpdates: WatcherStatus[];
-	let _digestCalls: number;
+	let digestCalls: number;
 	let onStatus: (status: WatcherStatus) => void;
 	let onDigest: () => Promise<void>;
 
 	beforeEach(() => {
 		vi.useFakeTimers();
 		statusUpdates = [];
-		_digestCalls = 0;
+		digestCalls = 0;
 		onStatus = (status) => statusUpdates.push(status);
-		onDigest = async () => { _digestCalls++; };
+		onDigest = async () => { digestCalls++; };
 	});
 
 	afterEach(() => {
@@ -313,6 +313,22 @@ describe("LiveCollectionWatcher", () => {
 
 		const status = watcher.getStatus();
 		expect(status.nextDigestAt).toBeNull();
+		watcher.stop();
+	});
+
+	it("does not call onDigest when scheduled digest is disabled", async () => {
+		const watcher = new LiveCollectionWatcher(
+			testSettings({
+				enableScheduledDigest: false,
+				enableBrowser: false, enableClaude: false, enableCodex: false, enableGit: false,
+			}),
+			onStatus,
+			onDigest,
+		);
+		watcher.start();
+		// Advance past what would be a digest time
+		await vi.advanceTimersByTimeAsync(25 * 60 * 60 * 1000); // 25 hours
+		expect(digestCalls).toBe(0);
 		watcher.stop();
 	});
 });
