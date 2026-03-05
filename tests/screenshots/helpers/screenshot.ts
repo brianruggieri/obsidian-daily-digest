@@ -1,52 +1,108 @@
 /**
  * Screenshot capture utilities for WDIO specs.
  *
- * Uses wdio-obsidian-service browser commands for reliable Obsidian
- * interaction, and @wdio/visual-service for screenshot capture.
+ * Uses wdio-obsidian-service browser commands for Obsidian interaction.
+ * Captures are taken via `screencapture -l <cgWindowId>` (macOS-native)
+ * rather than @wdio/visual-service, producing PNGs with the macOS window
+ * chrome — title bar, rounded corners, drop shadow, transparent background.
+ *
+ * Call `initCgWindowId()` once before any captures (in the wdio.conf `before`
+ * hook). The CGWindowID must be obtained while the Obsidian window is frontmost,
+ * immediately after the WebDriver session launches Obsidian.
  */
 
+import { execSync, spawnSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ACTUAL_DIR = path.resolve(__dirname, "../output/actual");
 const RENDER_SETTLE_MS = 500;
 
+// Module-level CGWindowID — set by initCgWindowId(), used by captureWindow().
+let cgWindowId: number | null = null;
+
+// Python script that finds the frontmost Obsidian window's CGWindowID.
+// Passed to python3 via stdin to avoid shell-quoting complexity.
+const GET_WINDOW_ID_PY = `
+import Quartz, sys
+wins = Quartz.CGWindowListCopyWindowInfo(
+    Quartz.kCGWindowListOptionOnScreenOnly,
+    Quartz.kCGNullWindowID
+)
+for w in wins:
+    if (w.get('kCGWindowOwnerName') == 'Obsidian'
+            and w.get('kCGWindowLayer', 1) == 0
+            and w.get('kCGWindowAlpha', 0.0) > 0):
+        print(w['kCGWindowNumber'])
+        sys.exit(0)
+sys.exit(1)
+`.trim();
+
 /**
- * Dismiss the privacy onboarding modal if it's showing.
+ * Initialise the CGWindowID for the running Obsidian window.
  *
- * The plugin shows a "Welcome to Daily Digest" modal on first run
- * (or when CURRENT_PRIVACY_VERSION bumps). This bypasses it by
- * setting the consent flags directly via the plugin API, then
- * closing any open modal.
+ * Must be called while Obsidian is frontmost — immediately after WDIO
+ * launches the session. Call once per worker (each spec runs in its own
+ * worker with its own Obsidian instance).
+ *
+ * Throws on non-macOS or if no Obsidian window is found.
  */
-export async function dismissOnboarding(): Promise<void> {
-	await browser.executeObsidian(async ({ app, plugins }) => {
-		const plugin = plugins.dailyDigest;
-		if (!plugin) throw new Error("daily-digest plugin not found");
-
-		// Mark onboarding as completed so the modal won't reappear
-		plugin.settings.hasCompletedOnboarding = true;
-		plugin.settings.privacyConsentVersion = 4; // CURRENT_PRIVACY_VERSION
-		await plugin.saveSettings();
-
-		// Close any open modal (the onboarding modal that fired on load)
-		const modal = app.workspace.containerEl
-			?.closest("body")
-			?.querySelector(".daily-digest-onboarding-modal");
-		if (modal) {
-			const closeBtn = modal.querySelector(".modal-close-button") as HTMLElement | null;
-			if (closeBtn) closeBtn.click();
-		}
+export function initCgWindowId(): void {
+	if (process.platform !== "darwin") {
+		throw new Error(
+			"screencapture -l is macOS-only. Ensure screenshots.yml uses runs-on: macos-latest."
+		);
+	}
+	const result = spawnSync("python3", ["-"], {
+		input: GET_WINDOW_ID_PY,
+		encoding: "utf8",
 	});
-	await browser.pause(300);
+	if (result.status !== 0 || !result.stdout.trim()) {
+		throw new Error(
+			`Failed to obtain Obsidian CGWindowID.\n` +
+			`stderr: ${result.stderr}\n` +
+			`Ensure Obsidian is running and frontmost when initCgWindowId() is called.`
+		);
+	}
+	const parsed = parseInt(result.stdout.trim(), 10);
+	if (isNaN(parsed)) {
+		throw new Error(`CGWindowID parse failed: received "${result.stdout.trim()}"`);
+	}
+	cgWindowId = parsed;
+}
+
+/**
+ * Capture the Obsidian window using screencapture -l.
+ *
+ * Produces a PNG with macOS window chrome: title bar, rounded corners,
+ * drop shadow on a transparent background — identical to Shottr window capture.
+ * The -x flag suppresses the shutter sound.
+ */
+async function captureWindow(tag: string): Promise<void> {
+	if (cgWindowId === null) {
+		throw new Error(
+			`cgWindowId is not set — initCgWindowId() must be called before any captures.`
+		);
+	}
+	fs.mkdirSync(ACTUAL_DIR, { recursive: true });
+	await browser.pause(RENDER_SETTLE_MS);
+	const outPath = path.join(ACTUAL_DIR, `${tag}.png`);
+	// -l: capture the specific window by CGWindowID (includes drop shadow)
+	// -x: suppress shutter sound
+	execSync(`screencapture -l ${cgWindowId} -x "${outPath}"`);
 }
 
 /**
  * Take a full-page screenshot of the current viewport.
  */
 export async function captureFullPage(tag: string): Promise<void> {
-	await browser.pause(RENDER_SETTLE_MS);
-	await browser.saveScreen(tag, {});
+	await captureWindow(tag);
 }
 
 /**
- * Scroll an element into view and take an element-level screenshot.
+ * Scroll an element into view and capture the window.
  */
 export async function captureElement(
 	selector: string,
@@ -55,13 +111,13 @@ export async function captureElement(
 	const el = await $(selector);
 	await el.scrollIntoView({ block: "start" });
 	await browser.pause(RENDER_SETTLE_MS);
-	await browser.saveElement(el, tag, {});
+	await captureWindow(tag);
 }
 
 /**
- * Scroll to a settings section heading and capture the viewport.
+ * Scroll to a settings section heading and capture the window.
  *
- * Falls back to a full-page screenshot if the heading can't be found.
+ * Falls back to a full-window screenshot if the heading can't be found.
  */
 export async function captureSettingsSection(
 	headingText: string,
@@ -85,21 +141,37 @@ export async function captureSettingsSection(
 		}
 	}, headingText);
 
-	await browser.pause(RENDER_SETTLE_MS);
+	await captureWindow(tag);
+}
 
-	// Capture the viewport from this scroll position
-	await browser.saveScreen(tag, {});
+/**
+ * Dismiss the privacy onboarding modal if it's showing.
+ */
+export async function dismissOnboarding(): Promise<void> {
+	await browser.executeObsidian(async ({ app, plugins }) => {
+		const plugin = plugins.dailyDigest;
+		if (!plugin) throw new Error("daily-digest plugin not found");
+
+		plugin.settings.hasCompletedOnboarding = true;
+		plugin.settings.privacyConsentVersion = 4; // CURRENT_PRIVACY_VERSION
+		await plugin.saveSettings();
+
+		const modal = app.workspace.containerEl
+			?.closest("body")
+			?.querySelector(".daily-digest-onboarding-modal");
+		if (modal) {
+			const closeBtn = modal.querySelector(".modal-close-button") as HTMLElement | null;
+			if (closeBtn) closeBtn.click();
+		}
+	});
+	await browser.pause(300);
 }
 
 /**
  * Open the Obsidian settings modal and navigate to the Daily Digest tab.
- *
- * Uses the Obsidian API directly via executeObsidian for reliability
- * (avoids keyboard-shortcut fragility across platforms).
  */
 export async function openPluginSettings(): Promise<void> {
 	await browser.executeObsidian(({ app }) => {
-		// Open settings and navigate to our plugin tab
 		app.setting.open();
 		app.setting.openTabById("daily-digest");
 	});
@@ -131,28 +203,21 @@ export async function collapseSidebars(): Promise<void> {
 
 /**
  * Open a note by filename in reading view.
- *
- * Uses the Obsidian API to open the file directly rather than
- * keyboard shortcuts (more reliable, cross-platform).
  */
 export async function openNoteInReadingView(filename: string): Promise<void> {
-	// Note: executeObsidian serializes the callback — it cannot capture
-	// outer-scope variables. Pass data as extra arguments instead.
 	const filePath = `daily/${filename}.md`;
-	await browser.executeObsidian(async ({ app, obsidian }, path) => {
-		const file = app.vault.getAbstractFileByPath(path);
+	await browser.executeObsidian(async ({ app, obsidian }, p) => {
+		const file = app.vault.getAbstractFileByPath(p);
 		if (!file || !(file instanceof obsidian.TFile)) {
-			throw new Error(`Note ${path} not found in vault`);
+			throw new Error(`Note ${p} not found in vault`);
 		}
 		const leaf = app.workspace.getLeaf(false);
 		await leaf.openFile(file, { state: { mode: "preview" } });
 	}, filePath);
 	await browser.pause(500);
 
-	// Verify we're in reading view
 	const readingView = await $(".markdown-reading-view");
 	if (!(await readingView.isExisting())) {
-		// Toggle to reading view
 		await browser.keys(["Meta", "e"]);
 		await browser.pause(300);
 	}
@@ -160,15 +225,8 @@ export async function openNoteInReadingView(filename: string): Promise<void> {
 
 /**
  * Scroll to a markdown heading in the current reading view.
- *
- * Obsidian uses a virtual scroller in reading view — only visible
- * sections are in the DOM. We use the file's heading cache to find
- * the target heading's line number, then scroll via the preview
- * renderer to bring that section into view.
  */
 export async function scrollToHeading(headingText: string): Promise<void> {
-	// Use Obsidian's metadata cache to find the heading position,
-	// then scroll the preview to that line.
 	const found = await browser.executeObsidian(({ app }, text) => {
 		const leaf = app.workspace.activeLeaf;
 		if (!leaf?.view) return false;
@@ -177,7 +235,6 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 		const file = (leaf.view as any).file;
 		if (!file) return false;
 
-		// Get heading positions from Obsidian's metadata cache
 		const cache = app.metadataCache.getFileCache(file);
 		if (!cache?.headings) return false;
 
@@ -187,7 +244,6 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 		);
 		if (!heading) return false;
 
-		// Use the preview renderer to scroll to the heading's line
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const previewMode = (leaf.view as any).previewMode;
 		if (previewMode?.renderer?.applyScroll) {
@@ -207,11 +263,6 @@ export async function scrollToHeading(headingText: string): Promise<void> {
 
 /**
  * Expand a collapsed callout by clicking its fold icon.
- *
- * Must be called after scrollToCalloutTitle() has brought the callout
- * into the DOM. Finds the `.callout-title-inner` containing the text,
- * walks up to the `.callout` container, and clicks the fold icon to
- * toggle it open. No-ops if the callout is already expanded.
  */
 export async function expandCallout(titleText: string): Promise<void> {
 	await browser.execute((text: string) => {
@@ -220,15 +271,12 @@ export async function expandCallout(titleText: string): Promise<void> {
 			if (!el.textContent?.includes(text)) continue;
 			const callout = el.closest(".callout");
 			if (!callout) continue;
-			// If already expanded (no "is-collapsed" class), skip
 			if (!callout.classList.contains("is-collapsed")) return;
-			// Click the fold icon to expand
 			const fold = callout.querySelector(".callout-fold") as HTMLElement | null;
 			if (fold) {
 				fold.click();
 				return;
 			}
-			// Fallback: click the title itself
 			(el as HTMLElement).click();
 			return;
 		}
@@ -238,12 +286,6 @@ export async function expandCallout(titleText: string): Promise<void> {
 
 /**
  * Scroll to an Obsidian callout by matching its title text in the file content.
- *
- * Callouts are NOT in Obsidian's metadata cache, and Obsidian's virtual
- * scroller only renders visible sections — so we can't query the DOM for
- * offscreen callouts. Instead, we find the callout's line number from the
- * raw file content and use the preview renderer's applyScroll() to bring
- * that section into view (same approach as scrollToHeading).
  */
 export async function scrollToCalloutTitle(titleText: string): Promise<void> {
 	const found = await browser.executeObsidian(async ({ app }, text) => {
@@ -254,14 +296,12 @@ export async function scrollToCalloutTitle(titleText: string): Promise<void> {
 		const file = (leaf.view as any).file;
 		if (!file) return false;
 
-		// Read the file content and find the line containing the callout title
 		const content = await app.vault.cachedRead(file);
 		if (typeof content !== "string") return false;
 
 		const lines = content.split("\n");
 		let targetLine = -1;
 		for (let i = 0; i < lines.length; i++) {
-			// Callout lines look like: > [!info]- 🌐 Browser Activity (20 visits, 3 categories)
 			if (lines[i].includes("[!") && lines[i].includes(text)) {
 				targetLine = i;
 				break;
