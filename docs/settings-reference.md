@@ -44,6 +44,8 @@ Render a cross-source chronological timeline in the daily note. Merges browser v
 
 ## 🗄️ Data sources
 
+![Data sources — browser profile detection](../tests/screenshots/baseline/settings-browser-profiles.png)
+
 ### `maxVisitsPerDomain`
 
 **Max visits per domain**
@@ -134,6 +136,8 @@ Parent directory containing your git repositories. The plugin scans one level de
 
 ## 🛡️ Privacy
 
+![Privacy — custom sensitivity filter](../tests/screenshots/baseline/settings-sensitivity-custom.png)
+
 ### `sensitivityPreset`
 
 **Sensitivity filter**
@@ -173,6 +177,8 @@ Additional domains to filter using exact matching. Subdomains are matched automa
 - **Visible when:** `enableSensitivityFilter` is enabled
 
 ## ✨ AI summarization
+
+![AI summarization — Anthropic provider](../tests/screenshots/baseline/settings-ai-anthropic.png)
 
 ### `promptBudget`
 
@@ -276,6 +282,8 @@ Path to a folder containing custom prompt templates. You can override any built-
 - **Visible when:** `enableAI` is enabled
 
 ## 🧠 Advanced
+
+![Advanced — classification and pattern extraction](../tests/screenshots/baseline/settings-advanced-ai.png)
 
 ### `sensitivityAction`
 

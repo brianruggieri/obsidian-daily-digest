@@ -35,6 +35,26 @@ const SECTION_ICONS: Record<SettingSection, string> = {
 	"Meta": "🔧",
 };
 
+/** Representative screenshot for each section (relative to docs/). */
+const SECTION_SCREENSHOTS: Partial<Record<SettingSection, { path: string; alt: string }>> = {
+	"Data sources": {
+		path: "../tests/screenshots/baseline/settings-browser-profiles.png",
+		alt: "Data sources — browser profile detection",
+	},
+	"Privacy": {
+		path: "../tests/screenshots/baseline/settings-sensitivity-custom.png",
+		alt: "Privacy — custom sensitivity filter",
+	},
+	"AI summarization": {
+		path: "../tests/screenshots/baseline/settings-ai-anthropic.png",
+		alt: "AI summarization — Anthropic provider",
+	},
+	"Advanced": {
+		path: "../tests/screenshots/baseline/settings-advanced-ai.png",
+		alt: "Advanced — classification and pattern extraction",
+	},
+};
+
 function formatDefault(meta: SettingMeta): string {
 	if (meta.defaultValue === "true") return "`true`";
 	if (meta.defaultValue === "false") return "`false`";
@@ -61,6 +81,11 @@ function buildSection(section: SettingSection, entries: SettingMeta[]): string {
 	const lines: string[] = [];
 	lines.push(`## ${icon} ${section}`);
 	lines.push("");
+	const screenshot = SECTION_SCREENSHOTS[section];
+	if (screenshot) {
+		lines.push(`![${screenshot.alt}](${screenshot.path})`);
+		lines.push("");
+	}
 
 	for (const meta of entries) {
 		lines.push(`### \`${meta.key}\``);
