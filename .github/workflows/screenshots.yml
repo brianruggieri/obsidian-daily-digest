@@ -32,7 +32,7 @@ jobs:
         run: npm run build
 
       - name: Install PyObjC Quartz bindings
-        run: pip3 install pyobjc-framework-Quartz
+        run: pip3 install --break-system-packages pyobjc-framework-Quartz
 
       - name: Run screenshot specs
         run: npm run screenshots
