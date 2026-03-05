@@ -574,3 +574,55 @@ export interface UnifiedTaskSession {
 	/** Outcome inferred from whether commits are present and task type. */
 	outcome: "committed" | "in-progress" | "abandoned" | "learning-only";
 }
+
+// ── Live Collection Types ────────────────────────────────
+
+/**
+ * Accumulated raw data from a single incremental collection cycle.
+ * The watcher builds these up over the day and merges them into a
+ * single CollectionSnapshot for rendering.
+ */
+export interface CollectionSnapshot {
+	/** Timestamp of the most recent collection cycle that fed this snapshot. */
+	lastCollectedAt: Date;
+	/** Accumulated browser visits since midnight. */
+	visits: BrowserVisit[];
+	/** Accumulated search queries since midnight. */
+	searches: SearchQuery[];
+	/** Accumulated Claude/Codex sessions since midnight. */
+	claudeSessions: ClaudeSession[];
+	/** Accumulated git commits since midnight. */
+	gitCommits: GitCommit[];
+}
+
+/**
+ * Per-source high-water-mark timestamps so each polling cycle only
+ * collects events newer than the last successful collection.
+ */
+export interface CollectionCursors {
+	browser: Date;
+	claude: Date;
+	codex: Date;
+	git: Date;
+}
+
+/** Possible states of the live collection watcher. */
+export type WatcherState = "stopped" | "collecting" | "idle" | "error";
+
+/** Events emitted by the watcher for the plugin to react to. */
+export interface WatcherStatus {
+	state: WatcherState;
+	/** Counts of items in the current snapshot. */
+	snapshotCounts: {
+		visits: number;
+		searches: number;
+		claudeSessions: number;
+		gitCommits: number;
+	};
+	/** ISO timestamp of next scheduled collection cycle. */
+	nextCollectionAt: string | null;
+	/** ISO timestamp of next scheduled full digest. */
+	nextDigestAt: string | null;
+	/** Human-readable error if state === "error". */
+	lastError: string | null;
+}
