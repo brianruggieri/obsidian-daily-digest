@@ -11,7 +11,7 @@ labels: enhancement, fun-feedback
 
 We all type fast when we're in the zone. That means typos. Hilarious, weird, sometimes accidentally profound typos. Instead of letting these gems disappear into the void, let's **capture the funniest misspellings** from your search queries, AI prompts, and commit messages, and present them as a daily blooper reel in your digest.
 
-Because "how to dubug typescipt" is a whole mood. 😄
+Because "how to `dubug` `typescipt`" is a whole mood. 😄
 
 ### What Makes a Misspelling "Funny"?
 
@@ -78,7 +78,7 @@ Add a **"Daily Blooper Reel"** section as a collapsed callout:
 >
 > 🔍 **Search queries:**
 > - "react **useSatte** hook" — so close, yet so far
-> - "how to **serilize** JSON in typescrpt" — a double whammy!
+> - "how to **serilize** JSON in `typescrpt`" — a double whammy!
 >
 > 🤖 **AI prompts:**
 > - "Can you help me **refacor** this **compnent**?" — Claude understood anyway ✨

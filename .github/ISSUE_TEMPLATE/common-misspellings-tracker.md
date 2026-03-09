@@ -37,7 +37,7 @@ Classify your misspellings into pattern types to reveal your "typing fingerprint
 - **Omissions** (dropping a letter): `enviroment` → `environment`, `depenency` → `dependency`
 - **Insertions** (extra letter): `dependeency`, `autthentication`
 - **Substitutions** (wrong letter): `dependancy` → `dependency` (a→e)
-- **Phonetic** (spelling by sound): `asyncronous`, `autentication`
+- **Phonetic** (spelling by sound): `asyncronous` → `asynchronous`, `autentication` → `authentication`
 - **Double-letter confusion**: `occurence` vs `occurrence`, `refering` vs `referring`
 
 Show a breakdown:
