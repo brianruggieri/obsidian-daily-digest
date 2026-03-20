@@ -659,7 +659,96 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 		}
 
-		// ━━ 5. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+		// ━━ 5. Live Collection ━━━━━━━━━━━━━━━━━━━━━━━
+		const liveHeading = new Setting(containerEl).setName("Live collection").setHeading();
+		this.prependIcon(liveHeading.nameEl, "activity");
+
+		const liveGroup = containerEl.createDiv({ cls: "dd-settings-group" });
+
+		new Setting(liveGroup)
+			.setName("Enable live collection")
+			.setDesc(
+				"Automatically poll enabled data sources in the background and " +
+				"accumulate activity throughout the day. Data stays in memory " +
+				"until a digest is generated."
+			)
+			.addToggle((toggle: ToggleComponent) =>
+				toggle
+					.setValue(this.plugin.settings.enableLiveCollection)
+					.onChange(async (value) => {
+						this.plugin.settings.enableLiveCollection = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.enableLiveCollection) {
+			new Setting(liveGroup)
+				.setName("Collection interval (minutes)")
+				.setDesc("How often to poll data sources for new activity. Range: 1–60.")
+				.addSlider((slider) =>
+					slider
+						.setLimits(1, 60, 1)
+						.setValue(this.plugin.settings.collectionIntervalMinutes)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							this.plugin.settings.collectionIntervalMinutes = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(liveGroup)
+				.setName("Auto-update daily note")
+				.setDesc(
+					"Write raw activity data to the daily note on each collection " +
+					"cycle (without AI). When off, data accumulates in memory and " +
+					"renders only on manual command or scheduled digest."
+				)
+				.addToggle((toggle: ToggleComponent) =>
+					toggle
+						.setValue(this.plugin.settings.enableAutoUpdate)
+						.onChange(async (value) => {
+							this.plugin.settings.enableAutoUpdate = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(liveGroup)
+				.setName("Scheduled daily digest")
+				.setDesc(
+					"Automatically generate a full daily digest (with AI if configured) " +
+					"at the specified time each day."
+				)
+				.addToggle((toggle: ToggleComponent) =>
+					toggle
+						.setValue(this.plugin.settings.enableScheduledDigest)
+						.onChange(async (value) => {
+							this.plugin.settings.enableScheduledDigest = value;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
+
+			if (this.plugin.settings.enableScheduledDigest) {
+				new Setting(liveGroup)
+					.setName("Digest time")
+					.setDesc("Time of day (24h format HH:MM) to generate the scheduled digest.")
+					.addText((text) =>
+						text
+							.setPlaceholder("00:00")
+							.setValue(this.plugin.settings.scheduledDigestTime)
+							.onChange(async (value) => {
+								// Validate HH:MM format
+								if (/^\d{1,2}:\d{2}$/.test(value.trim())) {
+									this.plugin.settings.scheduledDigestTime = value.trim();
+									await this.plugin.saveSettings();
+								}
+							})
+					);
+			}
+		}
+
+		// ━━ 6. Advanced ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 		const advHeading = new Setting(containerEl).setName("Advanced").setHeading();
 		this.prependIcon(advHeading.nameEl, "sliders-horizontal");
 
