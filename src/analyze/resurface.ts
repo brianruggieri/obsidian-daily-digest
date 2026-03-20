@@ -63,7 +63,9 @@ export function buildResurfaceBlock(
 	for (const signal of candidates.slice(0, 4)) {
 		if (!signal.lastSeen) continue;
 
-		const priorDate = new Date(signal.lastSeen);
+		// Parse YYYY-MM-DD as local date (not UTC midnight)
+		const [y, m, d] = signal.lastSeen.split("-").map(Number);
+		const priorDate = new Date(y, m - 1, d);
 		const daysSince = Math.floor(
 			(currentDate.getTime() - priorDate.getTime()) / (1000 * 60 * 60 * 24)
 		);
@@ -86,13 +88,14 @@ export function buildResurfaceBlock(
 		}
 	}
 
-	// Add delta-based entries (no vault check — these are known recurring topics)
+	// Add delta-based entries with vault existence check
 	for (const topic of deltaReturning.slice(0, 2)) {
 		// Find the most recent occurrence in signals (may be stable/declining)
 		const signal = recurrenceSignals.find((s) => s.topic === topic && s.lastSeen);
 		if (!signal?.lastSeen) continue;
 
-		const priorDate = new Date(signal.lastSeen);
+		const [dy, dm, dd] = signal.lastSeen.split("-").map(Number);
+		const priorDate = new Date(dy, dm - 1, dd);
 		const daysSince = Math.floor(
 			(currentDate.getTime() - priorDate.getTime()) / (1000 * 60 * 60 * 24)
 		);
@@ -100,15 +103,23 @@ export function buildResurfaceBlock(
 		if (daysSince <= 0) continue;
 
 		const priorPath = buildDailyPath(priorDate, settings);
-		lines.push({
-			topic,
-			priorNotePath: priorPath,
-			daysSince,
-			trend: signal.trend,
-		});
+
+		// Only include if the prior daily note actually exists in the vault
+		const noteExists = vault.getAbstractFileByPath(priorPath + ".md") !== null
+			|| vault.getAbstractFileByPath(priorPath) !== null;
+
+		if (noteExists) {
+			lines.push({
+				topic,
+				priorNotePath: priorPath,
+				daysSince,
+				trend: signal.trend,
+			});
+		}
 	}
 
-	return lines;
+	// Global cap: at most 4 total resurface items
+	return lines.slice(0, 4);
 }
 
 /**

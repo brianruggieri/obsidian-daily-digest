@@ -67,6 +67,17 @@ export const BASE_SETTINGS: DailyDigestSettings = {
 	classificationBatchSize: 8,
 	trackRecurrence: false,
 
+	// Knowledge artifacts
+	enableArtifactWriter: false,
+	artifactFolders: {
+		topics: "Topics",
+		entities: "Entities",
+		seeds: "Seeds",
+		mocs: "MOCs",
+	},
+	enableWikilinks: false,
+	enableResurfacing: false,
+
 	// Meta
 	hasCompletedOnboarding: true,
 	privacyConsentVersion: 1,

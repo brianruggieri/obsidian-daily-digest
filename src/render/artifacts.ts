@@ -74,7 +74,7 @@ export async function writeTopicNote(
 	topic: string,
 	dailyDate: Date,
 	settings: DailyDigestSettings,
-): Promise<void> {
+): Promise<boolean> {
 	const folder = settings.artifactFolders.topics;
 	await ensureFolder(vault, folder);
 
@@ -87,13 +87,16 @@ export async function writeTopicNote(
 	if (existing) {
 		const content = await vault.read(existing);
 		// Only append if this date isn't already linked
-		if (!content.includes(`[[${dailyPath}]]`) && !content.includes(dateStr)) {
+		if (!content.includes(`[[${dailyPath}]]`)) {
 			const updated = content.trimEnd() + `\n- [[${dailyPath}]] — ${dateStr}\n`;
 			await vault.modify(existing, updated);
+			return true;
 		}
+		return false;
 	} else {
 		const content = buildTopicNoteContent(topic, dailyPath, dateStr);
 		await vault.create(filePath, content);
+		return true;
 	}
 }
 
@@ -121,7 +124,7 @@ export async function writeEntityNote(
 	entity: string,
 	dailyDate: Date,
 	settings: DailyDigestSettings,
-): Promise<void> {
+): Promise<boolean> {
 	const folder = settings.artifactFolders.entities;
 	await ensureFolder(vault, folder);
 
@@ -133,13 +136,16 @@ export async function writeEntityNote(
 	const existing = vault.getAbstractFileByPath(filePath);
 	if (existing) {
 		const content = await vault.read(existing);
-		if (!content.includes(`[[${dailyPath}]]`) && !content.includes(dateStr)) {
+		if (!content.includes(`[[${dailyPath}]]`)) {
 			const updated = content.trimEnd() + `\n- [[${dailyPath}]] — ${dateStr}\n`;
 			await vault.modify(existing, updated);
+			return true;
 		}
+		return false;
 	} else {
 		const content = buildEntityNoteContent(entity, dailyPath, dateStr);
 		await vault.create(filePath, content);
+		return true;
 	}
 }
 
@@ -169,7 +175,7 @@ export async function writeSeedNote(
 	seed: string,
 	dailyDate: Date,
 	settings: DailyDigestSettings,
-): Promise<void> {
+): Promise<boolean> {
 	const folder = settings.artifactFolders.seeds;
 	await ensureFolder(vault, folder);
 
@@ -182,8 +188,10 @@ export async function writeSeedNote(
 	if (!existing) {
 		const content = buildSeedNoteContent(seed, dailyPath, dateStr);
 		await vault.create(filePath, content);
+		return true;
 	}
 	// Seeds are stubs — we don't append to them after first creation
+	return false;
 }
 
 function buildSeedNoteContent(seed: string, dailyPath: string, dateStr: string): string {
@@ -225,8 +233,12 @@ export async function writeWeeklyMOC(
 	const dateStr = formatDate(date);
 	const dailyPath = buildDailyPath(date, settings);
 
+	const topicFolder = settings.artifactFolders.topics;
 	const topicLinks = topicSlugs.slice(0, 10)
-		.map((s) => `[[${settings.artifactFolders.topics}/${s}]]`)
+		.map((s) => {
+			const topicPath = topicFolder ? `${topicFolder}/${s}` : s;
+			return `[[${topicPath}]]`;
+		})
 		.join(", ");
 
 	const existing = vault.getAbstractFileByPath(filePath);
@@ -285,8 +297,8 @@ export async function writeArtifacts(
 	const topicNames = extractTopicNames(knowledge);
 	for (const topic of topicNames) {
 		try {
-			await writeTopicNote(vault, topic, date, settings);
-			topicsWritten++;
+			const wrote = await writeTopicNote(vault, topic, date, settings);
+			if (wrote) topicsWritten++;
 		} catch {
 			// Non-fatal — continue with remaining artifacts
 		}
@@ -296,8 +308,8 @@ export async function writeArtifacts(
 	const entityNames = extractEntityNames(knowledge);
 	for (const entity of entityNames) {
 		try {
-			await writeEntityNote(vault, entity, date, settings);
-			entitiesWritten++;
+			const wrote = await writeEntityNote(vault, entity, date, settings);
+			if (wrote) entitiesWritten++;
 		} catch {
 			// Non-fatal
 		}
@@ -307,8 +319,8 @@ export async function writeArtifacts(
 	const seeds = aiSummary?.note_seeds ?? [];
 	for (const seed of seeds) {
 		try {
-			await writeSeedNote(vault, seed, date, settings);
-			seedsWritten++;
+			const wrote = await writeSeedNote(vault, seed, date, settings);
+			if (wrote) seedsWritten++;
 		} catch {
 			// Non-fatal
 		}
