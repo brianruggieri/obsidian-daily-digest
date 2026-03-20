@@ -735,7 +735,9 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"mapmyrun.com",
 		// Outdoor / exercise
 		"alltrails.com", "komoot.com",
-		"nike.com/run",
+		// nike.com/run removed — Layer 1 matches hostname only; /run path is
+		// handled by PATH_HINTS (/fitness) instead. Bare nike.com would
+		// miscategorize all Nike traffic (shopping, etc.).
 		// Mindfulness / mental health
 		"calm.com", "headspace.com", "insighttimer.com",
 		"wakingup.com", "tenpercent.com",
@@ -763,7 +765,10 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"priceline.com", "travelocity.com", "orbitz.com",
 		"hopper.com", "agoda.com",
 		// Flights / air travel
-		"skyscanner.com", "google.com/travel", "flightradar24.com",
+		"skyscanner.com", "flightradar24.com",
+		// google.com/travel removed — Layer 1 matches hostname only; /travel path
+		// is handled by PATH_HINTS instead. Bare google.com would miscategorize
+		// all Google traffic.
 		"seatguru.com", "flightaware.com",
 		// Airlines
 		"united.com", "delta.com", "southwest.com", "aa.com",

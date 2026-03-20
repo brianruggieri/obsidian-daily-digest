@@ -306,6 +306,50 @@ describe("categorizeDomain", () => {
 	it("matches API subdomains", () => {
 		expect(categorizeDomain("api.stripe.com")).toBe("dev");
 	});
+
+	// ── Layer 2: PATH_HINTS — travel paths ──────────────────
+	it("categorizes unknown domain with /travel path as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/travel/destinations")).toBe("travel");
+	});
+
+	it("categorizes unknown domain with /flights path as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/flights/search")).toBe("travel");
+	});
+
+	// ── Layer 2: PATH_HINTS — health paths ──────────────────
+	it("categorizes unknown domain with /health path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/health/articles")).toBe("health");
+	});
+
+	it("categorizes unknown domain with /fitness path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/fitness/workouts")).toBe("health");
+	});
+
+	it("categorizes unknown domain with /wellness path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/wellness/tips")).toBe("health");
+	});
+
+	// ── Layer 3: TITLE_HINTS — travel titles ────────────────
+	it("categorizes unknown domain with flight booking title as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "flights book cheap deals")).toBe("travel");
+	});
+
+	it("categorizes unknown domain with hotel search title as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "hotels search near me — best deal")).toBe("travel");
+	});
+
+	// ── Layer 3: TITLE_HINTS — health titles ────────────────
+	it("categorizes unknown domain with symptoms title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "Common symptoms of seasonal allergies")).toBe("health");
+	});
+
+	it("categorizes unknown domain with workout title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "30-minute full body workout routine")).toBe("health");
+	});
+
+	it("categorizes unknown domain with medication title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "Medication interactions and side effects")).toBe("health");
+	});
 });
 
 describe("categorizeVisits", () => {
@@ -354,7 +398,7 @@ describe("categorizeVisits", () => {
 
 describe("CATEGORY_LABELS", () => {
 	it("has labels for all standard categories", () => {
-		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "health", "travel", "personal", "education", "gaming", "writing", "pkm", "other"];
+		const expected = ["work", "dev", "design", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "health", "travel", "personal", "education", "gaming", "writing", "pkm", "other"];
 		for (const cat of expected) {
 			expect(CATEGORY_LABELS[cat]).toBeDefined();
 			expect(CATEGORY_LABELS[cat]).toHaveLength(2);
