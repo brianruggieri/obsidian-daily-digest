@@ -14,7 +14,7 @@ import { BrowserVisit, CategorizedVisits } from "../types";
 //     finance, social, and jobsearch categories
 //     https://dsi.ut-capitole.fr/blacklists/index_en.php
 //
-// ~2,410 domain patterns across 17 categories.
+// ~2,410 domain patterns across 18 categories.
 
 export const CATEGORY_RULES: Record<string, string[]> = {
 	work: [
@@ -1059,15 +1059,20 @@ export function categorizeDomain(domain: string, url?: string, title?: string): 
 	domain = domain.toLowerCase().replace(/^www\./, "");
 
 	// Layer 1: Domain pattern matching (fast path)
-	// Patterns ending with "." are prefix wildcards (e.g. "jira." matches
-	// jira.atlassian.com) — use substring matching.  All other patterns are
-	// treated as domain-or-suffix matches: the domain must equal the pattern
-	// or end with ".{pattern}".  This prevents e.g. "x.com" from matching
-	// "goodrx.com" or "roblox.com".
+	// Three pattern styles:
+	//   "jira."   (trailing dot)  — prefix wildcard: matches jira.atlassian.com
+	//                               but NOT mojira.com (label-boundary check).
+	//   ".edu"    (leading dot)   — suffix wildcard: matches mit.edu, any .edu.
+	//   "x.com"   (plain domain)  — exact or subdomain match only, so "x.com"
+	//                               won't match "goodrx.com" or "roblox.com".
 	for (const [category, patterns] of Object.entries(CATEGORY_RULES)) {
 		for (const p of patterns) {
 			if (p.endsWith(".")) {
-				if (domain.includes(p)) return category;
+				// Prefix wildcard — must start with the prefix or have it after a dot
+				if (domain.startsWith(p) || domain.includes(`.${p}`)) return category;
+			} else if (p.startsWith(".")) {
+				// Suffix wildcard (e.g. ".edu") — domain must end with suffix
+				if (domain.endsWith(p)) return category;
 			} else {
 				if (domain === p || domain.endsWith(`.${p}`)) return category;
 			}

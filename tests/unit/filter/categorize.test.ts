@@ -299,9 +299,22 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("www.github.com")).toBe("dev");
 	});
 
-	it("matches prefix-wildcard patterns (trailing dot) via substring", () => {
+	it("matches prefix-wildcard patterns (trailing dot) at label boundaries", () => {
 		// "docs." rule should match developer docs
 		expect(categorizeDomain("docs.anthropic.com")).toBe("dev");
+		// "jira." should match jira subdomains
+		expect(categorizeDomain("jira.atlassian.com")).toBe("work");
+	});
+
+	it("rejects prefix-wildcard patterns that match mid-label", () => {
+		// "jira." must NOT match "mojira.com" (mid-label false positive)
+		expect(categorizeDomain("mojira.com")).not.toBe("work");
+	});
+
+	it("matches suffix-wildcard patterns (leading dot) like .edu", () => {
+		expect(categorizeDomain("mit.edu")).toBe("education");
+		expect(categorizeDomain("cs.stanford.edu")).toBe("education");
+		expect(categorizeDomain("unknown-university.edu")).toBe("education");
 	});
 
 	it("matches API subdomains", () => {
