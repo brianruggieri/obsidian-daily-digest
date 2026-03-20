@@ -133,8 +133,122 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("groq.com")).toBe("ai_tools");
 	});
 
-	it("categorizes Strava as personal", () => {
-		expect(categorizeDomain("strava.com")).toBe("personal");
+	it("categorizes Strava as health", () => {
+		expect(categorizeDomain("strava.com")).toBe("health");
+	});
+
+	// Health & Fitness category
+	it("categorizes Fitbit as health", () => {
+		expect(categorizeDomain("fitbit.com")).toBe("health");
+	});
+
+	it("categorizes MyFitnessPal as health", () => {
+		expect(categorizeDomain("myfitnesspal.com")).toBe("health");
+	});
+
+	it("categorizes Peloton as health", () => {
+		expect(categorizeDomain("peloton.com")).toBe("health");
+	});
+
+	it("categorizes WebMD as health", () => {
+		expect(categorizeDomain("webmd.com")).toBe("health");
+	});
+
+	it("categorizes Headspace as health", () => {
+		expect(categorizeDomain("headspace.com")).toBe("health");
+	});
+
+	it("categorizes Zocdoc as health", () => {
+		expect(categorizeDomain("zocdoc.com")).toBe("health");
+	});
+
+	it("categorizes GoodRx as health (not social despite containing x.com substring)", () => {
+		expect(categorizeDomain("goodrx.com")).toBe("health");
+	});
+
+	it("categorizes Whoop as health", () => {
+		expect(categorizeDomain("whoop.com")).toBe("health");
+	});
+
+	it("categorizes Oura as health", () => {
+		expect(categorizeDomain("oura.com")).toBe("health");
+	});
+
+	it("categorizes AllTrails as health", () => {
+		expect(categorizeDomain("alltrails.com")).toBe("health");
+	});
+
+	it("categorizes BetterHelp as health", () => {
+		expect(categorizeDomain("betterhelp.com")).toBe("health");
+	});
+
+	it("categorizes Mayo Clinic as health", () => {
+		expect(categorizeDomain("mayoclinic.org")).toBe("health");
+	});
+
+	// Travel category
+	it("categorizes Booking.com as travel", () => {
+		expect(categorizeDomain("booking.com")).toBe("travel");
+	});
+
+	it("categorizes Airbnb as travel", () => {
+		expect(categorizeDomain("airbnb.com")).toBe("travel");
+	});
+
+	it("categorizes Expedia as travel", () => {
+		expect(categorizeDomain("expedia.com")).toBe("travel");
+	});
+
+	it("categorizes TripAdvisor as travel", () => {
+		expect(categorizeDomain("tripadvisor.com")).toBe("travel");
+	});
+
+	it("categorizes Skyscanner as travel", () => {
+		expect(categorizeDomain("skyscanner.com")).toBe("travel");
+	});
+
+	it("categorizes Rome2Rio as travel", () => {
+		expect(categorizeDomain("rome2rio.com")).toBe("travel");
+	});
+
+	it("categorizes Lonely Planet as travel", () => {
+		expect(categorizeDomain("lonelyplanet.com")).toBe("travel");
+	});
+
+	it("categorizes Atlas Obscura as travel", () => {
+		expect(categorizeDomain("atlasobscura.com")).toBe("travel");
+	});
+
+	it("categorizes United Airlines as travel", () => {
+		expect(categorizeDomain("united.com")).toBe("travel");
+	});
+
+	it("categorizes Delta Airlines as travel", () => {
+		expect(categorizeDomain("delta.com")).toBe("travel");
+	});
+
+	it("categorizes Southwest Airlines as travel", () => {
+		expect(categorizeDomain("southwest.com")).toBe("travel");
+	});
+
+	it("categorizes JetBlue as travel", () => {
+		expect(categorizeDomain("jetblue.com")).toBe("travel");
+	});
+
+	it("categorizes Amtrak as travel", () => {
+		expect(categorizeDomain("amtrak.com")).toBe("travel");
+	});
+
+	it("categorizes VRBO as travel", () => {
+		expect(categorizeDomain("vrbo.com")).toBe("travel");
+	});
+
+	it("categorizes Hostelworld as travel", () => {
+		expect(categorizeDomain("hostelworld.com")).toBe("travel");
+	});
+
+	it("categorizes FlightRadar24 as travel", () => {
+		expect(categorizeDomain("flightradar24.com")).toBe("travel");
 	});
 
 	it("categorizes Goodreads as personal", () => {
@@ -146,8 +260,11 @@ describe("categorizeDomain", () => {
 	});
 
 	it("categorizes Minecraft as gaming", () => {
-		// Note: roblox.com contains "x.com" substring so it matches social first (known limitation)
 		expect(categorizeDomain("minecraft.net")).toBe("gaming");
+	});
+
+	it("categorizes Roblox as gaming (not social despite containing x.com substring)", () => {
+		expect(categorizeDomain("roblox.com")).toBe("gaming");
 	});
 
 	it("categorizes Nexus Mods as gaming", () => {
@@ -182,13 +299,70 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("www.github.com")).toBe("dev");
 	});
 
-	it("matches subdomains via includes", () => {
+	it("matches prefix-wildcard patterns (trailing dot) at label boundaries", () => {
 		// "docs." rule should match developer docs
 		expect(categorizeDomain("docs.anthropic.com")).toBe("dev");
+		// "jira." should match jira subdomains
+		expect(categorizeDomain("jira.atlassian.com")).toBe("work");
+	});
+
+	it("rejects prefix-wildcard patterns that match mid-label", () => {
+		// "jira." must NOT match "mojira.com" (mid-label false positive)
+		expect(categorizeDomain("mojira.com")).not.toBe("work");
+	});
+
+	it("matches suffix-wildcard patterns (leading dot) like .edu", () => {
+		expect(categorizeDomain("mit.edu")).toBe("education");
+		expect(categorizeDomain("cs.stanford.edu")).toBe("education");
+		expect(categorizeDomain("unknown-university.edu")).toBe("education");
 	});
 
 	it("matches API subdomains", () => {
 		expect(categorizeDomain("api.stripe.com")).toBe("dev");
+	});
+
+	// ── Layer 2: PATH_HINTS — travel paths ──────────────────
+	it("categorizes unknown domain with /travel path as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/travel/destinations")).toBe("travel");
+	});
+
+	it("categorizes unknown domain with /flights path as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/flights/search")).toBe("travel");
+	});
+
+	// ── Layer 2: PATH_HINTS — health paths ──────────────────
+	it("categorizes unknown domain with /health path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/health/articles")).toBe("health");
+	});
+
+	it("categorizes unknown domain with /fitness path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/fitness/workouts")).toBe("health");
+	});
+
+	it("categorizes unknown domain with /wellness path as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/wellness/tips")).toBe("health");
+	});
+
+	// ── Layer 3: TITLE_HINTS — travel titles ────────────────
+	it("categorizes unknown domain with flight booking title as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "flights book cheap deals")).toBe("travel");
+	});
+
+	it("categorizes unknown domain with hotel search title as travel", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "hotels search near me — best deal")).toBe("travel");
+	});
+
+	// ── Layer 3: TITLE_HINTS — health titles ────────────────
+	it("categorizes unknown domain with symptoms title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "Common symptoms of seasonal allergies")).toBe("health");
+	});
+
+	it("categorizes unknown domain with workout title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "30-minute full body workout routine")).toBe("health");
+	});
+
+	it("categorizes unknown domain with medication title as health", () => {
+		expect(categorizeDomain("example.com", "https://example.com/page", "Medication interactions and side effects")).toBe("health");
 	});
 });
 
@@ -238,7 +412,7 @@ describe("categorizeVisits", () => {
 
 describe("CATEGORY_LABELS", () => {
 	it("has labels for all standard categories", () => {
-		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "personal", "education", "gaming", "writing", "pkm", "other"];
+		const expected = ["work", "dev", "design", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "health", "travel", "personal", "education", "gaming", "writing", "pkm", "other"];
 		for (const cat of expected) {
 			expect(CATEGORY_LABELS[cat]).toBeDefined();
 			expect(CATEGORY_LABELS[cat]).toHaveLength(2);

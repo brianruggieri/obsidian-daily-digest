@@ -257,6 +257,8 @@ export const CATEGORY_TOPIC_LABELS: Record<string, string[]> = {
 	media: ["media consumption"],
 	education: ["education"],
 	ai_tools: ["AI tools"],
+	health: ["health and fitness"],
+	travel: ["travel planning"],
 	other: [],
 	// UT1 equivalents (added when issue #40 lands):
 	// "social_networks": ["social networking"],
@@ -287,6 +289,8 @@ export const CATEGORY_SUMMARIES: Record<string, string> = {
 	media: "Consuming media content",
 	education: "Browsing educational content",
 	ai_tools: "Using AI tools and platforms",
+	health: "Tracking health and fitness activities",
+	travel: "Planning travel and trips",
 	other: "General web browsing",
 	// UT1 equivalents (added when issue #40 lands):
 	// "social_networks": "Browsing social media",
@@ -331,6 +335,8 @@ export const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
 	ai_tools: "implementation",
 	personal: "browsing",
 	education: "learning",
+	health: "browsing",
+	travel: "browsing",
 	gaming: "browsing",
 	writing: "writing",
 	pkm: "writing",
