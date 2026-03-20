@@ -735,9 +735,11 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"mapmyrun.com",
 		// Outdoor / exercise
 		"alltrails.com", "komoot.com",
-		// nike.com/run removed — Layer 1 matches hostname only; /run path is
-		// handled by PATH_HINTS (/fitness) instead. Bare nike.com would
-		// miscategorize all Nike traffic (shopping, etc.).
+		// nike.com omitted — bare nike.com has no Layer 1 rule, so it falls
+		// through to Layer 2 where PATH_HINTS (/fitness) catch fitness-
+		// specific subpages like nike.com/run. Non-fitness Nike pages
+		// (shopping, etc.) correctly land in "other" or match PATH_HINTS
+		// for their own category (e.g. /shop → shopping).
 		// Mindfulness / mental health
 		"calm.com", "headspace.com", "insighttimer.com",
 		"wakingup.com", "tenpercent.com",
@@ -1057,10 +1059,17 @@ export function categorizeDomain(domain: string, url?: string, title?: string): 
 	domain = domain.toLowerCase().replace(/^www\./, "");
 
 	// Layer 1: Domain pattern matching (fast path)
+	// Patterns ending with "." are prefix wildcards (e.g. "jira." matches
+	// jira.atlassian.com) — use substring matching.  All other patterns are
+	// treated as domain-or-suffix matches: the domain must equal the pattern
+	// or end with ".{pattern}".  This prevents e.g. "x.com" from matching
+	// "goodrx.com" or "roblox.com".
 	for (const [category, patterns] of Object.entries(CATEGORY_RULES)) {
 		for (const p of patterns) {
-			if (domain.includes(p)) {
-				return category;
+			if (p.endsWith(".")) {
+				if (domain.includes(p)) return category;
+			} else {
+				if (domain === p || domain.endsWith(`.${p}`)) return category;
 			}
 		}
 	}

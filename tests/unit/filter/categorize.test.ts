@@ -162,10 +162,8 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("zocdoc.com")).toBe("health");
 	});
 
-	it("categorizes GoodRx as social (known limitation: x.com substring match)", () => {
-		// Note: goodrx.com contains "x.com" substring so it matches social first
-		// Same limitation as roblox.com — see comment in gaming tests
-		expect(categorizeDomain("goodrx.com")).toBe("social");
+	it("categorizes GoodRx as health (not social despite containing x.com substring)", () => {
+		expect(categorizeDomain("goodrx.com")).toBe("health");
 	});
 
 	it("categorizes Whoop as health", () => {
@@ -262,8 +260,11 @@ describe("categorizeDomain", () => {
 	});
 
 	it("categorizes Minecraft as gaming", () => {
-		// Note: roblox.com contains "x.com" substring so it matches social first (known limitation)
 		expect(categorizeDomain("minecraft.net")).toBe("gaming");
+	});
+
+	it("categorizes Roblox as gaming (not social despite containing x.com substring)", () => {
+		expect(categorizeDomain("roblox.com")).toBe("gaming");
 	});
 
 	it("categorizes Nexus Mods as gaming", () => {
@@ -298,7 +299,7 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("www.github.com")).toBe("dev");
 	});
 
-	it("matches subdomains via includes", () => {
+	it("matches prefix-wildcard patterns (trailing dot) via substring", () => {
 		// "docs." rule should match developer docs
 		expect(categorizeDomain("docs.anthropic.com")).toBe("dev");
 	});
