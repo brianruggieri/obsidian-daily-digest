@@ -24,6 +24,9 @@ export interface ArtifactVault {
 	createFolder(path: string): Promise<void>;
 }
 
+/** Section header where generated backlinks are collected. */
+const BACKLINK_SECTION = "## Daily Digest Appearances";
+
 // ── Helpers ──────────────────────────────────────────────
 
 /**
@@ -40,6 +43,30 @@ async function ensureFolder(vault: ArtifactVault, folder: string): Promise<void>
 			if (!String(e).toLowerCase().includes("already exists")) throw e;
 		}
 	}
+}
+
+/**
+ * Append a backlink entry under the `## Daily Digest Appearances` section.
+ * If the section doesn't exist, creates it at the end of the content.
+ * This keeps generated backlinks separate from user-authored content.
+ */
+export function appendToBacklinkSection(content: string, entry: string): string {
+	const sectionIdx = content.indexOf(BACKLINK_SECTION);
+	if (sectionIdx !== -1) {
+		// Find the end of the section's existing entries by looking for the next
+		// heading (## ...) or end of file. Insert just before the next section.
+		const afterHeader = sectionIdx + BACKLINK_SECTION.length;
+		const nextSectionMatch = content.slice(afterHeader).search(/\n## /);
+		if (nextSectionMatch !== -1) {
+			const insertPos = afterHeader + nextSectionMatch;
+			// Insert the entry before the next section, with trailing newline
+			return content.slice(0, insertPos).trimEnd() + `\n${entry}\n` + content.slice(insertPos);
+		}
+		// No next section — append at end
+		return content.trimEnd() + `\n${entry}\n`;
+	}
+	// Section doesn't exist — add it at the end
+	return content.trimEnd() + `\n\n${BACKLINK_SECTION}\n\n${entry}\n`;
 }
 
 /**
@@ -88,7 +115,7 @@ export async function writeTopicNote(
 		const content = await vault.read(existing);
 		// Only append if this date isn't already linked
 		if (!content.includes(`[[${dailyPath}]]`)) {
-			const updated = content.trimEnd() + `\n- [[${dailyPath}]] — ${dateStr}\n`;
+			const updated = appendToBacklinkSection(content, `- [[${dailyPath}]] — ${dateStr}`);
 			await vault.modify(existing, updated);
 			return true;
 		}
@@ -137,7 +164,7 @@ export async function writeEntityNote(
 	if (existing) {
 		const content = await vault.read(existing);
 		if (!content.includes(`[[${dailyPath}]]`)) {
-			const updated = content.trimEnd() + `\n- [[${dailyPath}]] — ${dateStr}\n`;
+			const updated = appendToBacklinkSection(content, `- [[${dailyPath}]] — ${dateStr}`);
 			await vault.modify(existing, updated);
 			return true;
 		}

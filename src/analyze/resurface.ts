@@ -10,6 +10,7 @@
 
 import type { RecurrenceSignal, KnowledgeDelta } from "../types";
 import type { DailyDigestSettings } from "../settings/types";
+import { escapeForInlineMarkdown } from "../render/escape";
 
 // ── Vault interface (read-only) ──────────────────────────
 
@@ -66,7 +67,8 @@ export function buildResurfaceBlock(
 		// Parse YYYY-MM-DD as local date (not UTC midnight)
 		const [y, m, d] = signal.lastSeen.split("-").map(Number);
 		const priorDate = new Date(y, m - 1, d);
-		const daysSince = Math.floor(
+		// Use Math.round to absorb DST transitions (23h or 25h days)
+		const daysSince = Math.round(
 			(currentDate.getTime() - priorDate.getTime()) / (1000 * 60 * 60 * 24)
 		);
 
@@ -96,7 +98,8 @@ export function buildResurfaceBlock(
 
 		const [dy, dm, dd] = signal.lastSeen.split("-").map(Number);
 		const priorDate = new Date(dy, dm - 1, dd);
-		const daysSince = Math.floor(
+		// Use Math.round to absorb DST transitions (23h or 25h days)
+		const daysSince = Math.round(
 			(currentDate.getTime() - priorDate.getTime()) / (1000 * 60 * 60 * 24)
 		);
 
@@ -131,7 +134,8 @@ export function renderResurfaceLines(lines: ResurfaceLine[]): string[] {
 	return lines.map((l) => {
 		const dayWord = l.daysSince === 1 ? "day" : "days";
 		const trendNote = l.trend === "returning" ? " (returning)" : "";
-		return `- **${l.topic}**${trendNote} — last seen ${l.daysSince} ${dayWord} ago · see [[${l.priorNotePath}]]`;
+		const safeTopic = escapeForInlineMarkdown(l.topic);
+		return `- **${safeTopic}**${trendNote} — last seen ${l.daysSince} ${dayWord} ago · see [[${l.priorNotePath}]]`;
 	});
 }
 

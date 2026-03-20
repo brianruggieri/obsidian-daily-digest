@@ -107,6 +107,11 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Deep-merge nested objects that shallow Object.assign would clobber
+		this.settings.artifactFolders = {
+			...DEFAULT_SETTINGS.artifactFolders,
+			...this.settings.artifactFolders,
+		};
 		await this.migrateLegacyBrowserSettings();
 	}
 

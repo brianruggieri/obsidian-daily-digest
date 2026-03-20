@@ -15,7 +15,7 @@ import {
 import { AIProvider } from "../settings/types";
 import { KnowledgeSections } from "../analyze/knowledge";
 import { formatDetailsBlock, type PromptLog } from "../plugin/prompt-logger";
-import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml } from "./escape";
+import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml, escapeForWikilink } from "./escape";
 import { cleanUrlForDisplay } from "./url-display";
 
 function formatTime(d: Date | null): string {
@@ -338,7 +338,7 @@ function renderKnowledgeInsights(
 		if (!wikilinkFolders) return escapeForMarkdown(name);
 		const slug = topicSlug(name);
 		const path = wikilinkFolders.topics ? `${wikilinkFolders.topics}/${slug}` : slug;
-		return `[[${path}|${name}]]`;
+		return `[[${path}|${escapeForWikilink(name)}]]`;
 	}
 
 	/** Convert an entity name to a wikilink if folders are configured. */
@@ -346,7 +346,7 @@ function renderKnowledgeInsights(
 		if (!wikilinkFolders) return escapeForMarkdown(name);
 		const slug = entitySlug(name);
 		const path = wikilinkFolders.entities ? `${wikilinkFolders.entities}/${slug}` : slug;
-		return `[[${path}|${name}]]`;
+		return `[[${path}|${escapeForWikilink(name)}]]`;
 	}
 
 	/**
@@ -361,12 +361,12 @@ function renderKnowledgeInsights(
 		// "topicA ↔ topicB (N co-occurrences)"
 		const pairMatch = stripped.match(/^(.+?)\s*↔\s*(.+?)\s*(\(.+\))$/);
 		if (pairMatch) {
-			return `${barPrefix}${topicLink(pairMatch[1].trim())} ↔ ${topicLink(pairMatch[2].trim())} ${pairMatch[3]}`;
+			return `${barPrefix}${topicLink(pairMatch[1].trim())} ↔ ${topicLink(pairMatch[2].trim())} ${escapeForWikilink(pairMatch[3])}`;
 		}
 		// "topic (N mentions)"
 		const singleMatch = stripped.match(/^(.+?)\s*(\(.+\))$/);
 		if (singleMatch) {
-			return `${barPrefix}${topicLink(singleMatch[1].trim())} ${singleMatch[2]}`;
+			return `${barPrefix}${topicLink(singleMatch[1].trim())} ${escapeForWikilink(singleMatch[2])}`;
 		}
 		return escapeForMarkdown(line);
 	}
@@ -379,7 +379,7 @@ function renderKnowledgeInsights(
 		if (!wikilinkFolders) return escapeForMarkdown(line);
 		const match = line.match(/^(.+?)\s*↔\s*(.+?)\s*(\(.+\))$/);
 		if (match) {
-			return `${entityLink(match[1].trim())} ↔ ${entityLink(match[2].trim())} ${match[3]}`;
+			return `${entityLink(match[1].trim())} ↔ ${entityLink(match[2].trim())} ${escapeForWikilink(match[3])}`;
 		}
 		return escapeForMarkdown(line);
 	}
@@ -706,9 +706,9 @@ export function renderMarkdown(
 			if (wikilinkFolders) {
 				const slug = seedSlug(seed);
 				const seedPath = wikilinkFolders.seeds ? `${wikilinkFolders.seeds}/${slug}` : slug;
-				lines.push(`> - [[${seedPath}|${escapeForMarkdown(seed)}]]`);
+				lines.push(`> - [[${seedPath}|${escapeForWikilink(seed)}]]`);
 			} else {
-				lines.push(`> - [[${escapeForMarkdown(seed)}]]`);
+				lines.push(`> - [[${escapeForWikilink(seed)}]]`);
 			}
 		}
 		lines.push("");
