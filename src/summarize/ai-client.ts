@@ -78,6 +78,9 @@ export async function pollAnthropicBatch(
 	const maxAttempts = opts.maxAttempts ?? Math.ceil(maxDurationMs / intervalMs);
 
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		if (attempt > 0) {
+			await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
+		}
 		const response = await requestUrl({
 			url: `https://api.anthropic.com/v1/messages/batches/${batchId}`,
 			method: "GET",
@@ -94,7 +97,6 @@ export async function pollAnthropicBatch(
 		if (batch.processing_status === "ended") {
 			return batch;
 		}
-		await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
 	}
 	throw new Error(`Batch ${batchId} did not complete within the maximum polling time`);
 }

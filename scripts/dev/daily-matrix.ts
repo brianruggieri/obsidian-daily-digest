@@ -288,6 +288,19 @@ async function computePresetData(
 		localEndpoint: settings.localEndpoint,
 		localModel: settings.localModel,
 	};
+
+	// Skip compression and prompt building when AI is disabled — these stages
+	// are only consumed by the summarization call and batch submission.
+	if (!useAI) {
+		const emptyCompressed = { browserText: "", searchText: "", claudeText: "", gitText: "", totalEvents: 0, tokenEstimate: 0 };
+		return {
+			presetId, preset, settings,
+			visits, searches, claudeSessions, gitCommits,
+			categorized, classification, patterns, knowledge, articleClusters,
+			aiCallConfig, compressed: emptyCompressed, prompt: "", tier: 4 as const, promptLog, aiProviderUsed,
+		};
+	}
+
 	const compressed = compressActivity(categorized, searches, claudeSessions, gitCommits, settings.promptBudget);
 	const tier = resolvePrivacyTier(aiCallConfig, settings.privacyTier);
 	const proseOptions = buildTierFilteredOptions(tier, {
@@ -485,6 +498,10 @@ async function runBatchMode(
 			console.log(`\n[${data.presetId}] AI: mock (batch mode)`);
 		}
 	} else {
+		if (!apiKey) {
+			throw new Error("ANTHROPIC_API_KEY is required for --batch mode with real AI");
+		}
+
 		// Filter out presets with no activity (mirrors summarizeDay's short-circuit)
 		const hasActivity = (d: PresetPipelineData): boolean => {
 			const hasVisits = Object.values(d.categorized).some((v) => v.length > 0);
