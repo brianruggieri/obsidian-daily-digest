@@ -63,6 +63,7 @@ import type {
 } from "../../src/types";
 import type { KnowledgeSections } from "../../src/analyze/knowledge";
 import type { AICallConfig } from "../../src/summarize/ai-client";
+import type { AIProvider } from "../../src/settings/types";
 
 // ── Env vars ─────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ interface PresetPipelineData {
 	prompt: string;
 	tier: 1 | 2 | 3 | 4;
 	promptLog: PromptLog;
-	aiProviderUsed: "none" | "anthropic" | "local";
+	aiProviderUsed: AIProvider;
 }
 
 // ── Stages 1–9: Collect → Semantic extraction ────────────
@@ -278,10 +279,10 @@ async function computePresetData(
 	}
 
 	// ── Build prompt (for logging and batch submission) ──
-	const aiProviderUsed = (useAI ? settings.aiProvider : "none") as "none" | "anthropic" | "local";
+	const aiProviderUsed: AIProvider = useAI ? settings.aiProvider : "none";
 	const promptLog: PromptLog = createPromptLog();
 	const aiCallConfig: AICallConfig = {
-		provider: settings.aiProvider as "anthropic" | "local",
+		provider: settings.aiProvider,
 		anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? (AI_MODE === "mock" ? "mock-key" : ""),
 		anthropicModel: settings.aiModel ?? "claude-haiku-4-5-20251001",
 		localEndpoint: settings.localEndpoint,
@@ -320,12 +321,11 @@ function renderAndWrite(
 	data: PresetPipelineData,
 	aiSummary: AISummary | null,
 	outputDir: string,
-	start: number
+	start: number,
+	date: Date
 ): PresetReport | null {
 	const { presetId, preset, visits, searches, claudeSessions, gitCommits,
 		categorized, knowledge, promptLog, aiProviderUsed } = data;
-
-	const date = new Date(`${DATE_STR}T12:00:00`);
 	const md = renderMarkdown(
 		date, visits, searches, claudeSessions, gitCommits,
 		categorized, aiSummary, aiProviderUsed, knowledge, promptLog
@@ -406,7 +406,7 @@ async function runPreset(
 	}
 
 	// ── 11. Render markdown ──────────────────────────────
-	return renderAndWrite(data, aiSummary, outputDir, start);
+	return renderAndWrite(data, aiSummary, outputDir, start, date);
 }
 
 // ── Batch mode runner ────────────────────────────────────
@@ -463,7 +463,7 @@ async function runBatchMode(
 			console.log(`\n[${data.presetId}] AI: real summary generated`);
 		}
 
-		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!);
+		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!, date);
 		if (ASSERT && report) reports.push(report);
 	}
 
@@ -525,7 +525,7 @@ async function runBatchMode(
 	// ── Render all Anthropic preset results ──────────────
 	for (const data of anthropicData) {
 		const aiSummary = summaryMap.get(data.presetId) ?? null;
-		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!);
+		const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!, date);
 		if (ASSERT && report) reports.push(report);
 	}
 

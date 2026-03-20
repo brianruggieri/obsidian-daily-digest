@@ -62,15 +62,20 @@ export async function submitAnthropicBatch(
 
 /**
  * Poll the Anthropic Message Batches API until the batch has ended.
- * Rejects if the batch never completes within the maximum number of attempts.
+ * Rejects if the batch never completes within the allowed time.
+ *
+ * Timeout precedence:
+ * - `maxAttempts` (explicit) takes priority when provided
+ * - Otherwise `maxDurationMs` (default 24h) is divided by `intervalMs`
  */
 export async function pollAnthropicBatch(
 	batchId: string,
 	apiKey: string,
-	opts: { intervalMs?: number; maxAttempts?: number } = {}
+	opts: { intervalMs?: number; maxAttempts?: number; maxDurationMs?: number } = {}
 ): Promise<AnthropicBatchResponse> {
 	const intervalMs = opts.intervalMs ?? 5000;
-	const maxAttempts = opts.maxAttempts ?? 1440; // 2 hrs at 5s intervals by default
+	const maxDurationMs = opts.maxDurationMs ?? 24 * 60 * 60 * 1000; // 24 hours
+	const maxAttempts = opts.maxAttempts ?? Math.ceil(maxDurationMs / intervalMs);
 
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
 		const response = await requestUrl({

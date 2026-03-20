@@ -510,6 +510,34 @@ describe("pollAnthropicBatch", () => {
 			pollAnthropicBatch("b1", "sk-key", { intervalMs: 0 })
 		).rejects.toThrow("Batch poll failed: HTTP 500");
 	});
+
+	it("derives maxAttempts from maxDurationMs when maxAttempts is not set", async () => {
+		// maxDurationMs = 10ms, intervalMs = 5ms → ceil(10/5) = 2 attempts
+		mockRequestUrl.mockResolvedValue(batchStatusResponse("b1", "in_progress"));
+		await expect(
+			pollAnthropicBatch("b1", "sk-key", { intervalMs: 5, maxDurationMs: 10 })
+		).rejects.toThrow("did not complete");
+		expect(mockRequestUrl).toHaveBeenCalledTimes(2);
+	});
+
+	it("explicit maxAttempts takes precedence over maxDurationMs", async () => {
+		// maxDurationMs would yield ceil(100/10) = 10 attempts, but explicit maxAttempts = 3 wins
+		mockRequestUrl.mockResolvedValue(batchStatusResponse("b1", "in_progress"));
+		await expect(
+			pollAnthropicBatch("b1", "sk-key", { intervalMs: 10, maxDurationMs: 100, maxAttempts: 3 })
+		).rejects.toThrow("did not complete");
+		expect(mockRequestUrl).toHaveBeenCalledTimes(3);
+	});
+
+	it("defaults to 24h timeout when no duration or attempts specified", async () => {
+		// With intervalMs = 1000, default 24h = 86_400 attempts
+		// We just verify it does not throw immediately (returns on first poll)
+		mockRequestUrl.mockResolvedValue(
+			batchStatusResponse("b1", "ended", "https://r.example.com")
+		);
+		const result = await pollAnthropicBatch("b1", "sk-key", { intervalMs: 1000 });
+		expect(result.processing_status).toBe("ended");
+	});
 });
 
 describe("retrieveAnthropicBatchResults", () => {
