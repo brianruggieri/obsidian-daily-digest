@@ -14,7 +14,7 @@ import { BrowserVisit, CategorizedVisits } from "../types";
 //     finance, social, and jobsearch categories
 //     https://dsi.ut-capitole.fr/blacklists/index_en.php
 //
-// ~2,410 domain patterns across 15 categories.
+// ~2,410 domain patterns across 17 categories.
 
 export const CATEGORY_RULES: Record<string, string[]> = {
 	work: [
@@ -644,7 +644,7 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"sberbank.ru", "bourse.lefigaro.fr", "caixa.gov.br", "trustarc.com",
 		"truste.com", "nubank.com.br", "vtb.ru", "mastercard.com",
 		"tax.ny.gov", "bb.com.br", "tetrapolis.spb.ru", "treasury.gov",
-		"raiffeisen.ru", "cib.com.cn", "alfabank.ru", "delta.com",
+		"raiffeisen.ru", "cib.com.cn", "alfabank.ru",
 		"mcdonalds.com", "itau.com.br", "citi.com", "santander.com.br",
 		"tesco.com", "banki.ru", "bourse.lesechos.fr", "usaa.com",
 		"dbs.com", "jp-bank.japanpost.jp", "gazprombank.ru", "westernunion.com",
@@ -726,16 +726,67 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"lumo.proton.me", "yuewen.cn", "so.360.com", "z.ai",
 		"getliner.com", "typeset.io",
 	],
-	personal: [
+	health: [
 		// ── Hand-curated ──────────────────────────
-		// Health / fitness
-		"health.", "myfitnesspal.com", "strava.com", "garmin.com",
-		"whoop.com", "oura.com", "fitbit.com", "peloton.com",
+		// Fitness trackers / wearables
+		"fitbit.com", "strava.com", "garmin.com", "whoop.com",
+		"oura.com", "peloton.com", "myfitnesspal.com",
 		"noom.com", "cronometer.com", "loseit.com",
-		"alltrails.com", "komoot.com", "mapmyrun.com",
-		// Mindfulness
+		"mapmyrun.com",
+		// Outdoor / exercise
+		"alltrails.com", "komoot.com",
+		"nike.com/run",
+		// Mindfulness / mental health
 		"calm.com", "headspace.com", "insighttimer.com",
 		"wakingup.com", "tenpercent.com",
+		"betterhelp.com", "talkspace.com", "cerebral.com",
+		// Medical information
+		"webmd.com", "mayoclinic.org", "healthline.com",
+		"nih.gov", "clevelandclinic.org", "hopkinsmedicine.org",
+		"medlineplus.gov", "drugs.com", "rxlist.com",
+		// Patient portals / appointments
+		"mychart.com", "zocdoc.com", "onemedical.com",
+		// Pharmacy / prescriptions
+		"goodrx.com", "pillpack.com", "capsule.com",
+		// Health insurance
+		"healthcare.gov",
+		// Nutrition
+		"nutritiondata.self.com", "fatsecret.com", "eatthismuch.com",
+		// Health-oriented subdomains
+		"health.",
+	],
+	travel: [
+		// ── Hand-curated ──────────────────────────
+		// Booking / OTA
+		"booking.com", "airbnb.com", "expedia.com", "kayak.com",
+		"hotels.com", "vrbo.com", "hostelworld.com",
+		"priceline.com", "travelocity.com", "orbitz.com",
+		"hopper.com", "agoda.com",
+		// Flights / air travel
+		"skyscanner.com", "google.com/travel", "flightradar24.com",
+		"seatguru.com", "flightaware.com",
+		// Airlines
+		"united.com", "delta.com", "southwest.com", "aa.com",
+		"jetblue.com", "spirit.com", "frontier.com",
+		"alaskaair.com", "hawaiianairlines.com",
+		"britishairways.com", "airfrance.com", "lufthansa.com",
+		"emirates.com", "qantas.com", "ryanair.com", "easyjet.com",
+		// Rail / ground
+		"amtrak.com", "rome2rio.com", "wanderu.com",
+		"eurostar.com", "thetrainline.com",
+		// Reviews / guides
+		"tripadvisor.com", "lonelyplanet.com", "atlasobscura.com",
+		"fodors.com", "frommers.com", "nomadicmatt.com",
+		"thepointsguy.com",
+		// Road trips / maps
+		"roadtrippers.com",
+		// Cruises
+		"cruisecritic.com",
+		// Travel rewards
+		"awardhacker.com",
+	],
+	personal: [
+		// ── Hand-curated ──────────────────────────
 		// Habit tracking
 		"habitica.com", "stickk.com", "streaks.app",
 		// Books / reading
@@ -750,10 +801,6 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 		"tasty.co", "delish.com", "yummly.com",
 		"thepioneerwoman.com", "pinchofyum.com", "damndelicious.net",
 		"smittenkitchen.com", "loveandlemons.com",
-		// Travel
-		"tripadvisor.com", "booking.com", "airbnb.com",
-		"kayak.com", "expedia.com", "hotels.com",
-		"skyscanner.com", "hopper.com", "rome2rio.com",
 		// Weather
 		"weather.com", "weather.gov", "accuweather.com",
 		"wunderground.com",
@@ -934,6 +981,8 @@ export const CATEGORY_LABELS: Record<string, [string, string]> = {
 	shopping: ["\u{1F6D2}", "Shopping"],
 	finance: ["\u{1F4B0}", "Finance"],
 	ai_tools: ["\u{1F916}", "AI Tools"],
+	health: ["\u{1FA7A}", "Health & Fitness"],
+	travel: ["\u{2708}\u{FE0F}", "Travel"],
 	personal: ["\u{1F3C3}", "Personal"],
 	education: ["\u{1F393}", "Education"],
 	gaming: ["\u{1F3AE}", "Gaming"],
@@ -962,8 +1011,11 @@ const PATH_HINTS: Array<[RegExp, string]> = [
 	[/\/cooking\//i, "personal"],
 	[/\/pricing\/?$/i, "work"],
 	[/\/plans\/?$/i, "work"],
-	[/\/travel/i, "personal"],
-	[/\/flights/i, "personal"],
+	[/\/travel/i, "travel"],
+	[/\/flights/i, "travel"],
+	[/\/health/i, "health"],
+	[/\/fitness/i, "health"],
+	[/\/wellness/i, "health"],
 	[/\/learning/i, "education"],
 ];
 
@@ -980,6 +1032,11 @@ const TITLE_HINTS: Array<[RegExp, string]> = [
 	[/\bbuy now\b/i, "shopping"],
 	[/\badd to cart\b/i, "shopping"],
 	[/\bfree shipping\b/i, "shopping"],
+	[/\bflight(?:s)?\b.*\b(?:book|search|deal)/i, "travel"],
+	[/\bhotel(?:s)?\b.*\b(?:book|search|deal|review)/i, "travel"],
+	[/\bsymptoms?\b/i, "health"],
+	[/\bworkout\b/i, "health"],
+	[/\bmedication\b/i, "health"],
 ];
 
 // ── Layer 4: TLD / subdomain inference ───────────────────────

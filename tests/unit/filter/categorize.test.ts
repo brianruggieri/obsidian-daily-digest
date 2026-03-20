@@ -133,8 +133,124 @@ describe("categorizeDomain", () => {
 		expect(categorizeDomain("groq.com")).toBe("ai_tools");
 	});
 
-	it("categorizes Strava as personal", () => {
-		expect(categorizeDomain("strava.com")).toBe("personal");
+	it("categorizes Strava as health", () => {
+		expect(categorizeDomain("strava.com")).toBe("health");
+	});
+
+	// Health & Fitness category
+	it("categorizes Fitbit as health", () => {
+		expect(categorizeDomain("fitbit.com")).toBe("health");
+	});
+
+	it("categorizes MyFitnessPal as health", () => {
+		expect(categorizeDomain("myfitnesspal.com")).toBe("health");
+	});
+
+	it("categorizes Peloton as health", () => {
+		expect(categorizeDomain("peloton.com")).toBe("health");
+	});
+
+	it("categorizes WebMD as health", () => {
+		expect(categorizeDomain("webmd.com")).toBe("health");
+	});
+
+	it("categorizes Headspace as health", () => {
+		expect(categorizeDomain("headspace.com")).toBe("health");
+	});
+
+	it("categorizes Zocdoc as health", () => {
+		expect(categorizeDomain("zocdoc.com")).toBe("health");
+	});
+
+	it("categorizes GoodRx as social (known limitation: x.com substring match)", () => {
+		// Note: goodrx.com contains "x.com" substring so it matches social first
+		// Same limitation as roblox.com — see comment in gaming tests
+		expect(categorizeDomain("goodrx.com")).toBe("social");
+	});
+
+	it("categorizes Whoop as health", () => {
+		expect(categorizeDomain("whoop.com")).toBe("health");
+	});
+
+	it("categorizes Oura as health", () => {
+		expect(categorizeDomain("oura.com")).toBe("health");
+	});
+
+	it("categorizes AllTrails as health", () => {
+		expect(categorizeDomain("alltrails.com")).toBe("health");
+	});
+
+	it("categorizes BetterHelp as health", () => {
+		expect(categorizeDomain("betterhelp.com")).toBe("health");
+	});
+
+	it("categorizes Mayo Clinic as health", () => {
+		expect(categorizeDomain("mayoclinic.org")).toBe("health");
+	});
+
+	// Travel category
+	it("categorizes Booking.com as travel", () => {
+		expect(categorizeDomain("booking.com")).toBe("travel");
+	});
+
+	it("categorizes Airbnb as travel", () => {
+		expect(categorizeDomain("airbnb.com")).toBe("travel");
+	});
+
+	it("categorizes Expedia as travel", () => {
+		expect(categorizeDomain("expedia.com")).toBe("travel");
+	});
+
+	it("categorizes TripAdvisor as travel", () => {
+		expect(categorizeDomain("tripadvisor.com")).toBe("travel");
+	});
+
+	it("categorizes Skyscanner as travel", () => {
+		expect(categorizeDomain("skyscanner.com")).toBe("travel");
+	});
+
+	it("categorizes Rome2Rio as travel", () => {
+		expect(categorizeDomain("rome2rio.com")).toBe("travel");
+	});
+
+	it("categorizes Lonely Planet as travel", () => {
+		expect(categorizeDomain("lonelyplanet.com")).toBe("travel");
+	});
+
+	it("categorizes Atlas Obscura as travel", () => {
+		expect(categorizeDomain("atlasobscura.com")).toBe("travel");
+	});
+
+	it("categorizes United Airlines as travel", () => {
+		expect(categorizeDomain("united.com")).toBe("travel");
+	});
+
+	it("categorizes Delta Airlines as travel", () => {
+		expect(categorizeDomain("delta.com")).toBe("travel");
+	});
+
+	it("categorizes Southwest Airlines as travel", () => {
+		expect(categorizeDomain("southwest.com")).toBe("travel");
+	});
+
+	it("categorizes JetBlue as travel", () => {
+		expect(categorizeDomain("jetblue.com")).toBe("travel");
+	});
+
+	it("categorizes Amtrak as travel", () => {
+		expect(categorizeDomain("amtrak.com")).toBe("travel");
+	});
+
+	it("categorizes VRBO as travel", () => {
+		expect(categorizeDomain("vrbo.com")).toBe("travel");
+	});
+
+	it("categorizes Hostelworld as travel", () => {
+		expect(categorizeDomain("hostelworld.com")).toBe("travel");
+	});
+
+	it("categorizes FlightRadar24 as travel", () => {
+		expect(categorizeDomain("flightradar24.com")).toBe("travel");
 	});
 
 	it("categorizes Goodreads as personal", () => {
@@ -238,7 +354,7 @@ describe("categorizeVisits", () => {
 
 describe("CATEGORY_LABELS", () => {
 	it("has labels for all standard categories", () => {
-		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "personal", "education", "gaming", "writing", "pkm", "other"];
+		const expected = ["work", "dev", "research", "news", "social", "media", "shopping", "finance", "ai_tools", "health", "travel", "personal", "education", "gaming", "writing", "pkm", "other"];
 		for (const cat of expected) {
 			expect(CATEGORY_LABELS[cat]).toBeDefined();
 			expect(CATEGORY_LABELS[cat]).toHaveLength(2);
