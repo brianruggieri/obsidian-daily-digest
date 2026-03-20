@@ -73,7 +73,7 @@ export async function pollAnthropicBatch(
 	apiKey: string,
 	opts: { intervalMs?: number; maxAttempts?: number; maxDurationMs?: number } = {}
 ): Promise<AnthropicBatchResponse> {
-	const intervalMs = opts.intervalMs ?? 5000;
+	const intervalMs = Math.max(1, opts.intervalMs ?? 5000);
 	const maxDurationMs = opts.maxDurationMs ?? 24 * 60 * 60 * 1000; // 24 hours
 	const maxAttempts = opts.maxAttempts ?? Math.ceil(maxDurationMs / intervalMs);
 

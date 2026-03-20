@@ -485,8 +485,33 @@ async function runBatchMode(
 			console.log(`\n[${data.presetId}] AI: mock (batch mode)`);
 		}
 	} else {
+		// Filter out presets with no activity (mirrors summarizeDay's short-circuit)
+		const hasActivity = (d: PresetPipelineData): boolean => {
+			const hasVisits = Object.values(d.categorized).some((v) => v.length > 0);
+			return hasVisits || d.searches.length > 0 ||
+				d.claudeSessions.length > 0 || d.gitCommits.length > 0;
+		};
+		const batchableData = anthropicData.filter((d) => {
+			if (!hasActivity(d)) {
+				console.log(`\n[${d.presetId}] Skipping batch: no activity`);
+				summaryMap.set(d.presetId, null);
+				return false;
+			}
+			return true;
+		});
+
+		if (batchableData.length === 0) {
+			// All anthropic presets were skipped — render them without summaries
+			for (const data of anthropicData) {
+				const aiSummary = summaryMap.get(data.presetId) ?? null;
+				const report = renderAndWrite(data, aiSummary, outputDir, startTimes.get(data.presetId)!, date);
+				if (ASSERT && report) reports.push(report);
+			}
+			return reports;
+		}
+
 		// Build one batch request per preset
-		const batchRequests: AnthropicBatchRequest[] = anthropicData.map((data) => ({
+		const batchRequests: AnthropicBatchRequest[] = batchableData.map((data) => ({
 			custom_id: data.presetId,
 			params: {
 				model: data.aiCallConfig.anthropicModel,
@@ -513,7 +538,10 @@ async function runBatchMode(
 
 		for (const item of resultItems) {
 			if (item.result.type === "succeeded") {
-				const text = item.result.message.content[0]?.text ?? "";
+				const text = item.result.message.content
+					.filter((b: { type: string }) => b.type === "text")
+					.map((b: { text: string }) => b.text)
+					.join("\n");
 				summaryMap.set(item.custom_id, parseProseSections(text));
 			} else {
 				const reason = item.result.type === "errored"

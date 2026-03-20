@@ -20,7 +20,17 @@ afterAll(() => {
 	global.fetch = originalFetch;
 });
 
-import { callAnthropic, callLocal, callAI, AICallConfig } from "../../../src/summarize/ai-client";
+import {
+	callAnthropic,
+	callLocal,
+	callAI,
+	submitAnthropicBatch,
+	pollAnthropicBatch,
+	retrieveAnthropicBatchResults,
+	type AICallConfig,
+	type AnthropicBatchRequest,
+	type AnthropicBatchResponse,
+} from "../../../src/summarize/ai-client";
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -381,14 +391,6 @@ describe("MockAI", () => {
 });
 
 // ─── Anthropic Message Batches API ─────────────────────
-
-import {
-	submitAnthropicBatch,
-	pollAnthropicBatch,
-	retrieveAnthropicBatchResults,
-	type AnthropicBatchRequest,
-	type AnthropicBatchResponse,
-} from "../../../src/summarize/ai-client";
 
 function batchSubmitResponse(id = "msgbatch_123", status = 200) {
 	const json: AnthropicBatchResponse = {
