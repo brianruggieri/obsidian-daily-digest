@@ -144,6 +144,57 @@ export async function requestUrl(opts: {
 		}
 		return { json, text, status: resp.status };
 	}
+
+	// Stub responses for Anthropic Message Batches API endpoints so that
+	// batch-mode matrix runs work in mock/test contexts without network access.
+	const BATCHES_BASE = "https://api.anthropic.com/v1/messages/batches";
+	if (opts.url === BATCHES_BASE && opts.method === "POST") {
+		// Batch submit — extract custom_ids from the request body so the mock
+		// results endpoint can echo them back, allowing callers to map results
+		// to presets correctly (custom_id === presetId).
+		let customIds: string[] = ["mock-preset"];
+		try {
+			const body = JSON.parse(opts.body ?? "{}");
+			if (Array.isArray(body.requests)) {
+				customIds = body.requests.map((r: { custom_id?: string }) => r.custom_id ?? "mock-preset");
+			}
+		} catch { /* fall back to default */ }
+		// Stash custom_ids in the batch ID so the results endpoint can retrieve them.
+		const batchId = `msgbatch_mock_${customIds.join(",")}`;
+		const mockBatch = {
+			id: batchId,
+			processing_status: "ended",
+			request_counts: { processing: 0, succeeded: customIds.length, errored: 0, canceled: 0, expired: 0 },
+			results_url: `${BATCHES_BASE}/${batchId}/results`,
+		};
+		return { json: mockBatch, text: JSON.stringify(mockBatch), status: 200 };
+	}
+	if (opts.url.startsWith(BATCHES_BASE) && opts.url.endsWith("/results") && opts.method !== "POST") {
+		// Batch results download — parse custom_ids from the batch ID (encoded
+		// by the submit stub above) and return one JSONL line per request.
+		const urlParts = opts.url.replace(/\/results$/, "").split("/");
+		const batchId = urlParts.pop() ?? "";
+		const idPayload = batchId.replace("msgbatch_mock_", "");
+		const customIds = idPayload.includes(",") || idPayload !== batchId
+			? idPayload.split(",")
+			: ["mock-preset"];
+		const mockLines = customIds.map((id) => JSON.stringify({
+			custom_id: id,
+			result: { type: "succeeded", message: { content: [{ type: "text", text: "" }] } },
+		}));
+		return { json: {}, text: mockLines.join("\n"), status: 200 };
+	}
+	if (opts.url.startsWith(BATCHES_BASE) && opts.method !== "POST") {
+		// Batch status poll — return "ended" immediately.
+		const mockBatch = {
+			id: opts.url.split("/").pop() ?? "msgbatch_mock001",
+			processing_status: "ended",
+			request_counts: { processing: 0, succeeded: 1, errored: 0, canceled: 0, expired: 0 },
+			results_url: `${opts.url}/results`,
+		};
+		return { json: mockBatch, text: JSON.stringify(mockBatch), status: 200 };
+	}
+
 	return { json: {}, text: "", status: 200 };
 }
 
