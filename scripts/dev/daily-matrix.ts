@@ -43,7 +43,7 @@ import { groupCommitsIntoWorkUnits } from "../../src/analyze/commits";
 import { groupClaudeSessionsIntoTasks, detectSearchMissions, fuseCrossSourceSessions } from "../../src/analyze/task-sessions";
 import { compressActivity } from "../../src/summarize/compress";
 import { renderMarkdown } from "../../src/render/renderer";
-import { buildPrompt, summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../../src/summarize/summarize";
+import { summarizeDay, resolvePrivacyTier, buildTierFilteredOptions, buildProsePrompt, resolvePromptCapability } from "../../src/summarize/summarize";
 import { submitAnthropicBatch, pollAnthropicBatch, retrieveAnthropicBatchResults } from "../../src/summarize/ai-client";
 import type { AnthropicBatchRequest } from "../../src/summarize/ai-client";
 import { parseProseSections } from "../../src/summarize/prose-parser";
@@ -422,10 +422,14 @@ async function runBatchMode(
 ): Promise<PresetReport[]> {
 	console.log(`\nBatch mode: pre-computing pipeline for ${presetsToRun.length} presets...`);
 
+	// Track per-preset start times including pipeline computation (stages 1–9).
+	const startTimes: Map<string, number> = new Map();
+
 	// Stage 1–9 for all presets in parallel-ish (sequential to avoid I/O contention)
 	const allData: PresetPipelineData[] = [];
 	for (const preset of presetsToRun) {
 		console.log(`\n[${preset.id}] Pipeline (stages 1–9)...`);
+		startTimes.set(preset.id, Date.now());
 		const data = await computePresetData(preset.id, date);
 		if (data) allData.push(data);
 	}
@@ -439,7 +443,6 @@ async function runBatchMode(
 	);
 
 	const reports: PresetReport[] = [];
-	const startTimes: Map<string, number> = new Map(allData.map((d) => [d.presetId, Date.now()]));
 
 	// ── Run non-Anthropic presets sequentially ────────────
 	for (const data of nonAnthropicData) {

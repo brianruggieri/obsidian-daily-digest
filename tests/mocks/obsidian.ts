@@ -149,23 +149,40 @@ export async function requestUrl(opts: {
 	// batch-mode matrix runs work in mock/test contexts without network access.
 	const BATCHES_BASE = "https://api.anthropic.com/v1/messages/batches";
 	if (opts.url === BATCHES_BASE && opts.method === "POST") {
-		// Batch submit — return a mock batch with processing_status "ended" so
-		// callers don't need to poll in tests.
+		// Batch submit — extract custom_ids from the request body so the mock
+		// results endpoint can echo them back, allowing callers to map results
+		// to presets correctly (custom_id === presetId).
+		let customIds: string[] = ["mock-preset"];
+		try {
+			const body = JSON.parse(opts.body ?? "{}");
+			if (Array.isArray(body.requests)) {
+				customIds = body.requests.map((r: { custom_id?: string }) => r.custom_id ?? "mock-preset");
+			}
+		} catch { /* fall back to default */ }
+		// Stash custom_ids in the batch ID so the results endpoint can retrieve them.
+		const batchId = `msgbatch_mock_${customIds.join(",")}`;
 		const mockBatch = {
-			id: "msgbatch_mock001",
+			id: batchId,
 			processing_status: "ended",
-			request_counts: { processing: 0, succeeded: 1, errored: 0, canceled: 0, expired: 0 },
-			results_url: `${BATCHES_BASE}/msgbatch_mock001/results`,
+			request_counts: { processing: 0, succeeded: customIds.length, errored: 0, canceled: 0, expired: 0 },
+			results_url: `${BATCHES_BASE}/${batchId}/results`,
 		};
 		return { json: mockBatch, text: JSON.stringify(mockBatch), status: 200 };
 	}
 	if (opts.url.startsWith(BATCHES_BASE) && opts.url.endsWith("/results") && opts.method !== "POST") {
-		// Batch results download — return a single mock JSONL line with an empty text response.
-		const mockLine = JSON.stringify({
-			custom_id: "mock-preset",
+		// Batch results download — parse custom_ids from the batch ID (encoded
+		// by the submit stub above) and return one JSONL line per request.
+		const urlParts = opts.url.replace(/\/results$/, "").split("/");
+		const batchId = urlParts.pop() ?? "";
+		const idPayload = batchId.replace("msgbatch_mock_", "");
+		const customIds = idPayload.includes(",") || idPayload !== batchId
+			? idPayload.split(",")
+			: ["mock-preset"];
+		const mockLines = customIds.map((id) => JSON.stringify({
+			custom_id: id,
 			result: { type: "succeeded", message: { content: [{ type: "text", text: "" }] } },
-		});
-		return { json: {}, text: mockLine, status: 200 };
+		}));
+		return { json: {}, text: mockLines.join("\n"), status: 200 };
 	}
 	if (opts.url.startsWith(BATCHES_BASE) && opts.method !== "POST") {
 		// Batch status poll — return "ended" immediately.
