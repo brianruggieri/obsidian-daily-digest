@@ -107,6 +107,11 @@ export default class DailyDigestPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		// Deep-merge nested objects that shallow Object.assign would clobber
+		this.settings.artifactFolders = {
+			...DEFAULT_SETTINGS.artifactFolders,
+			...this.settings.artifactFolders,
+		};
 		await this.migrateLegacyBrowserSettings();
 	}
 
@@ -621,6 +626,24 @@ export default class DailyDigestPlugin extends Plugin {
 
 			progressNotice.hide();
 
+			// ── Resurface Block ──────────────────
+			let resurfaceLines: string[] = [];
+			if (this.settings.enableResurfacing && extractedPatterns) {
+				try {
+					const { buildResurfaceBlock, renderResurfaceLines } = await import("../analyze/resurface");
+					const resurfaceItems = buildResurfaceBlock(
+						extractedPatterns.recurrenceSignals,
+						extractedPatterns.knowledgeDelta,
+						this.app.vault as unknown as import("../analyze/resurface").ResurfaceVault,
+						targetDate,
+						this.settings,
+					);
+					resurfaceLines = renderResurfaceLines(resurfaceItems);
+				} catch (e) {
+					log.warn("Daily Digest: Resurface block generation failed, continuing without:", e);
+				}
+			}
+
 			// ── Render ───────────────────────────
 			const renderNotice = new Notice("Daily Digest: Rendering markdown\u2026", 0);
 			const aiProviderUsed = useAI && aiSummary !== null ? provider : "none";
@@ -636,11 +659,36 @@ export default class DailyDigestPlugin extends Plugin {
 				knowledgeSections,
 				undefined,  // promptLog
 				this.settings.enableTimeline,
+				this.settings.enableWikilinks ? this.settings.artifactFolders : undefined,
+				resurfaceLines,
 			);
 
 			// ── Write to vault ───────────────────
 			renderNotice.setMessage("Daily Digest: Writing to vault\u2026");
 			const filePath = await this.writeToVault(targetDate, md);
+
+			// ── Artifact Writer ──────────────────
+			if (this.settings.enableArtifactWriter && knowledgeSections) {
+				try {
+					const { writeArtifacts } = await import("../render/artifacts");
+					const artifactResult = await writeArtifacts(
+						this.app.vault as unknown as import("../render/artifacts").ArtifactVault,
+						targetDate,
+						knowledgeSections,
+						aiSummary,
+						this.settings,
+					);
+					log.debug(
+						`Daily Digest: Artifacts written — ` +
+						`${artifactResult.topicsWritten} topics, ` +
+						`${artifactResult.entitiesWritten} entities, ` +
+						`${artifactResult.seedsWritten} seeds, ` +
+						`MOC: ${artifactResult.mocWritten}`
+					);
+				} catch (e) {
+					log.warn("Daily Digest: Artifact writer failed, continuing without:", e);
+				}
+			}
 
 			renderNotice.hide();
 			this.statusBarItem.setText("Daily Digest ready");

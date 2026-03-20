@@ -10,7 +10,7 @@ This document describes every setting in the Daily Digest plugin, grouped by the
 - [🗄️ Data sources](#data-sources) (9 settings)
 - [🛡️ Privacy](#privacy) (4 settings)
 - [✨ AI summarization](#ai-summarization) (10 settings)
-- [🧠 Advanced](#advanced) (6 settings)
+- [🧠 Advanced](#advanced) (10 settings)
 - [🔧 Meta](#meta) (2 settings)
 
 ## ⚙️ General
@@ -344,6 +344,43 @@ Remember topics you visit across multiple days and highlight recurring interests
 - **Type:** Toggle
 - **Default:** `true`
 - **On by default:** yes
+
+### `enableArtifactWriter`
+
+**Knowledge artifact writer**
+
+Write atomic notes for topics, entities, note seeds, and weekly MOCs after each daily digest generation. All outputs are derived from local pattern analysis and AI summary data — no additional API calls.
+
+- **Type:** Toggle
+- **Default:** `false`
+
+### `artifactFolders`
+
+**Artifact folders**
+
+Vault folder paths for each artifact type: topics, entities, seeds, and MOCs. Leave a field empty to write artifacts to the vault root.
+
+- **Type:** Internal
+- **Default:** `{"topics":"Topics","entities":"Entities","seeds":"Seeds","mocs":"MOCs"}`
+- **Visible when:** `enableArtifactWriter` is enabled
+
+### `enableWikilinks`
+
+**Wikilink rendering**
+
+Render knowledge section topics, entities, and note seeds as [[wikilinks]] instead of plain text. Links point to the artifact folders configured above.
+
+- **Type:** Toggle
+- **Default:** `false`
+
+### `enableResurfacing`
+
+**Resurface block**
+
+Generate a Resurface section at the end of each daily note linking back to prior notes where the same topics appeared. Uses recurrence signals from local pattern analysis — no API calls.
+
+- **Type:** Toggle
+- **Default:** `false`
 
 ## 🔧 Meta
 

@@ -437,6 +437,52 @@ export const SETTINGS_REGISTRY: SettingMeta[] = [
 		enabledByDefault: false,
 	},
 
+	// ── Knowledge Artifacts ──────────────────────────────────────────────────
+	{
+		key: "enableArtifactWriter",
+		label: "Knowledge artifact writer",
+		description:
+			"Write atomic notes for topics, entities, note seeds, and weekly MOCs " +
+			"after each daily digest generation. All outputs are derived from local " +
+			"pattern analysis and AI summary data — no additional API calls.",
+		section: "Advanced",
+		type: "boolean",
+		defaultValue: "false",
+	},
+	{
+		key: "artifactFolders",
+		label: "Artifact folders",
+		description:
+			"Vault folder paths for each artifact type: topics, entities, seeds, and " +
+			"MOCs. Leave a field empty to write artifacts to the vault root.",
+		section: "Advanced",
+		type: "internal",
+		defaultValue: '{"topics":"Topics","entities":"Entities","seeds":"Seeds","mocs":"MOCs"}',
+		dependsOn: "enableArtifactWriter",
+	},
+	{
+		key: "enableWikilinks",
+		label: "Wikilink rendering",
+		description:
+			"Render knowledge section topics, entities, and note seeds as " +
+			"[[wikilinks]] instead of plain text. Links point to the artifact " +
+			"folders configured above.",
+		section: "Advanced",
+		type: "boolean",
+		defaultValue: "false",
+	},
+	{
+		key: "enableResurfacing",
+		label: "Resurface block",
+		description:
+			"Generate a Resurface section at the end of each daily note linking " +
+			"back to prior notes where the same topics appeared. Uses recurrence " +
+			"signals from local pattern analysis — no API calls.",
+		section: "Advanced",
+		type: "boolean",
+		defaultValue: "false",
+	},
+
 	// ── Meta ─────────────────────────────────────────────────────────────────
 	{
 		key: "hasCompletedOnboarding",

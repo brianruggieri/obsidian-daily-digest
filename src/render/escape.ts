@@ -79,6 +79,28 @@ export function escapeForTableCell(text: string): string {
 }
 
 /**
+ * Escape a string for safe use as a wikilink target or alias.
+ * Strips or replaces characters that break Obsidian's `[[path|alias]]` syntax:
+ *   `|` (alias separator), `[` / `]` (link delimiters), `#` (heading anchor).
+ */
+export function escapeForWikilink(text: string): string {
+	return text
+		.replace(/\|/g, "-")
+		.replace(/\[/g, "")
+		.replace(/\]/g, "")
+		.replace(/#/g, "");
+}
+
+/**
+ * Escape markdown-active characters from a string so it can safely be
+ * interpolated inside bold/italic markers like `**text**` or `_text_`.
+ * Strips `*`, `_`, `` ` ``, `[`, `]` which would break surrounding formatting.
+ */
+export function escapeForInlineMarkdown(text: string): string {
+	return text.replace(/[*_`[\]]/g, "");
+}
+
+/**
  * Escape a string for safe inclusion as a YAML frontmatter value.
  * Wraps in double quotes if the value contains any YAML-special characters.
  */

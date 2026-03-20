@@ -8,11 +8,14 @@ import {
 	SearchQuery,
 	TemporalCluster,
 	slugifyQuestion,
+	topicSlug,
+	entitySlug,
+	seedSlug,
 } from "../types";
 import { AIProvider } from "../settings/types";
 import { KnowledgeSections } from "../analyze/knowledge";
 import { formatDetailsBlock, type PromptLog } from "../plugin/prompt-logger";
-import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml } from "./escape";
+import { escapeForMarkdown, escapeForLinkText, escapeForTableCell, escapeForYaml, escapeForWikilink } from "./escape";
 import { cleanUrlForDisplay } from "./url-display";
 
 function formatTime(d: Date | null): string {
@@ -320,8 +323,67 @@ function renderTimelineLayer(
  * Renders the Knowledge Insights section into the provided lines array.
  * When asCallout is true, renders as a collapsed callout with bold labels
  * instead of ### headings (H3 inside callouts renders poorly in Obsidian).
+ * When wikilinkFolders is provided, topic/entity names are rendered as wikilinks.
  */
-function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, asCallout: boolean): void {
+function renderKnowledgeInsights(
+	lines: string[],
+	knowledge: KnowledgeSections,
+	asCallout: boolean,
+	wikilinkFolders?: { topics: string; entities: string },
+): void {
+	const prefix = asCallout ? "> " : "";
+
+	/** Convert a topic name to a wikilink if folders are configured. */
+	function topicLink(name: string): string {
+		if (!wikilinkFolders) return escapeForMarkdown(name);
+		const slug = topicSlug(name);
+		const path = wikilinkFolders.topics ? `${wikilinkFolders.topics}/${slug}` : slug;
+		return `[[${path}|${escapeForWikilink(name)}]]`;
+	}
+
+	/** Convert an entity name to a wikilink if folders are configured. */
+	function entityLink(name: string): string {
+		if (!wikilinkFolders) return escapeForMarkdown(name);
+		const slug = entitySlug(name);
+		const path = wikilinkFolders.entities ? `${wikilinkFolders.entities}/${slug}` : slug;
+		return `[[${path}|${escapeForWikilink(name)}]]`;
+	}
+
+	/**
+	 * Transform a topicMap line to replace plain topic names with wikilinks.
+	 * Handles: "███ topicA ↔ topicB (N co-occurrences)" and "topic (N mentions)"
+	 */
+	function transformTopicLine(line: string): string {
+		if (!wikilinkFolders) return escapeForMarkdown(line);
+		// Strip strength bars
+		const stripped = line.replace(/^█+\s*/, "");
+		const barPrefix = line.match(/^(█+\s*)/)?.[1] ?? "";
+		// "topicA ↔ topicB (N co-occurrences)"
+		const pairMatch = stripped.match(/^(.+?)\s*↔\s*(.+?)\s*(\(.+\))$/);
+		if (pairMatch) {
+			return `${barPrefix}${topicLink(pairMatch[1].trim())} ↔ ${topicLink(pairMatch[2].trim())} ${escapeForWikilink(pairMatch[3])}`;
+		}
+		// "topic (N mentions)"
+		const singleMatch = stripped.match(/^(.+?)\s*(\(.+\))$/);
+		if (singleMatch) {
+			return `${barPrefix}${topicLink(singleMatch[1].trim())} ${escapeForWikilink(singleMatch[2])}`;
+		}
+		return escapeForMarkdown(line);
+	}
+
+	/**
+	 * Transform an entityGraph line to replace entity names with wikilinks.
+	 * Format: "entityA ↔ entityB (Nx in context)"
+	 */
+	function transformEntityLine(line: string): string {
+		if (!wikilinkFolders) return escapeForMarkdown(line);
+		const match = line.match(/^(.+?)\s*↔\s*(.+?)\s*(\(.+\))$/);
+		if (match) {
+			return `${entityLink(match[1].trim())} ↔ ${entityLink(match[2].trim())} ${escapeForWikilink(match[3])}`;
+		}
+		return escapeForMarkdown(line);
+	}
+
 	if (asCallout) {
 		lines.push("> [!info]- \u{1F9E0} Knowledge Insights");
 		lines.push(`> ${escapeForMarkdown(knowledge.focusSummary)}`);
@@ -338,7 +400,7 @@ function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, 
 			lines.push(`> `);
 			lines.push(`> **\u{1F5FA}\u{FE0F} Topic Map**`);
 			for (const line of knowledge.topicMap) {
-				lines.push(`> - ${escapeForMarkdown(line)}`);
+				lines.push(`> - ${transformTopicLine(line)}`);
 			}
 		}
 
@@ -346,7 +408,7 @@ function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, 
 			lines.push(`> `);
 			lines.push(`> **\u{1F517} Entity Relations**`);
 			for (const line of knowledge.entityGraph) {
-				lines.push(`> - ${escapeForMarkdown(line)}`);
+				lines.push(`> - ${transformEntityLine(line)}`);
 			}
 		}
 
@@ -374,7 +436,7 @@ function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, 
 	lines.push("## \u{1F9E0} Knowledge Insights");
 	lines.push("");
 
-	lines.push(`> ${escapeForMarkdown(knowledge.focusSummary)}`);
+	lines.push(`${prefix}${escapeForMarkdown(knowledge.focusSummary)}`);
 	lines.push("");
 
 	if (knowledge.temporalInsights.length > 0) {
@@ -390,7 +452,7 @@ function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, 
 		lines.push("### \u{1F5FA}\u{FE0F} Topic Map");
 		lines.push("");
 		for (const line of knowledge.topicMap) {
-			lines.push(`- ${escapeForMarkdown(line)}`);
+			lines.push(`- ${transformTopicLine(line)}`);
 		}
 		lines.push("");
 	}
@@ -399,7 +461,7 @@ function renderKnowledgeInsights(lines: string[], knowledge: KnowledgeSections, 
 		lines.push("### \u{1F517} Entity Relations");
 		lines.push("");
 		for (const line of knowledge.entityGraph) {
-			lines.push(`- ${escapeForMarkdown(line)}`);
+			lines.push(`- ${transformEntityLine(line)}`);
 		}
 		lines.push("");
 	}
@@ -438,6 +500,8 @@ export function renderMarkdown(
 	knowledge?: KnowledgeSections,
 	promptLog?: PromptLog,
 	enableTimeline = false,
+	wikilinkFolders?: { topics: string; entities: string; seeds: string },
+	resurfaceLines: string[] = [],
 ): string {
 	const today = formatDate(date);
 	const dow = dayOfWeek(date);
@@ -446,9 +510,11 @@ export function renderMarkdown(
 	// ── Frontmatter ──────────────────────────────
 	const knowledgeTags = knowledge?.tags ?? [];
 	const allTags = ["daily", "daily-digest", ...knowledgeTags];
+	const digestId = `digest-${today}`;
 	lines.push("---");
 	lines.push(`date: ${today}`);
 	lines.push(`day: ${dow}`);
+	lines.push(`digest_id: ${digestId}`);
 	lines.push(`tags: [${allTags.join(", ")}]`);
 	lines.push(`generated: ${formatDate(new Date())} ${formatTime(new Date())}`);
 	if (aiSummary?.themes?.length) {
@@ -609,7 +675,10 @@ export function renderMarkdown(
 		knowledge.knowledgeDeltaLines.length > 0
 	);
 	if (hasKnowledgeContent && aiSummary) {
-		renderKnowledgeInsights(lines, knowledge!, true);
+		const kFolders = wikilinkFolders
+			? { topics: wikilinkFolders.topics, entities: wikilinkFolders.entities }
+			: undefined;
+		renderKnowledgeInsights(lines, knowledge!, true, kFolders);
 	}
 
 	// ── Learnings (collapsed callout, moved to Layer 2) ─
@@ -634,7 +703,13 @@ export function renderMarkdown(
 	if (aiSummary?.note_seeds?.length) {
 		lines.push("> [!tip]- \u{1F331} Note Seeds");
 		for (const seed of aiSummary.note_seeds) {
-			lines.push(`> - [[${escapeForMarkdown(seed)}]]`);
+			if (wikilinkFolders) {
+				const slug = seedSlug(seed);
+				const seedPath = wikilinkFolders.seeds ? `${wikilinkFolders.seeds}/${slug}` : slug;
+				lines.push(`> - [[${seedPath}|${escapeForWikilink(seed)}]]`);
+			} else {
+				lines.push(`> - [[${escapeForWikilink(seed)}]]`);
+			}
 		}
 		lines.push("");
 	}
@@ -856,7 +931,20 @@ export function renderMarkdown(
 
 	// ── Knowledge Insights (no-AI mode: open headings) ─
 	if (knowledge && !aiSummary) {
-		renderKnowledgeInsights(lines, knowledge, false);
+		const kFolders = wikilinkFolders
+			? { topics: wikilinkFolders.topics, entities: wikilinkFolders.entities }
+			: undefined;
+		renderKnowledgeInsights(lines, knowledge, false, kFolders);
+	}
+
+	// ── Resurface ─────────────────────────────────
+	if (resurfaceLines.length > 0) {
+		lines.push("## \u{1F501} Resurface");
+		lines.push("");
+		for (const l of resurfaceLines) {
+			lines.push(l);
+		}
+		lines.push("");
 	}
 
 	// ── Reflection ───────────────────────────────

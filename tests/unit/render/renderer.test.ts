@@ -726,3 +726,90 @@ describe("timeline rendering", () => {
 		expect(md).toMatch(/\d+ AI prompt/);
 	});
 });
+
+// ── Wikilink Rendering ──────────────────────────────────
+
+describe("wikilink rendering", () => {
+	const knowledgeWithTopics: KnowledgeSections = {
+		focusSummary: "Focused day.",
+		focusScore: 0.7,
+		temporalInsights: [],
+		topicMap: ["███ OAuth ↔ PKCE (3 co-occurrences)", "testing (5 mentions)"],
+		entityGraph: ["React ↔ TypeScript (3x in implementation)"],
+		recurrenceNotes: [],
+		knowledgeDeltaLines: [],
+		tags: [],
+	};
+
+	const summaryWithSeeds: AISummary = {
+		...sampleAISummary,
+		note_seeds: ["OAuth2 Deep Dive"],
+	};
+
+	it("renders topics as wikilinks when wikilinkFolders is provided", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			sampleAISummary, "none", knowledgeWithTopics, undefined, false,
+			{ topics: "Topics", entities: "Entities", seeds: "Seeds" },
+		);
+		expect(md).toContain("[[Topics/oauth|OAuth]]");
+		expect(md).toContain("[[Topics/pkce|PKCE]]");
+		expect(md).toContain("[[Topics/testing|testing]]");
+	});
+
+	it("renders entities as wikilinks when wikilinkFolders is provided", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			sampleAISummary, "none", knowledgeWithTopics, undefined, false,
+			{ topics: "Topics", entities: "Entities", seeds: "Seeds" },
+		);
+		expect(md).toContain("[[Entities/react|React]]");
+		expect(md).toContain("[[Entities/typescript|TypeScript]]");
+	});
+
+	it("renders seeds as wikilinks when wikilinkFolders is provided", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			summaryWithSeeds, "anthropic", undefined, undefined, false,
+			{ topics: "Topics", entities: "Entities", seeds: "Seeds" },
+		);
+		expect(md).toContain("[[Seeds/oauth2-deep-dive|OAuth2 Deep Dive]]");
+	});
+
+	it("renders plain text without wikilinkFolders", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			sampleAISummary, "none", knowledgeWithTopics,
+		);
+		// Should NOT contain wikilink syntax for topics
+		expect(md).not.toContain("[[Topics/");
+		expect(md).not.toContain("[[Entities/");
+	});
+});
+
+// ── Resurface Section ───────────────────────────────────
+
+describe("resurface section rendering", () => {
+	it("renders Resurface heading and bullet lines when resurfaceLines provided", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			null, "none", undefined, undefined, false, undefined,
+			[
+				"- **typescript** (returning) — last seen 7 days ago · see [[daily/2026-02-20]]",
+				"- **react** — last seen 3 days ago · see [[daily/2026-02-24]]",
+			],
+		);
+		expect(md).toContain("## \u{1F501} Resurface");
+		expect(md).toContain("**typescript** (returning)");
+		expect(md).toContain("[[daily/2026-02-20]]");
+		expect(md).toContain("**react**");
+	});
+
+	it("omits Resurface section when resurfaceLines is empty", () => {
+		const md = renderMarkdown(
+			DATE, sampleVisits, sampleSearches, sampleClaude, [], sampleCategorized,
+			null, "none", undefined, undefined, false, undefined, [],
+		);
+		expect(md).not.toContain("Resurface");
+	});
+});
