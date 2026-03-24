@@ -20,10 +20,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// ━━ 1. General ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-		const generalHeading = new Setting(containerEl).setName("General").setHeading();
-		this.prependIcon(generalHeading.nameEl, "settings");
-
 		const generalGroup = containerEl.createDiv({ cls: "dd-settings-group" });
 
 		new Setting(generalGroup)
@@ -31,7 +27,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			.setDesc("Folder within your vault for daily notes")
 			.addText((text) =>
 				text
-					.setPlaceholder("daily")
+					.setPlaceholder("Daily")
 					.setValue(this.plugin.settings.dailyFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.dailyFolder = value;
@@ -41,9 +37,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		new Setting(generalGroup)
 			.setName("Filename template")
+			// eslint-disable-next-line obsidianmd/ui/sentence-case -- date format tokens (YYYY-MM-DD) must not be lowercased
 			.setDesc("Date format for filenames (supports YYYY, MM, DD tokens, e.g. YYYY-MM-DD)")
 			.addText((text) =>
 				text
+					// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder shows a date format token, not a sentence
 					.setPlaceholder("YYYY-MM-DD")
 					.setValue(this.plugin.settings.filenameTemplate)
 					.onChange(async (value) => {
@@ -376,7 +374,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				.setDesc("Context hint for AI summaries (e.g. 'software engineer at a SaaS startup')")
 				.addText((text) =>
 					text
-						.setPlaceholder("optional")
+						.setPlaceholder("Optional")
 						.setValue(this.plugin.settings.profile)
 						.onChange(async (value) => {
 							this.plugin.settings.profile = value;
@@ -415,7 +413,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) =>
 						text
-							.setPlaceholder("http://localhost:11434")
+							// eslint-disable-next-line obsidianmd/ui/sentence-case -- URL placeholder, not a sentence
+					.setPlaceholder("http://localhost:11434")
 							.setValue(this.plugin.settings.localEndpoint)
 							.onChange(async (value) => {
 								this.plugin.settings.localEndpoint = value;
@@ -431,7 +430,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) =>
 						text
-							.setPlaceholder("qwen2.5:14b-instruct")
+							// eslint-disable-next-line obsidianmd/ui/sentence-case -- model name placeholder, not a sentence
+						.setPlaceholder("qwen2.5:14b-instruct")
 							.setValue(this.plugin.settings.localModel)
 							.onChange(async (value) => {
 								this.plugin.settings.localModel = value;
@@ -440,7 +440,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addButton((btn) =>
 						btn.setButtonText("Detect").onClick(async () => {
-							await this.detectLocalModels(containerEl);
+							await this.detectLocalModels();
 						})
 					);
 
@@ -460,31 +460,33 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.setDesc("How to set up a local AI model");
 
 				const guideContent = guide.createDiv({ cls: "dd-setup-guide-content" });
-				guideContent.style.display = "none";
+				guideContent.hide();
 
 				guideToggle.addButton((btn) =>
 					btn.setButtonText("Show").onClick(() => {
 						const visible = guideContent.style.display !== "none";
-						guideContent.style.display = visible ? "none" : "block";
+						if (visible) { guideContent.hide(); } else { guideContent.show(); }
 						btn.setButtonText(visible ? "Show" : "Hide");
 					})
 				);
 
 				// Ollama section
-				guideContent.createEl("h4", { text: "Ollama (recommended)" });
+				new Setting(guideContent).setName("Ollama (recommended)").setHeading();
 				const ollamaSteps = guideContent.createEl("ol");
 				ollamaSteps.createEl("li").createEl("span", {
 					text: "Install: ",
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				}).parentElement!.createEl("code", { text: "brew install ollama" });
 				const li2 = ollamaSteps.createEl("li");
 				li2.createEl("span", { text: "Pull a model: " });
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				li2.createEl("code", { text: "ollama pull qwen2.5:7b-instruct" });
 				const li3 = ollamaSteps.createEl("li");
 				li3.createEl("span", { text: "Start server: " });
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				li3.createEl("code", { text: "ollama serve" });
-				ollamaSteps.createEl("li", {
-					text: "Click Detect above to find available models",
-				});
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- "Detect" references UI button by its displayed name
+				ollamaSteps.createEl("li", { text: "Click Detect above to find available models" });
 
 				const ollamaNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
 				ollamaNote.createEl("p", {
@@ -496,11 +498,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				});
 
 				// LM Studio section
-				guideContent.createEl("h4", { text: "LM Studio" });
+				new Setting(guideContent).setName("LM Studio").setHeading();
 				const lmSteps = guideContent.createEl("ol");
-				lmSteps.createEl("li", {
-					text: "Download from lmstudio.ai",
-				});
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- domain name (lmstudio.ai) — rule would wrongly capitalize .ai TLD
+				lmSteps.createEl("li", { text: "Download from lmstudio.ai" });
 				lmSteps.createEl("li", {
 					text: "Download a model from the built-in browser",
 				});
@@ -508,14 +509,14 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				li3b.createEl("span", {
 					text: "Start the local server (default: ",
 				});
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- URL, not a sentence
 				li3b.createEl("code", { text: "http://localhost:1234" });
 				li3b.appendText(")");
-				lmSteps.createEl("li", {
-					text: "Update the endpoint above, then click Detect",
-				});
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- "Detect" references UI button by its displayed name
+				lmSteps.createEl("li", { text: "Update the endpoint above, then click Detect" });
 
 				// Other servers
-				guideContent.createEl("h4", { text: "Other OpenAI-compatible servers" });
+				new Setting(guideContent).setName("Other OpenAI-compatible servers").setHeading();
 				const otherNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
 				otherNote.createEl("p", {
 					text:
@@ -537,7 +538,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) => {
 						text.inputEl.type = "password";
-						text.setPlaceholder("sk-ant-...")
+						// eslint-disable-next-line obsidianmd/ui/sentence-case -- API key placeholder prefix, not a sentence
+					text.setPlaceholder("sk-ant-...")
 							.setValue(currentKey)
 							.onChange((value) => {
 								this.plugin.app.secretStorage.setSecret(SECRET_ID, value);
@@ -579,10 +581,10 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					.addDropdown((dropdown) =>
 						dropdown
 							.addOption("null", "Auto (highest available)")
-							.addOption("4", "Tier 4 — Statistics only (most private)")
-							.addOption("3", "Tier 3 — Classified abstractions (no raw data)")
-							.addOption("2", "Tier 2 — Budget-compressed activity")
-							.addOption("1", "Tier 1 — Full sanitized data (least private)")
+							.addOption("4", "Tier 4 — statistics only (most private)")
+							.addOption("3", "Tier 3 — classified abstractions (no raw data)")
+							.addOption("2", "Tier 2 — budget-compressed activity")
+							.addOption("1", "Tier 1 — full sanitized data (least private)")
 							.setValue(String(this.plugin.settings.privacyTier ?? "null"))
 							.onChange(async (value) => {
 								const tier = value === "null" ? null : (Number(value) as 4 | 3 | 2 | 1);
@@ -721,7 +723,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				);
 			new Setting(folderGroup)
 				.setName("MOCs folder")
-				.setDesc("Vault folder for Maps of Content (e.g. MOCs)")
+				.setDesc("Vault folder for maps of content (e.g. MOCs)")
 				.addText((text) =>
 					text
 						.setPlaceholder("MOCs")
@@ -770,14 +772,14 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		const advWrapper = containerEl.createDiv({ cls: "dd-settings-group" });
 
 		const advContent = advWrapper.createDiv({ cls: "dd-advanced-section" });
-		advContent.style.display = "none";
+		advContent.hide();
 
 		const advToggle = new Setting(advWrapper)
 			.setDesc("Fine-tune filtering, classification, pattern extraction, and other power-user settings.")
 			.addButton((btn) =>
 				btn.setButtonText("Show advanced settings").onClick(() => {
 					const visible = advContent.style.display !== "none";
-					advContent.style.display = visible ? "none" : "block";
+					if (visible) { advContent.hide(); } else { advContent.show(); }
 					btn.setButtonText(visible ? "Show advanced settings" : "Hide advanced settings");
 				})
 			);
@@ -951,7 +953,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		el.prepend(span);
 	}
 
-	private async detectLocalModels(_containerEl: HTMLElement): Promise<void> {
+	private async detectLocalModels(): Promise<void> {
 		const endpoint = this.plugin.settings.localEndpoint.replace(/\/+$/, "");
 		const notice = new Notice("Detecting local models\u2026", 0);
 
@@ -1027,7 +1029,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 			this.display();
 		} catch (e) {
 			notice.hide();
-			new Notice(`Failed to detect models: ${e}`, 8000);
+			new Notice(`Failed to detect models: ${e instanceof Error ? e.message : String(e)}`, 8000);
 		}
 	}
 
@@ -1070,7 +1072,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		if (configs.length === 0) {
 			const hint = containerEl.createDiv({ cls: "dd-settings-callout" });
-			hint.createEl("p", { text: "Click 'Detect Browsers & Profiles' to scan for installed browsers." });
+			// eslint-disable-next-line obsidianmd/ui/sentence-case -- 'Detect Browsers & Profiles' is the button's displayed name
+		hint.createEl("p", { text: "Click 'Detect Browsers & Profiles' to scan for installed browsers." });
 			return;
 		}
 
@@ -1164,7 +1167,7 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 	private async detectBrowserProfiles(): Promise<void> {
 		const notice = new Notice("Scanning for browser profiles\u2026", 0);
 		try {
-			const detected = await detectAllBrowsers();
+			const detected = detectAllBrowsers();
 			notice.hide();
 
 			if (detected.length === 0) {

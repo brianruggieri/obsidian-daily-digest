@@ -35,7 +35,7 @@ export function initBrowserCollection(pluginDir: string): void {
 	_pluginDir = pluginDir;
 }
 
-async function loadWasmBinary(): Promise<Uint8Array | ArrayBuffer> {
+function loadWasmBinary(): Uint8Array | ArrayBuffer {
 	if (_wasmBinary) return _wasmBinary;
 	// Cache failure so repeated calls don't retry disk I/O or re-log spam.
 	if (_wasmLoadError) throw _wasmLoadError;
@@ -68,7 +68,7 @@ async function querySqlite(dbPath: string, sql: string): Promise<string[][]> {
 			copyFileSync(dbPath + "-shm", tmp + "-shm");
 		}
 
-		const SQL = await initSqlJs({ wasmBinary: await loadWasmBinary() as ArrayBuffer });
+		const SQL = await initSqlJs({ wasmBinary: loadWasmBinary() as ArrayBuffer });
 		const buf = readFileSync(tmp);
 		const db = new SQL.Database(buf);
 		try {

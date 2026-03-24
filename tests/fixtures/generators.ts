@@ -158,6 +158,7 @@ export const DOMAIN_SETS: Record<string, DomainSpec[]> = {
 		{ domain: "nanowrimo.org", titlePatterns: ["NaNoWriMo - My Novel", "NaNoWriMo - Word Count Dashboard", "NaNoWriMo - Write-In Events"], category: "writing", weight: 1 },
 	],
 	pkm: [
+		// eslint-disable-next-line obsidianmd/hardcoded-config-path -- test fixture domain name (*.obsidian.md TLD), not a config path
 		{ domain: "forum.obsidian.md", titlePatterns: ["Obsidian Forum - Plugin Development", "Obsidian Forum - Showcase: Daily Notes Setup", "Obsidian Forum - Help: Dataview query", "Obsidian Forum - Templates"], category: "pkm", weight: 4 },
 		{ domain: "logseq.com", titlePatterns: ["Logseq - My Graph", "Logseq Docs - Queries", "Logseq - Community Forum"], category: "pkm", weight: 2 },
 		{ domain: "readwise.io", titlePatterns: ["Readwise - Daily Review", "Readwise - Highlights from Atomic Habits", "Readwise Reader - Inbox"], category: "pkm", weight: 3 },

@@ -17,7 +17,7 @@ export class PipelineDebugModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		this.setTitle("Pipeline Inspector (debug)");
+		this.setTitle("Pipeline inspector (debug)");
 
 		new Setting(contentEl)
 			.setName("Date")
@@ -28,12 +28,13 @@ export class PipelineDebugModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Stage")
+			// eslint-disable-next-line obsidianmd/ui/sentence-case -- references UI button/icon names by their displayed titles
 			.setDesc("To preview the actual AI prompt, use Generate → eye icon (Data Preview).")
 			.addDropdown(drop => drop
 				.addOptions({
-					raw: "raw — collected counts",
-					sanitized: "sanitized — after secret scrubbing & sensitivity filter",
-					categorized: "categorized — browser visits by category",
+					raw: "Raw — collected counts",
+					sanitized: "Sanitized — after secret scrubbing & sensitivity filter",
+					categorized: "Categorized — browser visits by category",
 				})
 				.setValue(this.selectedStage)
 				.onChange(v => { this.selectedStage = v as DebugStage; }));
@@ -49,17 +50,6 @@ export class PipelineDebugModal extends Modal {
 		if (existing) existing.remove();
 
 		const out = contentEl.createEl("div", { cls: "pipeline-debug-output" });
-		out.style.cssText = [
-			"margin-top: 1rem",
-			"max-height: 400px",
-			"overflow: auto",
-			"background: var(--background-secondary)",
-			"padding: 1rem",
-			"border-radius: 4px",
-			"font-family: var(--font-monospace)",
-			"font-size: 12px",
-			"white-space: pre-wrap",
-		].join("; ");
 		out.setText("Running\u2026");
 
 		try {

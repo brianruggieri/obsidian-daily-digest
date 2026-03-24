@@ -151,7 +151,7 @@ export class OnboardingModal extends Modal {
 		});
 
 		// ── Local Data Sources ───────────────────────
-		contentEl.createEl("h3", { text: "Local Data Sources" });
+		contentEl.createEl("h3", { text: "Local data sources" });
 		contentEl.createEl("p", {
 			text: "These sources are read locally. Data is stored in your vault as a daily note.",
 			cls: "dd-onboarding-subtitle",
@@ -207,7 +207,7 @@ export class OnboardingModal extends Modal {
 			);
 
 		// ── AI Summarization ────────────────────────
-		contentEl.createEl("h3", { text: "AI Summarization" });
+		contentEl.createEl("h3", { text: "AI summarization" });
 
 		const aiInfo = contentEl.createDiv({ cls: "dd-privacy-callout" });
 		aiInfo.createEl("p", {
@@ -272,7 +272,7 @@ export class OnboardingModal extends Modal {
 		contentEl.empty();
 		if (!this.settings.hasCompletedOnboarding) {
 			new Notice(
-				"Daily Digest: Complete setup in Settings to start generating notes.",
+				"Daily Digest: complete setup in settings to start generating notes.",
 				6000
 			);
 		}
@@ -339,7 +339,7 @@ export class DataPreviewModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		this.setTitle("Review Data Before AI Summarization");
+		this.setTitle("Review data before AI summarization");
 		this.modalEl.addClass("daily-digest-preview-modal");
 
 		contentEl.createEl("p", {
@@ -381,16 +381,16 @@ export class DataPreviewModal extends Modal {
 			const sampleSection = contentEl.createDiv({ cls: "dd-preview-samples" });
 			const sampleToggle = sampleSection.createEl("p", {
 				cls: "dd-preview-toggle",
-				text: "\u25B6 Show sample data (sanitized)",
+				text: "\u25B6 show sample data (sanitized)",
 			});
 			const sampleContent = sampleSection.createDiv({
 				cls: "dd-preview-sample-content",
 			});
-			sampleContent.style.display = "none";
+			sampleContent.hide();
 
 			sampleToggle.addEventListener("click", () => {
 				const visible = sampleContent.style.display !== "none";
-				sampleContent.style.display = visible ? "none" : "block";
+				if (visible) { sampleContent.hide(); } else { sampleContent.show(); }
 				sampleToggle.textContent = visible
 					? "\u25B6 Show sample data (sanitized)"
 					: "\u25BC Sample data (sanitized)";
@@ -454,11 +454,11 @@ export class DataPreviewModal extends Modal {
 			const promptContent = promptSection.createDiv({
 				cls: "dd-preview-prompt-content",
 			});
-			promptContent.style.display = "none";
+			promptContent.hide();
 
 			promptToggle.addEventListener("click", () => {
 				const visible = promptContent.style.display !== "none";
-				promptContent.style.display = visible ? "none" : "block";
+				if (visible) { promptContent.hide(); } else { promptContent.show(); }
 				promptToggle.textContent = visible
 					? `\u25B6 Show prompt that will be sent${tierLabel ? ` (${tierLabel})` : ""}`
 					: `\u25BC Prompt that will be sent${tierLabel ? ` (${tierLabel})` : ""}`;
@@ -470,11 +470,6 @@ export class DataPreviewModal extends Modal {
 			});
 			textArea.value = this.stats.promptText;
 			textArea.rows = 20;
-			textArea.style.width = "100%";
-			textArea.style.fontFamily = "var(--font-monospace)";
-			textArea.style.fontSize = "12px";
-			textArea.style.maxHeight = "400px";
-			textArea.style.resize = "vertical";
 
 			// Store reference so we can read edited value on submit
 			this.promptTextArea = textArea;
@@ -511,7 +506,7 @@ export class DataPreviewModal extends Modal {
 		new Setting(contentEl)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Send to AI & Generate")
+					.setButtonText("Send to AI & generate")
 					.setCta()
 					.onClick(() => {
 						const currentText = this.promptTextArea?.value;

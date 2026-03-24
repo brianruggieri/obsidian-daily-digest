@@ -1,6 +1,10 @@
 import js from "@eslint/js";
 import ts from "typescript-eslint";
 import globals from "globals";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const obsidianmd = require("eslint-plugin-obsidianmd").default;
 
 export default ts.config(
 	js.configs.recommended,
@@ -12,6 +16,9 @@ export default ts.config(
 				...globals.node,
 			},
 		},
+		plugins: {
+			obsidianmd,
+		},
 		rules: {
 			"no-unused-vars": "off",
 			"@typescript-eslint/no-unused-vars": [
@@ -21,6 +28,30 @@ export default ts.config(
 			"@typescript-eslint/no-explicit-any": "warn",
 			"@typescript-eslint/ban-ts-comment": "off",
 			"no-console": "error",
+			"obsidianmd/ui/sentence-case": ["error", {
+				brands: [
+					"Daily Digest",
+					"Anthropic",
+					"Claude Code",
+					"Codex CLI",
+					"Ollama",
+					"LM Studio",
+					"Claude Haiku",
+					"Claude Sonnet",
+					"Claude Opus",
+					"OpenAI",
+					"Dataview",
+					"GitHub",
+					"Obsidian",
+					"MOC",
+					"MOCs",
+					"AI",
+				],
+			}],
+			"obsidianmd/settings-tab/no-manual-html-headings": "error",
+			"obsidianmd/settings-tab/no-problematic-settings-headings": "error",
+			"obsidianmd/no-static-styles-assignment": "error",
+			"obsidianmd/hardcoded-config-path": "error",
 		},
 	},
 	{

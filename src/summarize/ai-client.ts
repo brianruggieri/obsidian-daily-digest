@@ -228,7 +228,7 @@ export async function callLocal(
 				body: JSON.stringify(basePayload),
 			});
 			if (!resp.ok && resp.status === 400) {
-				const { response_format: _rf, ...payloadWithoutFormat } = basePayload;
+				const { response_format: _, ...payloadWithoutFormat } = basePayload;
 				resp = await fetch(url, {
 					method: "POST",
 					headers,

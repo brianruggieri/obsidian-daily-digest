@@ -14,7 +14,7 @@
  * Matches CSI sequences (ESC[...letter), OSC sequences (ESC]...ST),
  * and standalone escape codes (ESC(A, ESC>, etc.).
  */
-// eslint-disable-next-line no-control-regex
+// eslint-disable-next-line no-control-regex -- ANSI escape sequences include ASCII control character 0x1B (ESC)
 const ANSI_RE = /\x1B(?:\[[0-9;]*[A-Za-z]|\][^\x07\x1B]*(?:\x07|\x1B\\)|\([A-B0-2]|[>=N~])/g;
 
 /** Strip ANSI terminal formatting codes (bold, color, cursor, etc.) */

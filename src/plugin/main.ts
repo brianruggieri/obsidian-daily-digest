@@ -46,7 +46,7 @@ export default class DailyDigestPlugin extends Plugin {
 		}
 
 		// Ribbon icon
-		this.addRibbonIcon("calendar-clock", "Daily Digest: Generate daily note", () => {
+		this.addRibbonIcon("calendar-clock", "Daily Digest: generate daily note", () => {
 			this.generateToday();
 		});
 
@@ -78,7 +78,7 @@ export default class DailyDigestPlugin extends Plugin {
 			name: "Inspect pipeline stage (debug)",
 			callback: () => {
 				if (!this.settings.debugMode) {
-					new Notice("Enable Debug mode in Daily Digest settings first.", 4000);
+					new Notice("Enable debug mode in Daily Digest settings first.", 4000);
 					return;
 				}
 				new PipelineDebugModal(this.app, this).open();
@@ -206,7 +206,7 @@ export default class DailyDigestPlugin extends Plugin {
 	private generateToday(skipAI = false): void {
 		const now = new Date();
 		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		this.generateNote(today, skipAI);
+		void this.generateNote(today, skipAI);
 	}
 
 	private async generateNote(targetDate: Date, skipAI = false): Promise<void> {
@@ -247,7 +247,7 @@ export default class DailyDigestPlugin extends Plugin {
 			localModel: this.settings.localModel,
 		};
 
-		const progressNotice = new Notice("Daily Digest: Collecting activity data\u2026", 0);
+		const progressNotice = new Notice("Daily Digest: collecting activity data\u2026", 0);
 		this.statusBarItem.setText("Daily Digest: collecting\u2026");
 
 		// Build sensitivity config
@@ -525,7 +525,7 @@ export default class DailyDigestPlugin extends Plugin {
 			const hasActivity = visits.length > 0 || searches.length > 0 ||
 				claudeSessions.length > 0 || gitCommits.length > 0;
 			if (useAI && !hasActivity) {
-				new Notice("Daily Digest: No activity data collected, skipping AI summary.");
+				new Notice("Daily Digest: no activity data collected, skipping AI summary.");
 				useAI = false;
 			}
 			if (useAI) {
@@ -588,13 +588,13 @@ export default class DailyDigestPlugin extends Plugin {
 
 					if (result.action === "cancel") {
 						this.statusBarItem.setText("Daily Digest ready");
-						new Notice("Daily Digest: Generation cancelled.");
+						new Notice("Daily Digest: generation cancelled.");
 						return;
 					}
 
 					if (result.action === "proceed-with-ai") {
 						const aiNotice = new Notice(
-							"Daily Digest: Generating AI summary (Anthropic)\u2026",
+							"Daily Digest: generating AI summary (Anthropic)\u2026",
 							0
 						);
 						if (result.editedPrompt) {
@@ -645,7 +645,7 @@ export default class DailyDigestPlugin extends Plugin {
 			}
 
 			// ── Render ───────────────────────────
-			const renderNotice = new Notice("Daily Digest: Rendering markdown\u2026", 0);
+			const renderNotice = new Notice("Daily Digest: rendering markdown\u2026", 0);
 			const aiProviderUsed = useAI && aiSummary !== null ? provider : "none";
 			const md = renderMarkdown(
 				targetDate,
@@ -702,7 +702,7 @@ export default class DailyDigestPlugin extends Plugin {
 				await this.app.workspace.getLeaf(false).openFile(file);
 			}
 		} catch (e) {
-			new Notice(`Daily Digest error: ${e}`, 10000);
+			new Notice(`Daily Digest error: ${e instanceof Error ? e.message : String(e)}`, 10000);
 			this.statusBarItem.setText("Daily Digest: error");
 			log.error("Daily Digest error:", e);
 		}
@@ -747,7 +747,7 @@ export default class DailyDigestPlugin extends Plugin {
 					// Backup failed — abort to protect user data
 					throw new Error(
 						`Daily Digest: Cannot create backup of existing note. ` +
-						`Aborting to protect your data. Error: ${e}`
+						`Aborting to protect your data. Error: ${e instanceof Error ? e.message : String(e)}`
 					);
 				}
 			}

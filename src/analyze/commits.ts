@@ -321,7 +321,7 @@ export function groupCommitsIntoWorkUnits(commits: GitCommit[]): CommitWorkUnit[
 		}
 
 		// Within each repo, split by dominant work mode (debugging vs. building)
-		for (const [_repo, repoItems] of Object.entries(byRepo)) {
+		for (const [, repoItems] of Object.entries(byRepo)) {
 			// Group by whether the mode is "debugging" or everything else
 			const debugItems = repoItems.filter((x) => x.mode === "debugging");
 			const buildItems = repoItems.filter((x) => x.mode !== "debugging");

@@ -318,7 +318,7 @@ function scanSafariBrowser(config: BrowserPathConfig): BrowserInstallConfig {
  * All returned BrowserInstallConfigs have enabled=false and selectedProfiles=[]
  * — the user must explicitly opt in to each profile.
  */
-export async function detectAllBrowsers(): Promise<BrowserInstallConfig[]> {
+export function detectAllBrowsers(): BrowserInstallConfig[] {
 	const results: BrowserInstallConfig[] = [];
 
 	for (const [browserId, config] of Object.entries(BROWSER_PATH_CONFIGS)) {

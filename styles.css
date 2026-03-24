@@ -309,6 +309,11 @@
 }
 
 .dd-preview-prompt-text {
+	width: 100%;
+	font-family: var(--font-monospace);
+	font-size: 12px;
+	max-height: 400px;
+	resize: vertical;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	padding: 8px;
@@ -332,4 +337,18 @@
 .dd-preview-token-estimate {
 	font-size: 12px;
 	color: var(--text-muted);
+}
+
+/* ── Pipeline Debug Modal ─────────────────── */
+
+.pipeline-debug-output {
+	margin-top: 1rem;
+	max-height: 400px;
+	overflow: auto;
+	background: var(--background-secondary);
+	padding: 1rem;
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	font-size: 12px;
+	white-space: pre-wrap;
 }

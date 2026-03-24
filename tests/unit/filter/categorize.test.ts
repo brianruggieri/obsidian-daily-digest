@@ -81,6 +81,7 @@ describe("categorizeDomain", () => {
 	});
 
 	it("categorizes Obsidian forum as pkm", () => {
+		// eslint-disable-next-line obsidianmd/hardcoded-config-path -- test value is a domain name (*.obsidian.md TLD), not a config path
 		expect(categorizeDomain("forum.obsidian.md")).toBe("pkm");
 	});
 

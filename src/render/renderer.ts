@@ -612,7 +612,7 @@ export function renderMarkdown(
 		lines.push("> | Category | Activity |");
 		lines.push("> |---|---|");
 		for (const [cat, summary] of Object.entries(catSumsEarly)) {
-			const [_emoji, label] = CATEGORY_LABELS[cat] ?? ["\u{1F310}", cat];
+			const [, label] = CATEGORY_LABELS[cat] ?? ["\u{1F310}", cat];
 			lines.push(`> | ${escapeForTableCell(label)} | ${escapeForTableCell(summary)} |`);
 		}
 		lines.push("");
@@ -674,11 +674,11 @@ export function renderMarkdown(
 		knowledge.recurrenceNotes.length > 0 ||
 		knowledge.knowledgeDeltaLines.length > 0
 	);
-	if (hasKnowledgeContent && aiSummary) {
+	if (knowledge && hasKnowledgeContent && aiSummary) {
 		const kFolders = wikilinkFolders
 			? { topics: wikilinkFolders.topics, entities: wikilinkFolders.entities }
 			: undefined;
-		renderKnowledgeInsights(lines, knowledge!, true, kFolders);
+		renderKnowledgeInsights(lines, knowledge, true, kFolders);
 	}
 
 	// ── Learnings (collapsed callout, moved to Layer 2) ─

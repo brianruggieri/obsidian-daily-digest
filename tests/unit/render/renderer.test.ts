@@ -559,6 +559,7 @@ describe("three-layer layout", () => {
 
 const timelineVisits: BrowserVisit[] = [
 	{ url: "https://github.com/repo", title: "My Repo", time: new Date("2025-06-15T09:15:00"), domain: "github.com" },
+	// eslint-disable-next-line obsidianmd/hardcoded-config-path -- test fixture domain name (*.obsidian.md TLD), not a config path
 	{ url: "https://docs.obsidian.md", title: "Obsidian Docs", time: new Date("2025-06-15T14:30:00"), domain: "docs.obsidian.md" },
 ];
 
