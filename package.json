@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-daily-digest",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Compile browser history, search queries, Claude Code sessions, Codex CLI sessions, and git commits into an AI-summarized Obsidian daily note.",
 	"main": "main.js",
 	"type": "module",
@@ -60,6 +60,7 @@
 		"@wdio/mocha-framework": "^9.0.0",
 		"@wdio/visual-service": "^6.0.0",
 		"esbuild": "0.25.5",
+		"eslint-plugin-obsidianmd": "^0.1.9",
 		"globals": "^14.0.0",
 		"husky": "^9.1.7",
 		"pixelmatch": "^7.1.0",
