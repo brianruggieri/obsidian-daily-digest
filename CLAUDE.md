@@ -136,10 +136,19 @@ This plugin handles sensitive personal data. Always maintain these invariants:
 - Browser history is read from **locked SQLite databases** via sql.js WASM — the plugin copies the DB file before reading to avoid lock conflicts
 - The `styles.css` uses Obsidian CSS custom properties for theme compatibility
 - `main.js` is **gitignored** — it is built locally for development (`npm run build`) and attached to GitHub Releases by the release workflow. Do not edit or commit it directly
-- Obsidian's `requestUrl` is used for cloud API calls; native `fetch` is used for localhost (CORS bypass)
+- **Use `requestUrl` for all network requests** — including localhost. Native `fetch` is forbidden; `requestUrl` handles both cloud and local endpoints correctly. The old comment about "CORS bypass" was incorrect.
 - The merge system (`merge.ts`) must preserve user-authored content across regenerations — always create timestamped backups before modifying existing notes
 - Privacy consent is version-controlled (`CURRENT_PRIVACY_VERSION`) — bumping it re-triggers the onboarding modal
 - Cross-platform paths: use `process.platform` checks for `darwin`, `win32`, `linux`
+
+## ESLint — Obsidian Rules Policy
+
+**Never add `eslint-disable` comments for `obsidianmd/*` rules.** The Obsidian community review bot explicitly rejects any `eslint-disable` directive targeting Obsidian's custom ESLint rules (`obsidianmd/hardcoded-config-path`, `obsidianmd/ui/sentence-case`, etc.). Adding them makes the bot report a new error instead of resolving the original one.
+
+When `npm run lint` reports an `obsidianmd/*` error:
+1. Fix the actual violation if possible (use `vault.configDir` instead of a hardcoded path, fix the capitalization, etc.)
+2. If the error is a **false positive** (domain names triggering `hardcoded-config-path`, or technical strings like CLI commands/URLs triggering `sentence-case`), document it and post a `/skip` comment on the obsidian-releases PR with a clear justification.
+3. **Never silence the rule.** `eslint-disable` is not a valid workaround for Obsidian-specific rules.
 
 ## Git Conventions
 
