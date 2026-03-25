@@ -37,11 +37,9 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		new Setting(generalGroup)
 			.setName("Filename template")
-			// eslint-disable-next-line obsidianmd/ui/sentence-case -- date format tokens (YYYY-MM-DD) must not be lowercased
 			.setDesc("Date format for filenames (supports YYYY, MM, DD tokens, e.g. YYYY-MM-DD)")
 			.addText((text) =>
 				text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder shows a date format token, not a sentence
 					.setPlaceholder("YYYY-MM-DD")
 					.setValue(this.plugin.settings.filenameTemplate)
 					.onChange(async (value) => {
@@ -413,7 +411,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) =>
 						text
-							// eslint-disable-next-line obsidianmd/ui/sentence-case -- URL placeholder, not a sentence
 					.setPlaceholder("http://localhost:11434")
 							.setValue(this.plugin.settings.localEndpoint)
 							.onChange(async (value) => {
@@ -430,7 +427,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) =>
 						text
-							// eslint-disable-next-line obsidianmd/ui/sentence-case -- model name placeholder, not a sentence
 						.setPlaceholder("qwen2.5:14b-instruct")
 							.setValue(this.plugin.settings.localModel)
 							.onChange(async (value) => {
@@ -475,17 +471,13 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				const ollamaSteps = guideContent.createEl("ol");
 				ollamaSteps.createEl("li").createEl("span", {
 					text: "Install: ",
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				}).parentElement!.createEl("code", { text: "brew install ollama" });
 				const li2 = ollamaSteps.createEl("li");
 				li2.createEl("span", { text: "Pull a model: " });
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				li2.createEl("code", { text: "ollama pull qwen2.5:7b-instruct" });
 				const li3 = ollamaSteps.createEl("li");
 				li3.createEl("span", { text: "Start server: " });
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- CLI command, must not be capitalized
 				li3.createEl("code", { text: "ollama serve" });
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- "Detect" references UI button by its displayed name
 				ollamaSteps.createEl("li", { text: "Click Detect above to find available models" });
 
 				const ollamaNote = guideContent.createDiv({ cls: "dd-settings-callout dd-settings-callout-info" });
@@ -500,7 +492,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				// LM Studio section
 				new Setting(guideContent).setName("LM Studio").setHeading();
 				const lmSteps = guideContent.createEl("ol");
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- domain name (lmstudio.ai) — rule would wrongly capitalize .ai TLD
 				lmSteps.createEl("li", { text: "Download from lmstudio.ai" });
 				lmSteps.createEl("li", {
 					text: "Download a model from the built-in browser",
@@ -509,10 +500,8 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 				li3b.createEl("span", {
 					text: "Start the local server (default: ",
 				});
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- URL, not a sentence
 				li3b.createEl("code", { text: "http://localhost:1234" });
 				li3b.appendText(")");
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- "Detect" references UI button by its displayed name
 				lmSteps.createEl("li", { text: "Update the endpoint above, then click Detect" });
 
 				// Other servers
@@ -538,7 +527,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 					)
 					.addText((text) => {
 						text.inputEl.type = "password";
-						// eslint-disable-next-line obsidianmd/ui/sentence-case -- API key placeholder prefix, not a sentence
 					text.setPlaceholder("sk-ant-...")
 							.setValue(currentKey)
 							.onChange((value) => {
@@ -960,27 +948,11 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 		try {
 			let models: string[] = [];
 
-			// Use native fetch for localhost — Obsidian's requestUrl can fail
-			// on app:// origins due to CORS restrictions with local servers.
-			const isLocalhost =
-				endpoint.includes("localhost") ||
-				endpoint.includes("127.0.0.1") ||
-				endpoint.includes("0.0.0.0");
-
 			const doFetch = async (url: string): Promise<unknown> => {
-				if (isLocalhost) {
-					const resp = await fetch(url, {
-						method: "GET",
-						headers: { Accept: "application/json" },
-					});
-					if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-					return await resp.json();
-				} else {
-					const { requestUrl } = await import("obsidian");
-					const resp = await requestUrl({ url, method: "GET" });
-					if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
-					return resp.json;
-				}
+				const { requestUrl } = await import("obsidian");
+				const resp = await requestUrl({ url, method: "GET", headers: { Accept: "application/json" }, throw: false });
+				if (resp.status < 200 || resp.status >= 300) throw new Error(`HTTP ${resp.status}`);
+				return resp.json;
 			};
 
 			// Try Ollama-native endpoint first
@@ -1072,7 +1044,6 @@ export class DailyDigestSettingTab extends PluginSettingTab {
 
 		if (configs.length === 0) {
 			const hint = containerEl.createDiv({ cls: "dd-settings-callout" });
-			// eslint-disable-next-line obsidianmd/ui/sentence-case -- 'Detect Browsers & Profiles' is the button's displayed name
 		hint.createEl("p", { text: "Click 'Detect Browsers & Profiles' to scan for installed browsers." });
 			return;
 		}

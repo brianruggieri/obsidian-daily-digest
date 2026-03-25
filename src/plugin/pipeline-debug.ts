@@ -28,7 +28,6 @@ export class PipelineDebugModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Stage")
-			// eslint-disable-next-line obsidianmd/ui/sentence-case -- references UI button/icon names by their displayed titles
 			.setDesc("To preview the actual AI prompt, use Generate → eye icon (Data Preview).")
 			.addDropdown(drop => drop
 				.addOptions({

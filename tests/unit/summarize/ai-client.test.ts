@@ -156,26 +156,26 @@ describe("callAnthropic", () => {
 	});
 });
 
-// ─── callLocal (localhost — uses fetch) ─────────────────
+// ─── callLocal ──────────────────────────────────────────
 
 describe("callLocal (localhost)", () => {
 	const LOCALHOST = "http://localhost:11434";
 
 	it("returns trimmed text on 200 with valid chat completion shape", async () => {
-		mockFetch.mockResolvedValue(fetchResponse("  Summary here  "));
+		mockRequestUrl.mockResolvedValue(chatCompletionResponse("  Summary here  "));
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("Summary here");
 	});
 
-	it("calls fetch with correct URL and payload", async () => {
-		mockFetch.mockResolvedValue(fetchResponse("ok"));
+	it("calls requestUrl with correct URL and payload", async () => {
+		mockRequestUrl.mockResolvedValue(chatCompletionResponse("ok"));
 		await callLocal("test prompt", `${LOCALHOST}/`, "llama3", 512, undefined, true);
 
-		expect(mockFetch).toHaveBeenCalledOnce();
-		const [url, opts] = mockFetch.mock.calls[0];
-		expect(url).toBe("http://localhost:11434/v1/chat/completions");
+		expect(mockRequestUrl).toHaveBeenCalledOnce();
+		const opts = mockRequestUrl.mock.calls[0][0];
+		expect(opts.url).toBe("http://localhost:11434/v1/chat/completions");
 
-		const body = JSON.parse(opts.body);
+		const body = JSON.parse(opts.body as string);
 		expect(body.model).toBe("llama3");
 		expect(body.max_tokens).toBe(512);
 		expect(body.temperature).toBe(0.3);
@@ -186,76 +186,74 @@ describe("callLocal (localhost)", () => {
 	});
 
 	it("omits response_format when jsonMode is false", async () => {
-		mockFetch.mockResolvedValue(fetchResponse("ok"));
+		mockRequestUrl.mockResolvedValue(chatCompletionResponse("ok"));
 		await callLocal("test", LOCALHOST, "llama3", 800, undefined, false);
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const body = JSON.parse(mockRequestUrl.mock.calls[0][0].body as string);
 		expect(body).not.toHaveProperty("response_format");
 	});
 
 	it("retries without response_format on 400", async () => {
-		// First call returns 400, retry succeeds
-		mockFetch
-			.mockResolvedValueOnce(fetchErrorResponse(400))
-			.mockResolvedValueOnce(fetchResponse("retry worked"));
+		mockRequestUrl
+			.mockResolvedValueOnce(chatCompletionResponse("", 400))
+			.mockResolvedValueOnce(chatCompletionResponse("retry worked"));
 
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("retry worked");
-		expect(mockFetch).toHaveBeenCalledTimes(2);
+		expect(mockRequestUrl).toHaveBeenCalledTimes(2);
 
-		// Second call should NOT have response_format
-		const retryBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+		const retryBody = JSON.parse(mockRequestUrl.mock.calls[1][0].body as string);
 		expect(retryBody).not.toHaveProperty("response_format");
 	});
 
 	it("returns error message when both initial and retry fail", async () => {
-		mockFetch
-			.mockResolvedValueOnce(fetchErrorResponse(400))
-			.mockResolvedValueOnce(fetchErrorResponse(500));
+		mockRequestUrl
+			.mockResolvedValueOnce(chatCompletionResponse("", 400))
+			.mockResolvedValueOnce(chatCompletionResponse("", 500));
 
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("[AI summary unavailable: HTTP 500]");
 	});
 
 	it("returns error on non-200 non-400 status without retry", async () => {
-		mockFetch.mockResolvedValueOnce(fetchErrorResponse(503));
+		mockRequestUrl.mockResolvedValueOnce(chatCompletionResponse("", 503));
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("[AI summary unavailable: HTTP 503]");
-		// Should not retry on non-400 errors
-		expect(mockFetch).toHaveBeenCalledOnce();
+		expect(mockRequestUrl).toHaveBeenCalledOnce();
 	});
 
 	it("returns error message on unexpected response shape", async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
+		mockRequestUrl.mockResolvedValue({
 			status: 200,
-			json: async () => ({ choices: [] }),
-		} as unknown as Response);
+			json: { choices: [] },
+			text: "",
+		});
 
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("[AI summary unavailable: unexpected response shape]");
 	});
 
 	it("returns error message on network error", async () => {
-		mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
+		mockRequestUrl.mockRejectedValue(new Error("ECONNREFUSED"));
 		const result = await callLocal("test prompt", LOCALHOST, "llama3");
 		expect(result).toBe("[AI summary unavailable: ECONNREFUSED]");
 	});
 
 	it("uses custom systemPrompt when provided", async () => {
-		mockFetch.mockResolvedValue(fetchResponse("ok"));
+		mockRequestUrl.mockResolvedValue(chatCompletionResponse("ok"));
 		await callLocal("test", LOCALHOST, "llama3", 800, "Custom system prompt");
 
-		const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+		const body = JSON.parse(mockRequestUrl.mock.calls[0][0].body as string);
 		expect(body.messages[0]).toEqual({ role: "system", content: "Custom system prompt" });
 	});
 
-	it("recognizes 127.0.0.1 and 0.0.0.0 as localhost", async () => {
-		for (const host of ["http://127.0.0.1:8080", "http://0.0.0.0:1234"]) {
-			mockFetch.mockResolvedValue(fetchResponse("ok"));
+	it("uses requestUrl for all host variants (localhost, 127.0.0.1, 0.0.0.0)", async () => {
+		for (const host of ["http://localhost:11434", "http://127.0.0.1:8080", "http://0.0.0.0:1234"]) {
+			mockRequestUrl.mockResolvedValue(chatCompletionResponse("ok"));
 			await callLocal("test", host, "model");
-			// Should use fetch (not requestUrl) for all localhost variants
-			expect(mockRequestUrl).not.toHaveBeenCalled();
+			expect(mockRequestUrl).toHaveBeenCalled();
+			expect(mockFetch).not.toHaveBeenCalled();
+			vi.clearAllMocks();
 		}
 	});
 });
@@ -323,11 +321,11 @@ describe("callAI", () => {
 	});
 
 	it("routes to callLocal when provider is 'local'", async () => {
-		mockFetch.mockResolvedValue(fetchResponse("Local result"));
+		mockRequestUrl.mockResolvedValue(chatCompletionResponse("Local result"));
 		const result = await callAI("test", { ...baseConfig, provider: "local" });
 
 		expect(result).toBe("Local result");
-		expect(mockFetch).toHaveBeenCalledOnce();
+		expect(mockRequestUrl).toHaveBeenCalledOnce();
 	});
 
 	it("returns error for 'none' provider", async () => {

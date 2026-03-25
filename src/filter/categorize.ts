@@ -962,7 +962,6 @@ export const CATEGORY_RULES: Record<string, string[]> = {
 	pkm: [
 		// ── Hand-curated ──────────────────────────
 		// Note-taking / PKM
-		// eslint-disable-next-line obsidianmd/hardcoded-config-path -- these are domain names (*.obsidian.md TLD), not the Obsidian config folder path
 		"obsidian.md", "forum.obsidian.md", "help.obsidian.md",
 		"logseq.com", "roamresearch.com", "remnote.com",
 		"capacities.io", "tana.inc", "mem.ai", "reflect.app",

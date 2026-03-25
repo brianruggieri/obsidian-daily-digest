@@ -188,10 +188,6 @@ export async function callLocal(
 ): Promise<string> {
 	const baseUrl = endpoint.replace(/\/+$/, "");
 	const url = `${baseUrl}/v1/chat/completions`;
-	const isLocalhost =
-		baseUrl.includes("localhost") ||
-		baseUrl.includes("127.0.0.1") ||
-		baseUrl.includes("0.0.0.0");
 
 	const messages: { role: string; content: string }[] = [];
 
@@ -215,46 +211,35 @@ export async function callLocal(
 		basePayload.response_format = { type: "json_object" };
 	}
 
-	const headers = { "Content-Type": "application/json", Accept: "application/json" };
-
 	try {
-		// Use native fetch for localhost to avoid Obsidian requestUrl CORS issues
-		if (isLocalhost) {
-			// Some local OpenAI-compatible servers reject `response_format` with 400.
-			// Try with it first; if the server returns 400, retry without it.
-			let resp = await fetch(url, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(basePayload),
-			});
-			if (!resp.ok && resp.status === 400) {
-				const { response_format: _, ...payloadWithoutFormat } = basePayload;
-				resp = await fetch(url, {
-					method: "POST",
-					headers,
-					body: JSON.stringify(payloadWithoutFormat),
-				});
-			}
-			if (!resp.ok) return `[AI summary unavailable: HTTP ${resp.status}]`;
-			const data = await resp.json();
-			const text = data?.choices?.[0]?.message?.content;
-			if (typeof text === "string") return text.trim();
-			return "[AI summary unavailable: unexpected response shape]";
-		} else {
-			const response = await requestUrl({
+		// Some local OpenAI-compatible servers reject `response_format` with 400.
+		// Try with it first; if the server returns 400, retry without it.
+		let response = await requestUrl({
+			url,
+			method: "POST",
+			contentType: "application/json",
+			headers: { Accept: "application/json" },
+			body: JSON.stringify(basePayload),
+			throw: false,
+		});
+		if (response.status === 400) {
+			const { response_format: _responseFormat, ...payloadWithoutFormat } = basePayload;
+			response = await requestUrl({
 				url,
 				method: "POST",
 				contentType: "application/json",
-				body: JSON.stringify(basePayload),
+				headers: { Accept: "application/json" },
+				body: JSON.stringify(payloadWithoutFormat),
+				throw: false,
 			});
-			if (response.status === 200) {
-				const data = response.json;
-				const text = data?.choices?.[0]?.message?.content;
-				if (typeof text === "string") return text.trim();
-				return "[AI summary unavailable: unexpected response shape]";
-			}
+		}
+		if (response.status < 200 || response.status >= 300) {
 			return `[AI summary unavailable: HTTP ${response.status}]`;
 		}
+		const data = response.json;
+		const text = data?.choices?.[0]?.message?.content;
+		if (typeof text === "string") return text.trim();
+		return "[AI summary unavailable: unexpected response shape]";
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
 		return `[AI summary unavailable: ${msg}]`;
