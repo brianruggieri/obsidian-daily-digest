@@ -46,6 +46,20 @@ export default ts.config(
 					"MOC",
 					"MOCs",
 					"AI",
+					"YYYY",
+					"MM",
+					"DD",
+				],
+				ignoreRegex: [
+					"^https?://",
+					"^sk-",
+					"^qwen",
+					"^brew ",
+					"^ollama ",
+					"lmstudio\\.ai",
+					"\\bDetect\\b",
+					"Generate .* icon",
+					"Data Preview",
 				],
 			}],
 			"obsidianmd/settings-tab/no-manual-html-headings": "error",
@@ -64,6 +78,12 @@ export default ts.config(
 		files: ["tests/**/*.ts"],
 		rules: {
 			"no-console": "off",
+		},
+	},
+	{
+		files: ["src/filter/categorize.ts"],
+		rules: {
+			"obsidianmd/hardcoded-config-path": "off",
 		},
 	},
 	{

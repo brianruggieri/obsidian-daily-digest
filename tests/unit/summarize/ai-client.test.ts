@@ -53,7 +53,7 @@ function chatCompletionResponse(content: string, status = 200) {
 }
 
 /** Build a fetch Response-like object for local model calls. */
-function fetchResponse(content: string, status = 200) {
+function _fetchResponse(content: string, status = 200) {
 	return {
 		ok: status >= 200 && status < 300,
 		status,
@@ -61,7 +61,7 @@ function fetchResponse(content: string, status = 200) {
 	} as unknown as Response;
 }
 
-function fetchErrorResponse(status: number) {
+function _fetchErrorResponse(status: number) {
 	return {
 		ok: false,
 		status,
