@@ -152,16 +152,7 @@ When `npm run lint` reports an `obsidianmd/*` error:
 
 ## Git Conventions
 
-- Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
-- Keep commits focused on a single concern
-- Run `npm run test` and `npm run build` before committing
-- Never commit `.env` or API keys
-- `main.js` is delivered via GitHub Releases (not committed) — the release workflow builds, tests, and uploads it as a release asset
+General git/branching/worktree workflow follows the global `~/.claude/CLAUDE.md`. Project-specific overrides:
 
-## Branching Conventions
-
-- **One feature per branch**, branched from `main` at the start of work
-- Branch naming: `feat/<short-name>`, `fix/<short-name>`, `chore/<short-name>`
-- Use the `superpowers:using-git-worktrees` skill at the start of every new feature session to create an isolated worktree
-- PRs merged to `main` only when the feature is complete and all tests pass
-- Never let two unrelated features accumulate on the same branch
+- Commits use **conventional commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`), not the global imperative-sentence style.
+- `main.js` is delivered via GitHub Releases (not committed) — the release workflow builds, tests, and uploads it as a release asset.
